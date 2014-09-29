@@ -7,7 +7,7 @@ A library with various basic utilities for programming with Clojure.
 ### Records
 
 The `active.clojure.record` namespace implements a
-`define-record-type` form essentially the same as Scheme's [SRFI
+`define-record-type` form similar to Scheme's [SRFI
 9](http://srfi.schemers.org/srfi-9/).
 
 ### Conditions

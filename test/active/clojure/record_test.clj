@@ -5,8 +5,8 @@
 (define-record-type Pare
   (kons a b)
   pare?
-  (a kar)
-  (b kdr))
+  [a kar
+   b kdr])
 
 (defrecord FakePare [a b])
 
@@ -23,9 +23,9 @@
 (define-record-type Pu
   (make-pu c a)
   pu?
-  (a pua)
-  (b pub)
-  (c puc))
+  [a pua
+   b pub
+   c puc])
 
 (deftest constructor
   (let [p (make-pu 1 2)]

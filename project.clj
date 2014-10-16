@@ -6,12 +6,14 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2280" :scope "provided"]]
 
-  :plugins [[com.keminglabs/cljx "0.4.0"]
+  :plugins [;; NB: The :exclusions argument quiets version-ranges warning.
+            [com.keminglabs/cljx "0.4.0" :exclusions [org.clojure/clojure]]
             [lein-cljsbuild "1.0.3"]
             ;; NB: This needs a version of clojurescript.test with the Nashorn runner,
             ;; for example from the nashorn-runner branch from
             ;; https://github.com/active-group/clojurescript.test
-            [com.cemerick/clojurescript.test "0.3.2-SNAPSHOT"]
+            ;; The :exclusions argument quiets version-ranges warning.
+            [com.cemerick/clojurescript.test "0.3.2-SNAPSHOT"  :exclusions [org.clojure/clojure]]
             [org.bodil/lein-nashorn "0.1.2"]]
 
   :cljx {:builds [{:source-paths ["src/cljx"]

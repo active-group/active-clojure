@@ -17,6 +17,13 @@ specifically crafted exception objects that form a protocol for
 communicating the cause of an exception, similar to the condition
 system in [R6RS Scheme](http://r6rs.org/).
 
+### Lenses
+
+The `active.clojure.lens` namespace implements *lenses*.  Lenses
+provide a subtle way to access and update the elements of a structure
+and are well-known in [functional programming
+languages](http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html).
+
 ## License
 
 Copyright © 2014 Active Group GmbH

@@ -46,5 +46,7 @@
               :test-commands {"nashorn" ["jrunscript" "-e" "var global = this" "-f" :nashorn-runner "target/test.js"]}}
 
   :hooks [cljx.hooks leiningen.cljsbuild]
+
+  :aliases {"testall" ["do" "cljsbuild" "test" "nashorn," "test"]}
   
   :global-vars {*warn-on-reflection* true})

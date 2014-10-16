@@ -128,7 +128,11 @@
 
 (def ^{:doc "A lens that views a sequence as a set."}
   as-set
-  (xmap set seq))
+  (lens set
+        ; this is needed to abide the second lens law
+        #(if (= (set %1) %2)
+           %1
+           (seq %2))))
 
 (defn contains
   "Returns a lens showing the membership of the given value in a set."

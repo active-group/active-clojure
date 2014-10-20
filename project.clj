@@ -47,10 +47,13 @@
                       :compiler {:output-to "target/test.js"
                                  :optimizations :whitespace
                                  :pretty-print true}}}
-              :test-commands {"nashorn" ["jrunscript" "-e" "var global = this" "-f" :nashorn-runner "target/test.js"]}}
+              :test-commands {"nashorn" ["jrunscript" "-e" "var global = this" "-f" :nashorn-runner "target/test.js"]
+                              "phantomjs" ["phantomjs" :runner "this.literal_js_was_evaluated=true" "target/test.js"]
+                              ;; open test-resources/unit-tests.html in a browser and look at the JavaScript console
+                              }}
 
   :hooks [cljx.hooks leiningen.cljsbuild]
 
-  :aliases {"testall" ["do" "cljsbuild" "test" "nashorn," "test"]}
+  :aliases {"testall" ["do" "cljx," "test"]}
   
   :global-vars {*warn-on-reflection* true})

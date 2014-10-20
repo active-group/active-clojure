@@ -286,17 +286,14 @@
   `(throw (condition ~?base ~?message ~@?irritants)))
 
 #+cljs
-(defrecord IllegalArgumentException [str])
-
-#+cljs
 (def Throwable js/Object)
 
 (defmacro guard
   [?handling & ?body]
   (when-not (vector? ?handling)
-    (throw (IllegalArgumentException. (str "guard requires vector in " ~'*ns* ":" (:line (meta ~'&form))))))
+    (throw (IllegalArgumentException. (str "guard requires vector in " *ns* " " (meta &form)))))
   (when-not (odd? (count ?handling))
-    (throw (IllegalArgumentException. (str "guard requires vector in " ~'*ns* ":" (:line (meta ~'&form))))))
+    (throw (IllegalArgumentException. (str "guard requires vector in " *ns* " " (meta &form)))))
   (let [?id (first ?handling)]
     `(try
        ~@?body

@@ -1,5 +1,6 @@
 (ns active.clojure.condition-test
-  (:require [active.clojure.condition :refer (&condition combine-conditions #+clj define-condition-type #+clj guard)]
+  (:require [active.clojure.condition :refer (&condition combine-conditions #+clj define-condition-type #+clj guard 
+                                              #+cljs Throwable)]
             [active.clojure.condition :as c]
             #+clj [clojure.test :refer :all]
             #+cljs [cemerick.cljs.test])
@@ -83,9 +84,6 @@
          (c1-a v5)))
   (is (= "b2"
          (c2-b v5))))
-
-#+cljs
-(def Throwable js/Object)
 
 (deftest condition-types
   (map

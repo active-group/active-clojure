@@ -16,23 +16,32 @@
   'simple conditions', nor are they regular records."}
   active.clojure.condition
   (:refer-clojure :exclude (assert))
-  (:require [clojure.core :as core]) ; get assert back
-  (:require [clojure.stacktrace :as stack])
-  (:import clojure.lang.ExceptionInfo))
+  #+clj (:require [clojure.core :as core] ; get assert back
+                  [clojure.stacktrace :as stack])
+  #+cljs (:require-macros [active.clojure.condition 
+                           :refer (define-condition-type assert condition raise guard)]
+                          [cljs.core :as core])
+  #+clj (:import clojure.lang.ExceptionInfo))
 
 (defn condition?
   [x]
-  (and (instance? ExceptionInfo x)
+  (and #+clj (instance? ExceptionInfo x)
        (contains? (ex-data x) ::condition)))
 
+#+clj
 (declare print-condition)
 
+#+clj
 (defmethod print-method ExceptionInfo [^ExceptionInfo exc ^java.io.Writer w]
   (if (condition? exc)
     (print-condition exc w)
     (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc))))))
 
-(def ^:private ex-info-msg (str "This is a " *ns* " util.condition."))
+#+cljs
+(def *ns* "<cljs>")
+
+(def ^:private ex-info-msg 
+  (str "This is a " *ns* " util.condition."))
 
 (defrecord ConditionType
     [name supertype field-names total-field-count])
@@ -93,16 +102,27 @@
     (and (condition? x)
          (condition-of-type? type x))))
 
+#+cljs
+(defn index-of [coll v]
+  (let [i (count (take-while #(not= v %) coll))]
+    (when (or (< i (count coll))
+              (= v (last coll)))
+      i)))
+
 (defn- field-index
   "Compute the field index of field named `field-name` for type `type`."
   [type field-name]
-  (let [^java.util.List fn (:field-names type)
-        local-index (.indexOf fn field-name)]
+  (let [#+clj ^java.util.List fn 
+        #+cljs fn (:field-names type)
+        local-index (#+clj .indexOf #+cljs index-of fn field-name)]
     (core/assert (not= -1 local-index))
     (if-let [supertype (:supertype type)]
       (+ (:total-field-count supertype)
          local-index)
       local-index)))
+
+#+cljs
+(defrecord Error [str])
 
 (defn condition-accessor
   "Create an an accessor for `field-name` for conditions of type `type`."
@@ -221,6 +241,7 @@
                                (make-message-condition message)
                                (make-irritants-condition irritants)))))
 
+#+clj
 (defn stack-trace-who
   "Get a suitable argument for [[&who]] from an exception object."
   []
@@ -264,6 +285,12 @@
   [?base ?message & ?irritants]
   `(throw (condition ~?base ~?message ~@?irritants)))
 
+#+cljs
+(defrecord IllegalArgumentException [str])
+
+#+cljs
+(def Throwable js/Object)
+
 (defmacro guard
   [?handling & ?body]
   (when-not (vector? ?handling)
@@ -273,7 +300,8 @@
   (let [?id (first ?handling)]
     `(try
        ~@?body
-       (catch Throwable ~?id
+       ; If Throwable is not a symbol it means java.lang.Throwable which does not work in ClojureScript.
+       (catch ~'Throwable ~?id
          (cond
           ~@(rest ?handling)
           ~@(if (= :else (last (butlast ?handling)))
@@ -335,6 +363,7 @@
 
     [type who message (concat stuff more-stuff)]))
 
+#+clj
 (defn- print-stack-trace-of
   [^Throwable exc]
   (let [st (.getStackTrace exc)]
@@ -347,6 +376,7 @@
       (stack/print-trace-element e)
       (newline))))
 
+#+clj
 (defn print-condition
   [c ^java.io.Writer w]
   (binding [*out* w]

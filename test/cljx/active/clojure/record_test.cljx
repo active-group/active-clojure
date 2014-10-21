@@ -1,6 +1,14 @@
 (ns active.clojure.record-test
-  (:require [active.clojure.record :refer (define-record-type)]
-            [clojure.test :refer :all]))
+  (:require #+clj [active.clojure.record :refer (define-record-type)]
+            #+clj [clojure.test :refer :all]
+            #+cljs ;; The following is needed because the unique test
+		   ;; below contains `Throwable`.
+            #+cljs [active.clojure.condition :refer (Throwable)]
+            #+cljs [cemerick.cljs.test])
+  #+cljs 
+  (:require-macros [cemerick.cljs.test
+                    :refer (is deftest with-test run-tests testing test-var)]
+                   [active.clojure.record :refer (define-record-type)]))
 
 (define-record-type Pare
   (kons a b)
@@ -34,5 +42,3 @@
     (is (= 2 (pua p)))
     (is (= 1 (puc p)))
     (is (nil? (pub p)))))
-
-

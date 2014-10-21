@@ -1,10 +1,20 @@
-(ns active.clojure.record)
+(ns active.clojure.record
+  (:require [active.clojure.condition :refer (error)]))
+
+;; Only needed in ClojureScript, does nothing in Clojure
+(defn check-type
+  [type rec accessor]
+  #+clj
+  (do)
+  #+cljs
+  (when-not (instance? type rec) 
+    (throw (error accessor "Wrong record type passed to accessor." rec type))))
 
 (defmacro define-record-type
   [?type ?constructor-call ?predicate & ?field-specs]
   (when-not (and (list? ?constructor-call)
                  (not (empty? ?constructor-call)))
-    (throw (IllegalArgumentException. (str "constructor call must be a list"))))
+    (throw (IllegalArgumentException. (str "constructor call must be a list in " *ns* " " (meta &form)))))
   (let [?constructor (first ?constructor-call)
         ?constructor-args (rest ?constructor-call)
         ?constructor-args-set (set ?constructor-args)]
@@ -29,7 +39,8 @@
                   `(defn ~?accessor
                      ~(str "Access the " ?field " field from a " ?type " record.")
                      [~?rec]
-                     (. ~?rec ~?field))))
+                     (check-type ~?type ~?rec ~?accessor)
+                     (. ~?rec ~(symbol (str "-" ?field))))))
               ?field-specs))))
 
 

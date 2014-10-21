@@ -10,6 +10,9 @@
                     :refer (is deftest with-test run-tests testing test-var)]
                    [active.clojure.record :refer (define-record-type)]))
 
+#+cljs
+(enable-console-print!)
+
 (define-record-type Pare
   (kons a b)
   pare?

@@ -1,14 +1,24 @@
-(ns active.clojure.record)
+(ns active.clojure.record
+  (:require [active.clojure.condition :refer (error)]))
+
+;; Only needed in ClojureScript, does nothing in Clojure
+(defn check-type
+  [type rec accessor]
+  #+clj
+  (do)
+  #+cljs
+  (when-not (instance? type rec) 
+    (throw (error accessor "Wrong record type passed to accessor." rec type))))
 
 (defmacro define-record-type
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
   (when-not (and (list? ?constructor-call)
                  (not (empty? ?constructor-call)))
-    (throw (IllegalArgumentException. (str "constructor call must be a list: " ?constructor-call))))
+    (throw (IllegalArgumentException. (str "constructor call must be a list in " *ns* " " (meta &form)))))
   (when-not (vector? ?field-specs)
-    (throw (IllegalArgumentException. (str "field specs must be a vector: " ?field-specs))))
+    (throw (IllegalArgumentException. (str "field specs must be a vector in " *ns* " " (meta &form)))))
   (when-not (even? (count ?field-specs))
-    (throw (IllegalArgumentException. (str "odd number of elements in field specs: " ?field-specs))))
+    (throw (IllegalArgumentException. (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
   (let [?field-pairs (partition 2 ?field-specs)
         ?constructor (first ?constructor-call)
         ?constructor-args (rest ?constructor-call)
@@ -35,7 +45,9 @@
                   `(defn ~?accessor
                      ~(str "Access the " ?field " field from a " ?type " record.")
                      [~?rec]
-                     (. ~?rec ~?field))))
+                     (check-type ~?type ~?rec ~?accessor)
+                     (. ~?rec ~(symbol (str "-" ?field))))))
               ?field-pairs))))
+
 
 

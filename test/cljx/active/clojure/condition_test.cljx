@@ -1,7 +1,16 @@
 (ns active.clojure.condition-test
-  (:require [active.clojure.condition :refer (&condition combine-conditions define-condition-type guard)]
+  (:require [active.clojure.condition :refer (&condition combine-conditions #+clj define-condition-type #+clj guard 
+                                              #+cljs Throwable)]
             [active.clojure.condition :as c]
-            [clojure.test :refer :all]))
+            #+clj [clojure.test :refer :all]
+            #+cljs [cemerick.cljs.test])
+  #+cljs 
+  (:require-macros [cemerick.cljs.test
+                    :refer (is deftest with-test run-tests testing test-var)]
+                   [active.clojure.condition :refer (define-condition-type guard)]))
+
+#+cljs
+(enable-console-print!)
 
 (define-condition-type &c &condition
   make-c c?
@@ -76,6 +85,22 @@
   (is (= "b2"
          (c2-b v5))))
 
+(deftest condition-types
+  (map
+   #(let [e ((first %1))]
+      (is ((second %1) e))
+
+      (try (throw e)
+           (catch Throwable caught
+             (is (= e caught)))))
+   [[c/make-message-condition c/message-condition?]
+    [c/make-warning c/warning?]
+    [c/make-serious-condition c/serious-condition?]
+    [c/make-error c/error?]
+    [c/make-violation c/violation?]
+    [c/make-assertion-violation c/assertion-violation?]
+    [c/make-irritants-condition c/irritants-condition?]
+    [c/make-who-condition c/who-condition?]]))
 
 (deftest guard-test
   (is (= :error
@@ -83,7 +108,7 @@
                  (c/error? con) :error
                  (c/violation? con) :violation]
                 (throw (c/make-error)))))
-  (is (thrown? Throwable 
+  (is (thrown? Throwable
                (guard [con
                        (c/error? con) :error]
                       (throw (c/make-violation)))))

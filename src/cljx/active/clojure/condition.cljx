@@ -16,23 +16,56 @@
   'simple conditions', nor are they regular records."}
   active.clojure.condition
   (:refer-clojure :exclude (assert))
-  (:require [clojure.core :as core]) ; get assert back
-  (:require [clojure.stacktrace :as stack])
-  (:import clojure.lang.ExceptionInfo))
+  #+clj (:require [clojure.core :as core] ; get assert back
+                  [clojure.stacktrace :as stack])
+  #+cljs (:require-macros [active.clojure.condition 
+                           :refer (define-condition-type assert condition raise guard)]
+                          [cljs.core :as core])
+  #+clj (:import clojure.lang.ExceptionInfo))
 
 (defn condition?
   [x]
-  (and (instance? ExceptionInfo x)
+  (and #+clj (instance? ExceptionInfo x)
        (contains? (ex-data x) ::condition)))
 
 (declare print-condition)
 
+;; Printing conditions in ClojureScript:
+;;
+;; TODO `print-method` does not exist in ClojureScript and there is no
+;; other way to define how an object should print itself.  For now,
+;; you have to call `print-condition` yourself.
+;;
+;; TODO `*ns*` does not exist in ClojureSript.  Therefore, it would be
+;; nice to have at least file name and line number information stored
+;; in `ex-info-msg`, but this does not work:
+;;
+;; (let [e (new js/Error "message" "file" 23)]
+;;   (println (.-message e))
+;;   (println (.-fileName e))
+;;   (println (.-lineNumber e)))
+;;
+;; as it prints
+;;
+;; message
+;; nil
+;; nil
+;;
+;; TODO Also, there is no run-time-independent way to get a stack
+;; trace in ClojureScript.
+
+#+clj
 (defmethod print-method ExceptionInfo [^ExceptionInfo exc ^java.io.Writer w]
   (if (condition? exc)
     (print-condition exc w)
     (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc))))))
 
-(def ^:private ex-info-msg (str "This is a " *ns* " util.condition."))
+#+cljs
+(def *ns* "<cljs>")
+
+(defn ^:private ex-info-msg 
+  [namespace]
+  (str "This is a " namespace " active.clojure.condition."))
 
 (defrecord ConditionType
     [name supertype field-names total-field-count])
@@ -72,7 +105,8 @@
 
   For internal use only."
   [condition-components]
-  (ex-info ex-info-msg
+  (ex-info #+clj (ex-info-msg *ns*)
+           #+cljs (ex-info-msg "<cljs>")
            {::condition true
             ::components condition-components}))
 
@@ -93,16 +127,27 @@
     (and (condition? x)
          (condition-of-type? type x))))
 
+#+cljs
+(defn index-of [coll v]
+  (let [i (count (take-while #(not= v %) coll))]
+    (when (or (< i (count coll))
+              (= v (last coll)))
+      i)))
+
 (defn- field-index
   "Compute the field index of field named `field-name` for type `type`."
   [type field-name]
-  (let [^java.util.List fn (:field-names type)
-        local-index (.indexOf fn field-name)]
+  (let [#+clj ^java.util.List fn 
+        #+cljs fn (:field-names type)
+        local-index (#+clj .indexOf #+cljs index-of fn field-name)]
     (core/assert (not= -1 local-index))
     (if-let [supertype (:supertype type)]
       (+ (:total-field-count supertype)
          local-index)
       local-index)))
+
+#+cljs
+(def Error js/Error)
 
 (defn condition-accessor
   "Create an an accessor for `field-name` for conditions of type `type`."
@@ -117,7 +162,7 @@
                             comp))
                      (::components (ex-data cond)))]
         (nth (:arguments comp) i)
-        (throw (Error. (str cond " is not a condition of type " type)))))))
+        (throw (new Error (str cond " is not a condition of type " type)))))))
 
 (defmacro define-condition-type
   "    (define-condition-type <condition-type>
@@ -221,6 +266,7 @@
                                (make-message-condition message)
                                (make-irritants-condition irritants)))))
 
+#+clj
 (defn stack-trace-who
   "Get a suitable argument for [[&who]] from an exception object."
   []
@@ -264,16 +310,20 @@
   [?base ?message & ?irritants]
   `(throw (condition ~?base ~?message ~@?irritants)))
 
+#+cljs
+(def Throwable js/Object)
+
 (defmacro guard
   [?handling & ?body]
   (when-not (vector? ?handling)
-    (throw (IllegalArgumentException. (str "guard requires vector in " ~'*ns* ":" (:line (meta ~'&form))))))
+    (throw (IllegalArgumentException. (str "guard requires vector in " *ns* " " (meta &form)))))
   (when-not (odd? (count ?handling))
-    (throw (IllegalArgumentException. (str "guard requires vector in " ~'*ns* ":" (:line (meta ~'&form))))))
+    (throw (IllegalArgumentException. (str "guard requires vector in " *ns* " " (meta &form)))))
   (let [?id (first ?handling)]
     `(try
        ~@?body
-       (catch Throwable ~?id
+       ; If Throwable is not a symbol it means java.lang.Throwable which does not work in ClojureScript.
+       (catch ~'Throwable ~?id
          (cond
           ~@(rest ?handling)
           ~@(if (= :else (last (butlast ?handling)))
@@ -335,6 +385,7 @@
 
     [type who message (concat stuff more-stuff)]))
 
+#+clj
 (defn- print-stack-trace-of
   [^Throwable exc]
   (let [st (.getStackTrace exc)]
@@ -347,6 +398,7 @@
       (stack/print-trace-element e)
       (newline))))
 
+#+clj
 (defn print-condition
   [c ^java.io.Writer w]
   (binding [*out* w]
@@ -372,3 +424,26 @@
           (pr irritant))
         (.write w "\n")))
     (print-stack-trace-of c)))
+
+#+cljs
+(defn print-condition
+  [c]
+  (let [[type who message stuff] (decode-condition c)]
+    (print (name type))
+    (print ": ")
+    (if (string? message)
+      (let [s message]
+        (print s))
+      (print message))
+    (let [spaces
+          (apply str (repeat (+ (count (name type)) 2)
+                             \space))]
+      (when who
+        (print " [")
+        (print who)
+        (print "]"))
+      (doseq [irritant stuff]
+        (print "\n")
+        (print spaces)
+        (pr irritant))
+      (print "\n"))))

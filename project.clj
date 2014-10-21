@@ -40,11 +40,14 @@
   :cljsbuild {:builds
               {:dev {:source-paths ["target/classes"]
                      :compiler {:output-to "target/main.js"
+                                :source-map "target/main.map"
                                 :optimizations :whitespace
                                 :pretty-print true}}
-               :test {:source-paths ["target/generated/src"
+               :test {:source-paths ["src"
+                                     "target/generated/src"
                                      "target/generated/test/cljs"]
                       :compiler {:output-to "target/test.js"
+                                 :source-map "target/test.map"
                                  :optimizations :whitespace
                                  :pretty-print true}}}
               :test-commands {"nashorn" ["jrunscript" "-e" "var global = this" "-f" :nashorn-runner "target/test.js"]

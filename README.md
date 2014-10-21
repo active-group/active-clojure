@@ -24,6 +24,11 @@ provide a subtle way to access and update the elements of a structure
 and are well-known in [functional programming
 languages](http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html).
 
+### Debugging
+
+The `active.clojure.lens` namespace implements some useful debugging
+tools such as a macro `pret` that prints and returns its argument.
+
 ## License
 
 Copyright © 2014 Active Group GmbH

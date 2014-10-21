@@ -28,8 +28,31 @@
   (and #+clj (instance? ExceptionInfo x)
        (contains? (ex-data x) ::condition)))
 
-#+clj
 (declare print-condition)
+
+;; Printing conditions in ClojureScript:
+;;
+;; TODO `print-method` does not exist in ClojureScript and there is no
+;; other way to define how an object should print itself.  For now,
+;; you have to call `print-condition` yourself.
+;;
+;; TODO `*ns*` does not exist in ClojureSript.  Therefore, it would be
+;; nice to have at least file name and line number information stored
+;; in `ex-info-msg`, but this does not work:
+;;
+;; (let [e (new js/Error "message" "file" 23)]
+;;   (println (.-message e))
+;;   (println (.-fileName e))
+;;   (println (.-lineNumber e)))
+;;
+;; as it prints
+;;
+;; message
+;; nil
+;; nil
+;;
+;; TODO Also, there is no run-time-independent way to get a stack
+;; trace in ClojureScript.
 
 #+clj
 (defmethod print-method ExceptionInfo [^ExceptionInfo exc ^java.io.Writer w]
@@ -40,8 +63,9 @@
 #+cljs
 (def *ns* "<cljs>")
 
-(def ^:private ex-info-msg 
-  (str "This is a " *ns* " util.condition."))
+(defn ^:private ex-info-msg 
+  [namespace]
+  (str "This is a " namespace " active.clojure.condition."))
 
 (defrecord ConditionType
     [name supertype field-names total-field-count])
@@ -81,7 +105,8 @@
 
   For internal use only."
   [condition-components]
-  (ex-info ex-info-msg
+  (ex-info #+clj (ex-info-msg *ns*)
+           #+cljs (ex-info-msg "<cljs>")
            {::condition true
             ::components condition-components}))
 
@@ -122,7 +147,7 @@
       local-index)))
 
 #+cljs
-(defrecord Error [str])
+(def Error js/Error)
 
 (defn condition-accessor
   "Create an an accessor for `field-name` for conditions of type `type`."
@@ -137,7 +162,7 @@
                             comp))
                      (::components (ex-data cond)))]
         (nth (:arguments comp) i)
-        (throw (Error. (str cond " is not a condition of type " type)))))))
+        (throw (new Error (str cond " is not a condition of type " type)))))))
 
 (defmacro define-condition-type
   "    (define-condition-type <condition-type>
@@ -399,3 +424,26 @@
           (pr irritant))
         (.write w "\n")))
     (print-stack-trace-of c)))
+
+#+cljs
+(defn print-condition
+  [c]
+  (let [[type who message stuff] (decode-condition c)]
+    (print (name type))
+    (print ": ")
+    (if (string? message)
+      (let [s message]
+        (print s))
+      (print message))
+    (let [spaces
+          (apply str (repeat (+ (count (name type)) 2)
+                             \space))]
+      (when who
+        (print " [")
+        (print who)
+        (print "]"))
+      (doseq [irritant stuff]
+        (print "\n")
+        (print spaces)
+        (pr irritant))
+      (print "\n"))))

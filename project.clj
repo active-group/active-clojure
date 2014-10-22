@@ -57,6 +57,8 @@
 
   :hooks [cljx.hooks leiningen.cljsbuild]
 
+  :jar-exclusions [#"^cljx/"]
+
   :aliases {"testall" ["do" "cljx," "test"]}
   
   :global-vars {*warn-on-reflection* true})

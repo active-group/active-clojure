@@ -1,5 +1,6 @@
 (ns active.clojure.record-test
   (:require #+clj [active.clojure.record :refer (define-record-type)]
+            [active.clojure.lens :as lens]
             #+clj [clojure.test :refer :all]
             #+cljs ;; The following is needed because the unique test
 		   ;; below contains `Throwable`.
@@ -45,3 +46,53 @@
     (is (= 2 (pua p)))
     (is (= 1 (puc p)))
     (is (nil? (pub p)))))
+
+;; Records with lenses
+
+(defn law-1-holds [l data v]
+  ;; you get back what you put in
+  (is (= v
+         (lens/yank (lens/shove data l v) l))))
+
+(defn law-2-holds [l data]
+  ;; putting back what you got doesn't change anything
+  (is (= data
+         (lens/shove data l (lens/yank data l)))))
+
+(defn law-3-holds [l data v1 v2]
+  ;; second set wins, or setting once is the same as setting twice
+  (is (= (lens/shove data l v1)
+         (lens/shove (lens/shove data l v2) l v1))))
+
+(defn lens-laws-hold [l data v1 v2]
+  (and (law-1-holds l data v1)
+       (law-2-holds l data)
+       (law-3-holds l data v1 v2)))
+
+(define-record-type LensPare
+  (lens-kons a b)
+  lens-pare?
+  [(a lens-kar lens-kar-lens)
+   (b lens-kdr lens-kdr-lens)])
+
+(deftest pare-lens
+  (lens-laws-hold lens-kar-lens (lens-kons 1 2) 23 42)
+  (lens-laws-hold lens-kdr-lens (lens-kons 1 2) 23 42)
+  (is (= (lens-kons "a" 42)
+         (lens/shove (lens-kons 23 42) lens-kar-lens "a")))
+  (is (= (lens-kons 23 "b")
+         (lens/shove (lens-kons 23 42) lens-kdr-lens "b"))))
+
+(define-record-type Quadruple
+  (quadruple a b c d)
+  quadruple?
+  [(a quadruple-one quadruple-one-lens)
+   b quadruple-two
+   (c quadruple-three quadruple-three-lens)
+   d quadruple-four])
+
+(deftest quadruple-lens
+  (lens-laws-hold quadruple-one-lens (quadruple 'a 'b 'c 'd) 12 78)
+  (lens-laws-hold quadruple-three-lens (quadruple 'a 'b 'c 'd) 12 78)
+  (is (= (quadruple 4 8 15 16)
+         (lens/shove (quadruple 108 8 15 16) quadruple-one-lens 4))))

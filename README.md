@@ -26,7 +26,7 @@ languages](http://www.haskellforall.com/2013/05/program-imperatively-using-haske
 
 ### Debugging
 
-The `active.clojure.lens` namespace implements some useful debugging
+The `active.clojure.debug` namespace implements some useful debugging
 tools such as a macro `pret` that prints and returns its argument.
 
 ## License

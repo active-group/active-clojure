@@ -6,16 +6,6 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojurescript "0.0-2371"]]
 
-  :plugins [;; NB: The :exclusions argument quiets some version-ranges warning.
-            [com.keminglabs/cljx "0.4.0" :exclusions [org.clojure/clojure]]
-            [lein-cljsbuild "1.0.3"]
-            ;; NB: This needs a version of clojurescript.test with the Nashorn runner,
-            ;; for example from the nashorn-runner branch from
-            ;; https://github.com/active-group/clojurescript.test
-            ;; The :exclusions argument quiets some version-ranges warning.
-            [com.cemerick/clojurescript.test "0.3.2-SNAPSHOT"  :exclusions [org.clojure/clojure]]
-            [org.bodil/lein-nashorn "0.1.2"]]
-
   :cljx {:builds [{:source-paths ["src/cljx"]
                    :output-path "target/generated/src"
                    :rules :clj}
@@ -55,10 +45,24 @@
                               ;; open test-resources/unit-tests.html in a browser and look at the JavaScript console
                               }}
 
+
+  :plugins [[lein-cljsbuild "1.0.3"]
+            ;; NB: This needs a version of clojurescript.test with the Nashorn runner,
+            ;; for example from the nashorn-runner branch from
+            ;; https://github.com/active-group/clojurescript.test
+            ;; The :exclusions argument quiets some version-ranges warning.
+            [com.cemerick/clojurescript.test "0.3.2-SNAPSHOT"  :exclusions [org.clojure/clojure]]
+            [org.bodil/lein-nashorn "0.1.2"]]
+
+  :profiles {:dev {:plugins [ ;; NB: The :exclusions argument quiets some version-ranges warning.
+                             [com.keminglabs/cljx "0.4.0" :exclusions [org.clojure/clojure]]
+                             ]}}
+  
+  
   :hooks [cljx.hooks leiningen.cljsbuild]
-
+  
   :jar-exclusions [#"^cljx/"]
-
+  
   :aliases {"testall" ["do" "cljx," "test"]}
   
   :global-vars {*warn-on-reflection* true})

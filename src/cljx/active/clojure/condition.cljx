@@ -12,7 +12,7 @@
 
   Condition objects are represented as specially marked `ex-info` objects.
 
-  One notable differnce to the R6RS design is that there is no user-facing type for 
+  One notable difference to the R6RS design is that there is no user-facing type for 
   'simple conditions', nor are they regular records."}
   active.clojure.condition
   (:refer-clojure :exclude (assert))

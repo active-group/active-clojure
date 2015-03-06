@@ -340,8 +340,10 @@
              (cons (first l) (recurse (rest l)))))]
     (recurse l)))
 
-(def ^:const ^:private covered-condition-types
-  #{&error &assertion &serious})
+;; Turning this into a constant def screws things up somehow.
+(defn covered-condition-types
+  []
+  #{&error &assertion &serious &violation})
 
 (defn decode-condition
   "Return a keyword describing the type,

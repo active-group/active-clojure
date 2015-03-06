@@ -45,8 +45,7 @@
                               }}
 
 
-  :plugins [[lein-cljsbuild "1.0.5"]
-            [org.bodil/lein-nashorn "0.1.2"]]
+  :plugins [[lein-cljsbuild "1.0.5"]]
 
   :profiles {:dev {:plugins [ ;; NB: The :exclusions argument quiets some version-ranges warning.
                              [com.keminglabs/cljx "0.6.0" :exclusions [org.clojure/clojure]]

@@ -3,10 +3,10 @@
                                               #+cljs Throwable)]
             [active.clojure.condition :as c]
             #+clj [clojure.test :refer :all]
-            #+cljs [cemerick.cljs.test])
+            #+cljs [cljs.test])
   #+cljs 
-  (:require-macros [cemerick.cljs.test
-                    :refer (is deftest with-test run-tests testing test-var)]
+  (:require-macros [cljs.test
+                    :refer (is deftest run-tests testing)]
                    [active.clojure.condition :refer (define-condition-type guard)]))
 
 #+cljs

@@ -1,10 +1,10 @@
 (ns active.clojure.debug-test
   (:require #+clj [active.clojure.debug :as dbg]
             #+clj [clojure.test :refer :all]
-            #+cljs [cemerick.cljs.test])
+            #+cljs [cljs.test])
   #+cljs 
-  (:require-macros [cemerick.cljs.test
-                    :refer (is deftest with-test run-tests testing test-var)]
+  (:require-macros [cljs.test
+                    :refer (is deftest run-tests testing)]
                    [active.clojure.debug :as dbg]))
 
 #+cljs

@@ -1,10 +1,10 @@
 (ns active.clojure.lens-test
   (:require [active.clojure.lens :as lens]
             #+clj [clojure.test :refer :all]
-            #+cljs [cemerick.cljs.test :as t])
+            #+cljs [cljs.test :as t])
   #+cljs
-  (:require-macros [cemerick.cljs.test
-                    :refer (is deftest with-test run-tests testing test-var)]))
+  (:require-macros [cljs.test
+                    :refer (is deftest run-tests testing)]))
 
 #+cljs
 (enable-console-print!)

@@ -5,10 +5,10 @@
             #+cljs ;; The following is needed because the unique test
 		   ;; below contains `Throwable`.
             #+cljs [active.clojure.condition :refer (Throwable)]
-            #+cljs [cemerick.cljs.test])
+            #+cljs [cljs.test])
   #+cljs 
-  (:require-macros [cemerick.cljs.test
-                    :refer (is deftest with-test run-tests testing test-var)]
+  (:require-macros [cljs.test
+                    :refer (is deftest run-tests testing)]
                    [active.clojure.record :refer (define-record-type)]))
 
 #+cljs

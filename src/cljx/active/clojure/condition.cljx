@@ -451,10 +451,3 @@
         (pr irritant))
       (print "\n"))))
 
-#+clj
-(defn repl-caught
-  [& [e]]
-  (let [e (or e *e)]
-    (if (condition? e)
-      (print-condition e *err*)
-      (main/repl-caught e))))

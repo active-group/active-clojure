@@ -195,12 +195,12 @@
   `(do
      (let [total-field-count# (+ ~(count ?field-specs) (:total-field-count ~?supertype))]
        (def ~?condition-type
-         (ConditionType. '~?condition-type ~?supertype 
-                         '[~@(map first ?field-specs)] total-field-count#))
+         (->ConditionType '~?condition-type ~?supertype 
+                          '[~@(map first ?field-specs)] total-field-count#))
        (defn ~?constructor
          [& args#]
          {:pre [(= (count args#) total-field-count#)]}
-         (make-condition [(ConditionComponent. ~?condition-type (vec args#))])) 
+         (make-condition [(->ConditionComponent ~?condition-type (vec args#))])) 
        (def ~?predicate (condition-predicate ~?condition-type))
        ~@(map (fn [[?field-name ?accessor]]
                 `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))

@@ -46,7 +46,7 @@
                               }}
 
 
-  :plugins [[lein-cljsbuild "1.0.3"]
+  :plugins [[lein-cljsbuild "1.0.5"]
             ;; NB: This needs a version of clojurescript.test with the Nashorn runner,
             ;; for example from the nashorn-runner branch from
             ;; https://github.com/active-group/clojurescript.test

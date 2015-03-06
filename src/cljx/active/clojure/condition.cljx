@@ -17,7 +17,8 @@
   active.clojure.condition
   (:refer-clojure :exclude (assert))
   #+clj (:require [clojure.core :as core] ; get assert back
-                  [clojure.stacktrace :as stack])
+                  [clojure.stacktrace :as stack]
+                  [clojure.main :as main])
   #+cljs (:require-macros [active.clojure.condition 
                            :refer (define-condition-type assert condition raise guard)]
                           [cljs.core :as core])
@@ -374,7 +375,7 @@
 
         more-stuff (delete-first
                     (fn [comp] ; make sure interesting subtypes still get printed
-                      (contains? covered-condition-types
+                      (contains? (covered-condition-types)
                                  (:type comp)))
                     ;; we don't expect interesting subtypes here
                     (delete-first
@@ -449,3 +450,11 @@
         (print spaces)
         (pr irritant))
       (print "\n"))))
+
+#+clj
+(defn repl-caught
+  [& [e]]
+  (let [e (or e *e)]
+    (if (condition? e)
+      (print-condition e *err*)
+      (main/repl-caught e))))

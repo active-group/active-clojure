@@ -1,16 +1,16 @@
 (ns active.clojure.condition-test
-  (:require [active.clojure.condition :refer (&condition combine-conditions #+clj define-condition-type #+clj guard 
-                                              #+cljs Throwable)]
+  (:require [active.clojure.condition :refer (&condition combine-conditions #?(:clj define-condition-type) #?(:clj guard)
+                                              #?(:cljs Throwable))]
             [active.clojure.condition :as c]
-            #+clj [clojure.test :refer :all]
-            #+cljs [cljs.test])
-  #+cljs 
+            #?(:clj [clojure.test :refer :all])
+            #?(:cljs [cljs.test]))
+  #?(:cljs 
   (:require-macros [cljs.test
                     :refer (is deftest run-tests testing)]
-                   [active.clojure.condition :refer (define-condition-type guard)]))
+                   [active.clojure.condition :refer (define-condition-type guard)])))
 
-#+cljs
-(enable-console-print!)
+#?(:cljs
+(enable-console-print!))
 
 (define-condition-type &c &condition
   make-c c?

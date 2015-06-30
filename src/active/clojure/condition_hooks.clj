@@ -1,10 +1,9 @@
 (ns active.clojure.condition-hooks
   (:require [active.clojure.condition :as c]
-            #+clj [clojure.main :as main]
-            #+clj [clojure.test :refer :all]
-            #+clj [clojure.stacktrace :as stack]))
+            [clojure.main :as main]
+            [clojure.test :refer :all]
+            [clojure.stacktrace :as stack]))
 
-#+clj
 (defn repl-caught
   [& [e]]
   (let [e (or e *e)]
@@ -14,7 +13,6 @@
 
 ;; This trick (if it is one) stolen from humane-test-output
 
-#+clj
 (defonce activation-body
   (delay
    (defmethod report :error [m]
@@ -35,6 +33,5 @@
 
           :else (prn actual)))))))
 
-#+clj
 (defn activate-clojure-test! []
   @activation-body)

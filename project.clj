@@ -6,36 +6,17 @@
   :dependencies [[org.clojure/clojure "1.7.0-RC1"]
                  [org.clojure/clojurescript "0.0-3308"]]
 
-  :cljx {:builds [{:source-paths ["src/cljx"]
-                   :output-path "target/generated/src"
-                   :rules :clj}
-
-                  {:source-paths ["src/cljx"]
-                   :output-path "target/generated/src"
-                   :rules :cljs}
-
-                  {:source-paths ["test/cljx"]
-                   :output-path "target/generated/test/clj"
-                   :rules :clj}
- 
-                  {:source-paths ["test/cljx"]
-                   :output-path "target/generated/test/cljs"
-                   :rules :cljs}]}
-  :source-paths ["src"
-                 "target/generated/src"]
-
-  :test-paths ["test" 
-               "target/generated/test/clj"]
+  :generated-paths ["target"]
+    
+  :clean-targets ^{:protect false} [:generated-paths]
 
   :cljsbuild {:builds
-              {:dev {:source-paths ["target/classes"]
+              {:dev {:source-paths ["src"]
                      :compiler {:output-to "target/main.js"
                                 :source-map "target/main.map"
                                 :optimizations :whitespace
                                 :pretty-print true}}
-               :test {:source-paths ["src"
-                                     "target/generated/src"
-                                     "target/generated/test/cljs"]
+               :test {:source-paths ["src" "test"]
                       :compiler {:output-to "target/test.js"
                                  :source-map "target/test.map"
                                  :optimizations :whitespace
@@ -47,15 +28,4 @@
 
   :plugins [[lein-cljsbuild "1.0.6"]]
 
-  :profiles {:dev {:plugins [ ;; NB: The :exclusions argument quiets some version-ranges warning.
-                             [com.keminglabs/cljx "0.6.0" :exclusions [org.clojure/clojure]]
-                             ]}}
-  
-  
-  :prep-tasks [["cljx" "once"] "javac" "compile"]
-  
-  :jar-exclusions [#"^cljx/"]
-  
-  :aliases {"testall" ["do" "cljx," "test"]}
-  
   :global-vars {*warn-on-reflection* true})

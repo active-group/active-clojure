@@ -22,7 +22,7 @@
   (-shove lens data v))
 
 ;; Keywords are lenses over a map (or object), focusing on the value associated with that keyword.
-(extend-type #+clj clojure.lang.Keyword #+cljs cljs.core.Keyword
+(extend-type #?(:clj clojure.lang.Keyword) #?(:cljs cljs.core.Keyword)
   Lens
   (-yank [kw data] (kw data))
   (-shove [kw data v] (assoc data kw v)))
@@ -181,14 +181,14 @@
         (fn [data v] (map #(shove %1 %2 %3)
                          data lenses v))))
 
-#+cljs
-(comment not very general: defn repeated
-  [n]
-  (lens #(take n (repeat %))
-        (fn [data v]
-          (or (some #(not (= % data))
-                    v)
-              data))))
+;; not very general: 
+;; (defn repeated
+;;   [n]
+;;   (lens #(take n (repeat %))
+;;         (fn [data v]
+;;           (or (some #(not (= % data))
+;;                     v)
+;;               data))))
 
 (defn ++
   "Returns a lens over some data structure that shows a sequence of

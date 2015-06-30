@@ -16,17 +16,17 @@
   'simple conditions', nor are they regular records."}
   active.clojure.condition
   (:refer-clojure :exclude (assert))
-  #+clj (:require [clojure.core :as core] ; get assert back
-                  [clojure.stacktrace :as stack]
-                  [clojure.main :as main])
-  #+cljs (:require-macros [active.clojure.condition 
-                           :refer (define-condition-type assert condition raise guard)]
-                          [cljs.core :as core])
-  #+clj (:import clojure.lang.ExceptionInfo))
+  #?(:clj (:require [clojure.core :as core] ; get assert back
+                    [clojure.stacktrace :as stack]
+                    [clojure.main :as main]))
+  #?(:cljs (:require-macros [active.clojure.condition 
+                             :refer (define-condition-type assert condition raise guard)]
+                            [cljs.core :as core]))
+  #?(:clj (:import clojure.lang.ExceptionInfo)))
 
 (defn condition?
   [x]
-  (and #+clj (instance? ExceptionInfo x)
+  (and #?(:clj (instance? ExceptionInfo x))
        (contains? (ex-data x) ::condition)))
 
 (declare print-condition)
@@ -55,14 +55,14 @@
 ;; TODO Also, there is no run-time-independent way to get a stack
 ;; trace in ClojureScript.
 
-#+clj
+#?(:clj
 (defmethod print-method ExceptionInfo [^ExceptionInfo exc ^java.io.Writer w]
   (if (condition? exc)
     (print-condition exc w)
-    (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc))))))
+    (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc)))))))
 
-#+cljs
-(def *ns* "<cljs>")
+#?(:cljs
+(def *ns* "<cljs>"))
 
 (defn ^:private ex-info-msg 
   [namespace]
@@ -106,8 +106,8 @@
 
   For internal use only."
   [condition-components]
-  (ex-info #+clj (ex-info-msg *ns*)
-           #+cljs (ex-info-msg "<cljs>")
+  (ex-info #?(:clj (ex-info-msg *ns*))
+           #?(:cljs (ex-info-msg "<cljs>"))
            {::condition true
             ::components condition-components}))
 
@@ -128,27 +128,27 @@
     (and (condition? x)
          (condition-of-type? type x))))
 
-#+cljs
+#?(:cljs
 (defn index-of [coll v]
   (let [i (count (take-while #(not= v %) coll))]
     (when (or (< i (count coll))
               (= v (last coll)))
-      i)))
+      i))))
 
 (defn- field-index
   "Compute the field index of field named `field-name` for type `type`."
   [type field-name]
-  (let [#+clj ^java.util.List fn 
-        #+cljs fn (:field-names type)
-        local-index (#+clj .indexOf #+cljs index-of fn field-name)]
+  (let [#?(:clj ^java.util.List fn)
+        #?(:cljs fn) (:field-names type)
+        local-index (#?(:clj .indexOf) #?(:cljs index-of) fn field-name)]
     (core/assert (not= -1 local-index))
     (if-let [supertype (:supertype type)]
       (+ (:total-field-count supertype)
          local-index)
       local-index)))
 
-#+cljs
-(def Error js/Error)
+#?(:cljs
+(def Error js/Error))
 
 (defn condition-accessor
   "Create an an accessor for `field-name` for conditions of type `type`."
@@ -165,6 +165,7 @@
         (nth (:arguments comp) i)
         (throw (new Error (str cond " is not a condition of type " type)))))))
 
+#?(:clj
 (defmacro define-condition-type
   "    (define-condition-type <condition-type>
         <supertype>
@@ -204,7 +205,7 @@
        (def ~?predicate (condition-predicate ~?condition-type))
        ~@(map (fn [[?field-name ?accessor]]
                 `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))
-              ?field-specs))))
+              ?field-specs)))))
 
 ; These standard condition types correspond directly to R6RS Scheme
 
@@ -267,7 +268,7 @@
                                (make-message-condition message)
                                (make-irritants-condition irritants)))))
 
-#+clj
+#?(:clj
 (defn stack-trace-who
   "Get a suitable argument for [[&who]] from an exception object."
   []
@@ -281,8 +282,9 @@
         (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)$" (str class))]
           (if (and match (= "invoke" method))
             (apply format "%s/%s" (rest match))
-            (format "%s.%s" class method)))))))
+            (format "%s.%s" class method))))))))
 
+#?(:clj
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."
@@ -297,23 +299,26 @@
        `(when-not ~x
           (assertion-violation (stack-trace-who)
                                (str "Assert failed: " ~message)
-                               '~x)))))
+                               '~x))))))
 
 
+#?(:clj
 (defmacro condition
   [?base ?message & ?irritants]
   `(combine-conditions ~?base
                        (make-who-condition (stack-trace-who))
                        (make-message-condition ~?message)
-                       (make-irritants-condition [~@?irritants])))
+                       (make-irritants-condition [~@?irritants]))))
 
+#?(:clj
 (defmacro raise
   [?base ?message & ?irritants]
-  `(throw (condition ~?base ~?message ~@?irritants)))
+  `(throw (condition ~?base ~?message ~@?irritants))))
 
-#+cljs
-(def Throwable js/Object)
+#?(:cljs
+(def Throwable js/Object))
 
+#?(:clj
 (defmacro guard
   [?handling & ?body]
   (when-not (vector? ?handling)
@@ -329,7 +334,7 @@
           ~@(rest ?handling)
           ~@(if (= :else (last (butlast ?handling)))
               `()
-              `(:else (throw ~?id))))))))
+              `(:else (throw ~?id)))))))))
 
 (defn delete-first
   [pred? l]
@@ -388,7 +393,7 @@
 
     [type who message (concat stuff more-stuff)]))
 
-#+clj
+#?(:clj
 (defn- print-stack-trace-of
   [^Throwable exc]
   (let [st (.getStackTrace exc)]
@@ -399,9 +404,9 @@
     (doseq [e (rest st)]
       (print " ")
       (stack/print-trace-element e)
-      (newline))))
+      (newline)))))
 
-#+clj
+#?(:clj
 (defn print-condition
   [c ^java.io.Writer w]
   (binding [*out* w]
@@ -426,9 +431,9 @@
             (.write spaces))
           (pr irritant))
         (.write w "\n")))
-    (print-stack-trace-of c)))
+    (print-stack-trace-of c))))
 
-#+cljs
+#?(:cljs
 (defn print-condition
   [c]
   (let [[type who message stuff] (decode-condition c)]
@@ -449,5 +454,5 @@
         (print "\n")
         (print spaces)
         (pr irritant))
-      (print "\n"))))
+      (print "\n")))))
 

@@ -1,13 +1,13 @@
 (ns active.clojure.lens-test
   (:require [active.clojure.lens :as lens]
-            #+clj [clojure.test :refer :all]
-            #+cljs [cljs.test :as t])
-  #+cljs
+            #?(:clj [clojure.test :refer :all])
+            #?(:cljs [cljs.test :as t]))
+  #?(:cljs
   (:require-macros [cljs.test
-                    :refer (is deftest run-tests testing)]))
+                    :refer (is deftest run-tests testing)])))
 
-#+cljs
-(enable-console-print!)
+#?(:cljs
+(enable-console-print!))
 
 (defn law-1-holds [l data v]
   ;; you get back what you put in
@@ -163,7 +163,7 @@
            (lens/shove 42 l 13)))))
 
 (deftest xmap
-  (let [l (lens/xmap str #+clj read-string #+cljs js/parseInt)]
+  (let [l (lens/xmap str #?(:clj read-string) #?(:cljs js/parseInt))]
     (lens-laws-hold l 42 "13" "1")
     (is (= "42"
            (lens/yank 42 l)))

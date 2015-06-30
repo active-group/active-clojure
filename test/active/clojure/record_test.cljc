@@ -1,18 +1,18 @@
 (ns active.clojure.record-test
-  (:require #+clj [active.clojure.record :refer (define-record-type)]
+  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             [active.clojure.lens :as lens]
-            #+clj [clojure.test :refer :all]
-            #+cljs ;; The following is needed because the unique test
-		   ;; below contains `Throwable`.
-            #+cljs [active.clojure.condition :refer (Throwable)]
-            #+cljs [cljs.test])
-  #+cljs 
+            #?(:clj [clojure.test :refer :all])
+            ;; The following is needed because the unique test
+            ;; below contains `Throwable`.
+            #?(:cljs [active.clojure.condition :refer (Throwable)])
+            #?(:cljs [cljs.test]))
+  #?(:cljs 
   (:require-macros [cljs.test
                     :refer (is deftest run-tests testing)]
-                   [active.clojure.record :refer (define-record-type)]))
+                   [active.clojure.record :refer (define-record-type)])))
 
-#+cljs
-(enable-console-print!)
+#?(:cljs
+(enable-console-print!))
 
 (define-record-type Pare
   (kons a b)

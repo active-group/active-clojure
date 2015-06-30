@@ -4,12 +4,12 @@
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
   [type rec accessor]
-  #+clj
-  (do)
-  #+cljs
-  (when-not (instance? type rec) 
-    (throw (error accessor "Wrong record type passed to accessor." rec type))))
+  #?(:clj (do))
+  #?(:cljs
+     (when-not (instance? type rec) 
+       (throw (error accessor "Wrong record type passed to accessor." rec type)))))
 
+#?(:clj
 (defmacro define-record-type
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
   (when-not (and (list? ?constructor-call)
@@ -67,7 +67,7 @@
                                                                        ?v 
                                                                        `(~?shove-accessor ~?data)))
                                                                    ?field-pairs)))))))
-              ?field-pairs-lense))))
+              ?field-pairs-lense)))))
 
 
 

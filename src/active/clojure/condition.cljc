@@ -193,19 +193,22 @@
   Each `<accessor>` is bound to a procedure that extracts the
   corresponding field from a condition of type `<condition-type>`."
   [?condition-type ?supertype ?constructor ?predicate & ?field-specs]
-  `(do
-     (let [total-field-count# (+ ~(count ?field-specs) (:total-field-count ~?supertype))]
-       (def ~?condition-type
-         (->ConditionType '~?condition-type ~?supertype 
-                          '[~@(map first ?field-specs)] total-field-count#))
-       (defn ~?constructor
-         [& args#]
-         {:pre [(= (count args#) total-field-count#)]}
-         (make-condition [(->ConditionComponent ~?condition-type (vec args#))])) 
-       (def ~?predicate (condition-predicate ~?condition-type))
-       ~@(map (fn [[?field-name ?accessor]]
-                `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))
-              ?field-specs)))))
+  (let [?constructor-params (concat (map (fn [[?field-name _]]
+                                           (gensym ?field-name))
+                                         ?field-specs)
+                                    (map gensym (:field-names (eval ?supertype))))]
+    `(do
+       (let [total-field-count# (+ ~(count ?field-specs) (:total-field-count ~?supertype))]
+         (def ~?condition-type
+           (->ConditionType '~?condition-type ~?supertype 
+                            '[~@(map first ?field-specs)] total-field-count#))
+         (defn ~?constructor
+           [~@?constructor-params]
+           (make-condition [(->ConditionComponent ~?condition-type (vector ~@?constructor-params))])) 
+         (def ~?predicate (condition-predicate ~?condition-type))
+         ~@(map (fn [[?field-name ?accessor]]
+                  `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))
+                ?field-specs))))))
 
 ; These standard condition types correspond directly to R6RS Scheme
 

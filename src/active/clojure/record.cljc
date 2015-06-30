@@ -33,6 +33,13 @@
                                 (if (contains? m :doc)
                                   m
                                   (assoc m :doc doc)))))]
+
+    (let [?field-names (set (map first ?field-pairs))]
+      (doseq [?constructor-arg ?constructor-args]
+        (when-not (contains? ?field-names ?constructor-arg)
+          (throw (IllegalArgumentException. (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
+
+
     `(do
        (defrecord ~?type
            [~@(map first ?field-pairs)]

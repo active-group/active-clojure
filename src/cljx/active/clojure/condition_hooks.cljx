@@ -35,5 +35,6 @@
 
           :else (prn actual)))))))
 
+#+clj
 (defn activate-clojure-test! []
   @activation-body)

@@ -3,8 +3,8 @@
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2985"]]
+  :dependencies [[org.clojure/clojure "1.7.0-RC1"]
+                 [org.clojure/clojurescript "0.0-3308"]]
 
   :cljx {:builds [{:source-paths ["src/cljx"]
                    :output-path "target/generated/src"
@@ -45,7 +45,7 @@
                               }}
 
 
-  :plugins [[lein-cljsbuild "1.0.5"]]
+  :plugins [[lein-cljsbuild "1.0.6"]]
 
   :profiles {:dev {:plugins [ ;; NB: The :exclusions argument quiets some version-ranges warning.
                              [com.keminglabs/cljx "0.6.0" :exclusions [org.clojure/clojure]]

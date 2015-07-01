@@ -71,12 +71,22 @@
 (defrecord ConditionType
     [name supertype field-names total-field-count])
 
+#?(:clj
+(defmethod print-method ConditionType [^ConditionType ct ^java.io.Writer w]
+  (.write w (name (:name ct)))))
+
 (def ^{:doc "Root of the condition-type hierarchy."}
   &condition
   (ConditionType. '&condition nil [] 0))
 
 (defrecord ConditionComponent
     [type arguments])
+
+#?(:clj
+(defmethod print-method ConditionComponent [^ConditionComponent cc ^java.io.Writer w]
+  (print-method (:type cc) w)
+  (.write w ": ")
+  (print-method (:arguments cc) w)))
 
 (defn- condition-component?
   "Is object a condition component?"
@@ -452,10 +462,11 @@
       (doto w
         (.write (name type))
         (.write ": "))
-      (if (string? message)
-        (let [^String s message]
-          (.write w s))
-        (print message))
+      (cond
+       (nil? message) (println "<no message>")
+       (string? message) (let [^String s message]
+                           (.write w s))
+       :else (print message))
       (let [^String spaces
             (apply str (repeat (+ (count (name type)) 2)
                                \space))]
@@ -477,10 +488,11 @@
   (let [[type who message stuff] (decode-condition c)]
     (print (name type))
     (print ": ")
-    (if (string? message)
-      (let [s message]
-        (print s))
-      (print message))
+      (cond
+       (nil? message) (println "<no message>")
+       (string? message) (let [^String s message]
+                           (.write w s))
+       :else (print message))
     (let [spaces
           (apply str (repeat (+ (count (name type)) 2)
                              \space))]

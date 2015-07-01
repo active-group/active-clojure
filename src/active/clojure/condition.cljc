@@ -101,6 +101,8 @@
   [cond]
   (::components (ex-data cond)))
 
+(declare make-exception make-message-condition)
+
 (defn make-condition
   "Make a condition from components.
 
@@ -111,10 +113,38 @@
            {::condition true
             ::components condition-components}))
 
+#?(:clj
+(defn ->condition
+  "Coerce something into a condition object.
+
+  This yields `thing` if it's already a condition,
+  and an [[&exception]] condition if it's not."
+  [thing]
+  (cond
+   (condition? thing) thing
+
+   (instance? Throwable thing)
+   (make-condition (mapcat condition-components
+                           [(make-exception thing)
+                            (make-message-condition (.getMessage ^Throwable thing))]))
+
+   :else (clojure.core/assert (instance? Throwable thing) "not a throwable"))))
+
+#?(:cljs
+(defn ->condition
+  "Coerce something into a condition object.
+
+  This yields `thing` if it's already a condition,
+  and an [[&exception]] condition if it's not."
+  [thing]
+  (if (condition? thing)
+    thing
+    (make-exception thing))))
+
 (defn combine-conditions
   "Make a compound condition from constituents."
   [& component-conditions]
-  (make-condition (mapcat condition-components component-conditions)))
+  (make-condition (mapcat (comp condition-components ->condition) component-conditions)))
 
 (defn condition-of-type?
   "Does condition `cond` have type `type`?"
@@ -238,6 +268,11 @@
 (define-condition-type &who &condition
   make-who-condition who-condition?
   (who condition-who))
+
+(define-condition-type
+  ^{:doc "Exception that's not a condition."} &exception &error
+  make-exception exception?
+  (value exception-value))
 
 (defn error 
   "Throw an exception that signals that an error has occurred.

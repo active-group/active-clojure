@@ -19,6 +19,9 @@
   #?(:clj (:require [clojure.core :as core] ; get assert back
                     [clojure.stacktrace :as stack]
                     [clojure.main :as main]))
+  #?(:clj (:require [io.aviso.exception :as aviso-exception]
+                    [io.aviso.columns :as aviso-columns]
+                    [clojure.string :as string]))
   #?(:cljs (:require-macros [active.clojure.condition 
                              :refer (define-condition-type assert condition raise guard)]
                             [cljs.core :as core]))
@@ -442,17 +445,42 @@
     [type who message (concat stuff more-stuff)]))
 
 #?(:clj
-(defn- print-stack-trace-of
-  [^Throwable exc]
-  (let [st (.getStackTrace exc)]
-    (if-let [e (first st)]
-      (stack/print-trace-element e)
-      (print "[empty stack trace]"))
-    (newline)
-    (doseq [e (rest st)]
-      (print " ")
-      (stack/print-trace-element e)
-      (newline)))))
+(defn- preformat-stack-frame
+  [frame]
+  (cond
+    (:omitted frame)
+    (assoc frame :formatted-name (str (:omitted-frame aviso-exception/*fonts*) "..." (:reset aviso-exception/*fonts*))
+                 :file ""
+                 :line nil)
+
+    ;; When :names is empty, it's a Java (not Clojure) frame
+    (-> frame :names empty?)
+    (let [full-name      (str (:class frame) "." (:method frame))
+          formatted-name (str (:java-frame aviso-exception/*fonts*) full-name (:reset aviso-exception/*fonts*))]
+      (assoc frame
+        :formatted-name formatted-name))
+
+    :else
+    (let [names          (:names frame)
+          formatted-name (str
+                           (:clojure-frame aviso-exception/*fonts*)
+                           (->> names drop-last (string/join "/"))
+                           "/"
+                           (:function-name aviso-exception/*fonts*) (last names) (:reset aviso-exception/*fonts*))]
+      (assoc frame :formatted-name formatted-name)))))
+
+#?(:clj
+(defn print-stack-trace-of
+  [writer exception]
+  (let [elements (map preformat-stack-frame (aviso-exception/expand-stack-trace exception))]
+    (aviso-columns/write-rows writer [:formatted-name
+                                      "  "
+                                      (:source aviso-exception/*fonts*)
+                                      :file
+                                      [#(if (:line %) ": ") :left 2]
+                                      #(-> % :line str)
+                                      (:reset aviso-exception/*fonts*)]
+                              elements))))
 
 #?(:clj
 (defn print-condition
@@ -480,7 +508,7 @@
             (.write spaces))
           (pr irritant))
         (.write w "\n")))
-    (print-stack-trace-of c))))
+    (print-stack-trace-of w c))))
 
 #?(:cljs
 (defn print-condition

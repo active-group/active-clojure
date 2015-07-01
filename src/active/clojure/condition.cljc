@@ -491,7 +491,7 @@
         (.write (name type))
         (.write ": "))
       (cond
-       (nil? message) (println "<no message>")
+       (nil? message) (print "<no message>")
        (string? message) (let [^String s message]
                            (.write w s))
        :else (print message))
@@ -517,9 +517,8 @@
     (print (name type))
     (print ": ")
       (cond
-       (nil? message) (println "<no message>")
-       (string? message) (let [^String s message]
-                           (.write w s))
+       (nil? message) (print "<no message>")
+       (string? message) (print message)
        :else (print message))
     (let [spaces
           (apply str (repeat (+ (count (name type)) 2)

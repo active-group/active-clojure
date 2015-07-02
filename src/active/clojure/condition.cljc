@@ -115,7 +115,7 @@
   {:pre [(condition? cond)]}
   (::components (ex-data cond)))
 
-(declare make-throwable make-error make-assertion-violation make-message-condition)
+(declare make-throwable make-error make-assertion-violation make-message-condition make-who-condition)
 
 (defn make-condition
   "Make a condition from components.
@@ -128,6 +128,20 @@
             ::components condition-components}))
 
 #?(:clj
+(defn stack-trace-who
+  "Get a suitable argument for [[&who]] from an exception object."
+  [st]
+  ;; the top is the let, above that it's stack-trace-who itself
+  (if-let [^StackTraceElement e (nth st 2)]
+    (let [class (.getClassName e)
+          method (.getMethodName e)]
+      ;; adapted from clojure.stacktrace
+      (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)$" (str class))]
+        (if (and match (= "invoke" method))
+          (apply format "%s/%s" (rest match))
+          (format "%s.%s" class method)))))))
+
+#?(:clj
 (defn ->condition
   "Coerce something into a condition object.
 
@@ -138,14 +152,16 @@
    (condition? thing) thing
 
    (instance? Throwable thing)
-   (make-condition (mapcat condition-components
-                           (filter identity
-                                   [(make-throwable thing)
-                                    (make-message-condition (.getMessage ^Throwable thing))
-                                    (cond
-                                     (instance? Exception thing) (make-error)
-                                     (instance? Error thing) (make-assertion-violation)
-                                     :else nil)])))
+   (let [^Throwable throwable thing]
+     (make-condition (mapcat condition-components
+                             (filter identity
+                                     [(make-throwable throwable)
+                                      (make-message-condition (.getMessage throwable))
+                                      (cond
+                                       (instance? Exception throwable) (make-error)
+                                       (instance? Error throwable) (make-assertion-violation)
+                                       :else nil)
+                                      (make-who-condition (stack-trace-who (.getStackTrace throwable)))]))))
 
    :else (clojure.core/assert (instance? Throwable thing) "not a throwable"))))
 
@@ -328,35 +344,19 @@
                                (make-irritants-condition irritants)))))
 
 #?(:clj
-(defn stack-trace-who
-  "Get a suitable argument for [[&who]] from an exception object."
-  []
-  (let [^Thread thr (Thread/currentThread)
-        st (.getStackTrace thr)]
-    ;; the top is the let, above that it's stack-trace-who itself
-    (if-let [^StackTraceElement e (nth st 2)]
-      (let [class (.getClassName e)
-            method (.getMethodName e)]
-        ;; adapted from clojure.stacktrace
-        (let [match (re-matches #"^([A-Za-z0-9_.-]+)\$(\w+)$" (str class))]
-          (if (and match (= "invoke" method))
-            (apply format "%s/%s" (rest match))
-            (format "%s.%s" class method))))))))
-
-#?(:clj
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."
   ([x]
      (when *assert*
        `(when-not ~x
-          (assertion-violation (stack-trace-who)
+          (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
                                (str "Assertion failed")
                                '~x))))
   ([x message]
      (when *assert*
        `(when-not ~x
-          (assertion-violation (stack-trace-who)
+          (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
                                (str "Assert failed: " ~message)
                                '~x))))))
 
@@ -365,7 +365,7 @@
 (defmacro condition
   [?base ?message & ?irritants]
   `(combine-conditions ~?base
-                       (make-who-condition (stack-trace-who))
+                       (make-who-condition (stack-trace-who (.getStackTrace (Thread/currentThread))))
                        (make-message-condition ~?message)
                        (make-irritants-condition [~@?irritants]))))
 

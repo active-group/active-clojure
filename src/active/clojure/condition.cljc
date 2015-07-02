@@ -267,10 +267,6 @@
                        (partition 2 (first ?field-specs))
                        ;; legacy syntax
                        ?field-specs)
-        ?constructor-params (concat (map (fn [[?field-name _]]
-                                           (gensym ?field-name))
-                                         ?field-pairs)
-                                    (map gensym (:field-names (eval ?supertype))))
         document (fn [n doc]
                    (vary-meta n
                               (fn [m]
@@ -307,11 +303,11 @@
                                                     ?field-pairs))))))
            (->ConditionType '~?condition-type ~?supertype 
                             '[~@(map first ?field-pairs)] total-field-count#))
-         (def ~(document-with-arglist ?constructor 
-                                      (vec (map first ?field-pairs))
-                                      (str "Construct a " (reference ?condition-type) " condition."))
-           (fn [~@?constructor-params]
-             (make-condition [(->ConditionComponent ~?condition-type (vector ~@?constructor-params))]))) 
+         (def ~(document ?constructor 
+                         (str "Construct a " (reference ?condition-type) " condition."))
+           (fn [& args#]
+             {:pre [(= (count args#) total-field-count#)]}
+             (make-condition [(->ConditionComponent ~?condition-type (vec args#))])))
          (def ~(document-with-arglist ?predicate '[thing]
                                       (str "Is object a " (reference ?condition-type) " condition?"))
            (condition-predicate ~?condition-type))

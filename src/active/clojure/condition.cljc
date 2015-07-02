@@ -257,7 +257,10 @@
   type `<condition-type>` or any of its subtypes.
 
   Each `<accessor>` is bound to a function that extracts the
-  corresponding field from a condition of type `<condition-type>`."
+  corresponding field from a condition of type `<condition-type>`.
+
+  `:doc` properties attached to the metadata of `<condition-type>` and
+  `the <field>s will yield proper docstrings for the names defined by this form."
   [?condition-type ?supertype ?constructor ?predicate & ?field-specs]
   (let [?field-pairs (if (and (= 1 (count ?field-specs))
                               (vector? (first ?field-specs)))

@@ -112,9 +112,10 @@
 (defn- condition-components
   "Extract components from condition."
   [cond]
+  {:pre [(condition? cond)]}
   (::components (ex-data cond)))
 
-(declare make-exception make-message-condition)
+(declare make-exception make-error make-assertion-violation make-message-condition)
 
 (defn make-condition
   "Make a condition from components.
@@ -138,8 +139,13 @@
 
    (instance? Throwable thing)
    (make-condition (mapcat condition-components
-                           [(make-exception thing)
-                            (make-message-condition (.getMessage ^Throwable thing))]))
+                           (filter identity
+                                   [(make-exception thing)
+                                    (make-message-condition (.getMessage ^Throwable thing))
+                                    (cond
+                                     (instance? Exception thing) (make-error)
+                                     (instance? Error thing) (make-assertion-violation)
+                                     :else nil)])))
 
    :else (clojure.core/assert (instance? Throwable thing) "not a throwable"))))
 

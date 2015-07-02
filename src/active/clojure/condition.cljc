@@ -23,7 +23,7 @@
                     [io.aviso.columns :as aviso-columns]
                     [clojure.string :as string]))
   #?(:cljs (:require-macros [active.clojure.condition 
-                             :refer (define-condition-type assert condition raise guard)]
+                             :refer (define-condition-type assert condition raise guard throw-condition)]
                             [cljs.core :as core]))
   #?(:clj (:import clojure.lang.ExceptionInfo)))
 
@@ -311,37 +311,50 @@
   make-throwable throwable?
   (value throwable-value))
 
+#?(:clj
+(defmacro throw-condition
+  "Throw a condition.
+
+  For internal use."
+  [?base ?who ?message ?irritants]
+  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (instance? Throwable thing#))) ~?irritants)
+         irritants# (get g# false)
+         conditions# (get g# true)
+         who# ~?who]
+     (throw (apply combine-conditions
+                   ~?base
+                   (and who# (make-who-condition who#))
+                   (make-message-condition ~?message)
+                   (and (not-empty irritants#) (make-irritants-condition irritants#))
+                   conditions#)))))
+
 (defn error 
   "Throw an exception that signals that an error has occurred.
 
   This function should be called when an error has occurred,
   typically caused by something that has gone wrong in the interaction
-  of the program with the external world or the user."
+  of the program with the external world or the user.
+
+  The `irritants` arguments can be conditions, in which case they're included
+  in the resulting condition, or non-conditions, which are included in an
+  [[&irritants]] condition."
   [who message & irritants]
-  (if who
-    (throw (combine-conditions (make-error)
-                               (make-who-condition who)
-                               (make-message-condition message)
-                               (make-irritants-condition irritants)))
-    (throw (combine-conditions (make-error)
-                               (make-message-condition message)
-                               (make-irritants-condition irritants)))))
+  (throw-condition (make-error) who message irritants))
 
 (defn assertion-violation
   "Throw an exception that signals that an assertion was violated.
 
-  THis should be called when an invalid call to a procedure was made,
+  This should be called when an invalid call to a procedure was made,
   either passing an invalid number of arguments, or passing an argument
-  that it is not specified to handle."
+  that it is not specified to handle.
+
+  The `irritants` arguments can be conditions, in which case they're included
+  in the resulting condition, or non-conditions, which are included in an
+  [[&irritants]] condition.
+
+  On Java, `irritants` can also include ``Throwable`` objects."
   [who message & irritants]
-  (if who
-    (throw (combine-conditions (make-assertion-violation)
-                               (make-who-condition who)
-                               (make-message-condition message)
-                               (make-irritants-condition irritants)))
-    (throw (combine-conditions (make-assertion-violation)
-                               (make-message-condition message)
-                               (make-irritants-condition irritants)))))
+  (throw-condition (make-assertion-violation) who message irritants))
 
 #?(:clj
 (defmacro assert

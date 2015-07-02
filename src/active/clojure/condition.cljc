@@ -306,6 +306,13 @@
   make-who-condition who-condition?
   (who condition-who))
 
+(define-condition-type &location &condition
+  make-location-condition location-condition?
+  ;; any of these can be nil
+  (namespace location-condition-namespace)
+  (file location-condition-file)
+  (line location-condition-line))
+
 (define-condition-type
   ^{:doc "Throwable value that's not a condition."} &throwable &serious
   make-throwable throwable?
@@ -362,16 +369,26 @@
   logical true."
   ([x]
      (when *assert*
-       `(when-not ~x
-          (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
-                               (str "Assertion failed")
-                               '~x))))
+       (let [?ns (str *ns*)
+             ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
+             ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
+             ?line  (:line (meta &form))]
+         `(when-not ~x
+            (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
+                                 (str "Assertion failed")
+                                 (make-location-condition '~?ns ~?file ~?line)
+                                 '~x)))))
   ([x message]
      (when *assert*
-       `(when-not ~x
-          (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
-                               (str "Assert failed: " ~message)
-                               '~x))))))
+       (let [?ns (str *ns*)
+             ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
+             ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
+             ?line  (:line (meta &form))]
+         `(when-not ~x
+            (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
+                                 (str "Assert failed: " ~message)
+                                 (make-location-condition '~?ns ~?file ~?line)
+                                 '~x)))))))
 
 
 #?(:clj

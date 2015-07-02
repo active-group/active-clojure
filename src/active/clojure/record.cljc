@@ -89,7 +89,9 @@
        (def ~(document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
          (fn [x#]
            (instance? ~?type x#)))
-       (def ~(document ?constructor (str "Construct a `" ?type "`"
+       (def ~(document-with-arglist ?constructor 
+                                    (vec ?constructor-args)
+                                    (str "Construct a `" ?type "`"
                                          (name-doc ?type)
                                          " record.\n"
                                          (apply str

@@ -69,11 +69,11 @@
        (law-2-holds l data)
        (law-3-holds l data v1 v2)))
 
-(define-record-type LensPare
+(define-record-type ^{:doc "Lens example"} LensPare
   (lens-kons a b)
   lens-pare?
-  [(a lens-kar lens-kar-lens)
-   (b lens-kdr lens-kdr-lens)])
+  [(^{:doc "a field"} a lens-kar lens-kar-lens)
+   (^{:doc "b field"} b lens-kdr lens-kdr-lens)])
 
 (deftest pare-lens
   (lens-laws-hold lens-kar-lens (lens-kons 1 2) 23 42)

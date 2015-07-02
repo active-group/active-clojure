@@ -20,7 +20,7 @@
   (when-not (even? (count (remove seq? ?field-specs)))
     (throw (IllegalArgumentException. (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
   (when-not (every? true? (map #(= 3 (count %1)) (filter seq? ?field-specs)))
-    (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lense in " *ns* " " (meta &form)))))
+    (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form)))))
 
   (let [?field-pairs (partition 2 (flatten (map #(if (seq? %1) (butlast %1) %1) ?field-specs)))
         ?field-pairs-lense (filter seq? ?field-specs)

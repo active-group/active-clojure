@@ -115,7 +115,7 @@
   {:pre [(condition? cond)]}
   (::components (ex-data cond)))
 
-(declare make-exception make-error make-assertion-violation make-message-condition)
+(declare make-throwable make-error make-assertion-violation make-message-condition)
 
 (defn make-condition
   "Make a condition from components.
@@ -140,7 +140,7 @@
    (instance? Throwable thing)
    (make-condition (mapcat condition-components
                            (filter identity
-                                   [(make-exception thing)
+                                   [(make-throwable thing)
                                     (make-message-condition (.getMessage ^Throwable thing))
                                     (cond
                                      (instance? Exception thing) (make-error)
@@ -158,7 +158,7 @@
   [thing]
   (if (condition? thing)
     thing
-    (make-exception thing))))
+    (make-throwable thing))))
 
 (defn combine-conditions
   "Make a compound condition from constituents."
@@ -289,9 +289,9 @@
   (who condition-who))
 
 (define-condition-type
-  ^{:doc "Exception that's not a condition."} &exception &error
-  make-exception exception?
-  (value exception-value))
+  ^{:doc "Throwable value that's not a condition."} &throwable &serious
+  make-throwable throwable?
+  (value throwable-value))
 
 (defn error 
   "Throw an exception that signals that an error has occurred.

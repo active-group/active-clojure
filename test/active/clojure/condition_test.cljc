@@ -1,5 +1,6 @@
 (ns active.clojure.condition-test
-  (:require [active.clojure.condition :refer (&condition combine-conditions #?(:clj define-condition-type) #?(:clj guard)
+  (:require [active.clojure.condition :refer (&condition combine-conditions #?(:clj define-condition-type) #?(:clj guard) ->condition
+                                              throwable? error? assertion-violation?
                                               #?(:cljs Throwable))]
             [active.clojure.condition :as c]
             #?(:clj [clojure.test :refer :all])
@@ -117,3 +118,20 @@
                  (c/violation? con) :violation
                  :else :something-else]
                  (throw (c/make-error))))))
+
+#?(:clj
+(deftest java-throwables
+  (let [c (->condition (Throwable. "foo"))]
+    (is (throwable? c))
+    (is (not (error? c)))
+    (is (not (assertion-violation? c))))
+
+  (let [c (->condition (Error. "foo"))]
+    (is (throwable? c))
+    (is (not (error? c)))
+    (is (assertion-violation? c)))
+
+  (let [c (->condition (Exception. "foo"))]
+    (is (throwable? c))
+    (is (error? c))
+    (is (not (assertion-violation? c))))))

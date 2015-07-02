@@ -267,65 +267,104 @@
         ?constructor-params (concat (map (fn [[?field-name _]]
                                            (gensym ?field-name))
                                          ?field-pairs)
-                                    (map gensym (:field-names (eval ?supertype))))]
+                                    (map gensym (:field-names (eval ?supertype))))
+        document (fn [n doc]
+                   (vary-meta n
+                              (fn [m]
+                                (if (contains? m :doc)
+                                  m
+                                  (assoc m :doc doc)))))
+        document-with-arglist (fn [n arglist doc]
+                                (vary-meta n
+                                           (fn [m]
+                                             (let [m (if (contains? m :doc)
+                                                       m
+                                                       (assoc m :doc doc))]
+                                               (if (contains? m :arglists)
+                                                 m
+                                                 (assoc m :arglists `'(~arglist)))))))
+        name-doc (fn [field]
+                    (if-let [doc (:doc (meta field))]
+                      (str " (" doc ")")
+                      ""))
+        reference (fn [name]
+                    (str "[[" (ns-name *ns*) "/" name "]]"))
+        ?docref (str "See " (reference ?condition-type) ".")]
     `(do
        (let [total-field-count# (+ ~(count ?field-pairs) (:total-field-count ~?supertype))]
-         (def ~?condition-type
+         (def ~(vary-meta ?condition-type
+                          (fn [m]
+                            (assoc m :doc
+                                   (str (or (get m :doc)
+                                            "Condition type.")
+                                        "\n"
+                                        (apply str
+                                               (map (fn [[?field ?accessor]]
+                                                      (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)))
+                                                    ?field-pairs))))))
            (->ConditionType '~?condition-type ~?supertype 
                             '[~@(map first ?field-pairs)] total-field-count#))
-         (defn ~?constructor
-           [~@?constructor-params]
-           (make-condition [(->ConditionComponent ~?condition-type (vector ~@?constructor-params))])) 
-         (def ~?predicate (condition-predicate ~?condition-type))
+         (def ~(document-with-arglist ?constructor 
+                                      (vec (map first ?field-pairs))
+                                      (str "Construct a " (reference ?condition-type) " condition."))
+           (fn [~@?constructor-params]
+             (make-condition [(->ConditionComponent ~?condition-type (vector ~@?constructor-params))]))) 
+         (def ~(document-with-arglist ?predicate '[thing]
+                                      (str "Is object a " (reference ?condition-type) " condition?"))
+           (condition-predicate ~?condition-type))
          ~@(map (fn [[?field-name ?accessor]]
-                  `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))
+                  `(def ~(document-with-arglist ?accessor
+                                                (vector ?condition-type)
+                                                (str "Access the `" ?field-name "`" (name-doc ?field-name)
+                                                     " field from a " (reference ?condition-type) " condition."))
+                     (condition-accessor ~?condition-type '~?field-name)))
                 ?field-pairs))))))
 
 ; These standard condition types correspond directly to R6RS Scheme
 
-(define-condition-type &message &condition
+(define-condition-type ^{:doc "Human-reaable message."} &message &condition
   make-message-condition message-condition?
-  [message condition-message])
+  [^{:doc "message text"} message condition-message])
 
-(define-condition-type &warning &condition
+(define-condition-type ^{:doc "Non-fatal warning."} &warning &condition
   make-warning warning?
   [])
 
-(define-condition-type &serious &condition
+(define-condition-type ^{:doc "Serious condition that should not be ignored."} &serious &condition
   make-serious-condition serious-condition?
   [])
 
-(define-condition-type &error &serious
+(define-condition-type ^{:doc "Error from environment, not preventable by the program."} &error &serious
   make-error error?
   [])
 
-(define-condition-type &violation &serious
+(define-condition-type ^{:doc "Bug in the program."} &violation &serious
   make-violation violation?
   [])
 
-(define-condition-type &assertion &violation
+(define-condition-type ^{:doc "Violation of a specific assertion."}  &assertion &violation
   make-assertion-violation assertion-violation?
   [])
 
-(define-condition-type &irritants &condition
+(define-condition-type ^{:doc "Condition with objects providing more information about an exceptional situation."} &irritants &condition
   make-irritants-condition irritants-condition?
-  [irritants condition-irritants])
+  [^{:doc "objects providing more information"} irritants condition-irritants])
 
-(define-condition-type &who &condition
+(define-condition-type ^{:doc "Information about in what entity an exceptional situation occurred."} &who &condition
   make-who-condition who-condition?
-  [who condition-who])
+  [^{:doc "name of the entity"} who condition-who])
 
-(define-condition-type &location &condition
+(define-condition-type ^{:doc "Location information about an exceptional situation"} &location &condition
   make-location-condition location-condition?
   ;; any of these can be nil
-  [namespace location-condition-namespace
-   file location-condition-file
-   line location-condition-line])
+  [^{:doc "namespace of the location"} namespace location-condition-namespace
+   ^{:doc "file name of the location"} file location-condition-file
+   ^{:doc "line number of the loocation"} line location-condition-line])
 
 (define-condition-type
   ^{:doc "Throwable value that's not a condition."} &throwable &serious
   make-throwable throwable?
-  [value throwable-value])
+  [^{:doc "Throwable object"} value throwable-value])
 
 #?(:clj
 (defmacro throw-condition

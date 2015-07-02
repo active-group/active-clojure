@@ -1,5 +1,6 @@
 (ns active.clojure.condition-test
   (:require [active.clojure.condition :refer (&condition combine-conditions #?(:clj define-condition-type) #?(:clj guard) ->condition
+                                              make-error
                                               throwable? error? assertion-violation?
                                               #?(:cljs Throwable))]
             [active.clojure.condition :as c]
@@ -135,3 +136,6 @@
     (is (throwable? c))
     (is (error? c))
     (is (not (assertion-violation? c))))))
+
+(deftest combine-nil
+  (is (error? (combine-conditions false (make-error) nil))))

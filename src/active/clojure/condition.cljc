@@ -161,9 +161,11 @@
     (make-throwable thing))))
 
 (defn combine-conditions
-  "Make a compound condition from constituents."
+  "Make a compound condition from constituents.
+
+  `nil` and `false` arguments are ignored."
   [& component-conditions]
-  (make-condition (mapcat (comp condition-components ->condition) component-conditions)))
+  (make-condition (mapcat (comp condition-components ->condition) (filter identity component-conditions))))
 
 (defn condition-of-type?
   "Does condition `cond` have type `type`?"

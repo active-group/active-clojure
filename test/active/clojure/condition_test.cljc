@@ -16,15 +16,15 @@
 
 (define-condition-type &c &condition
   make-c c?
-  (x c-x))
+  [x c-x])
 
 (define-condition-type &c1 &c
   make-c1 c1?
-  (a c1-a))
+  [a c1-a])
 
 (define-condition-type &c2 &c
   make-c2 c2?
-  (b c2-b))
+  [b c2-b])
 
 (def v1 (make-c1 "V1" "a1"))
   

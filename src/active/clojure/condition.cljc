@@ -237,11 +237,10 @@
   "    (define-condition-type <condition-type>
         <supertype>
         <constructor> <predicate>
-        <field-spec1> ...)
+        [<field> <accessor> ...)
 
   `<Condition-type>`, `<supertype>`, `<constructor>`, and
-  `<predicate>` must all be identifiers. Each `<field-spec>` must be of
-  the form `(<field> <accessor>)` where both `<field>` and `<accessor>`
+  `<predicate>` must all be identifiers. Each `<field>` and `<accessor>`
   must be identifiers.
 
   The `define-condition-type` form defines a condition type named
@@ -257,66 +256,76 @@
   `<Predicate>` is bound to a predicate that identifies conditions of
   type `<condition-type>` or any of its subtypes.
 
-  Each `<accessor>` is bound to a procedure that extracts the
+  Each `<accessor>` is bound to a function that extracts the
   corresponding field from a condition of type `<condition-type>`."
   [?condition-type ?supertype ?constructor ?predicate & ?field-specs]
-  (let [?constructor-params (concat (map (fn [[?field-name _]]
+  (let [?field-pairs (if (and (= 1 (count ?field-specs))
+                              (vector? (first ?field-specs)))
+                       (partition 2 (first ?field-specs))
+                       ;; legacy syntax
+                       ?field-specs)
+        ?constructor-params (concat (map (fn [[?field-name _]]
                                            (gensym ?field-name))
-                                         ?field-specs)
+                                         ?field-pairs)
                                     (map gensym (:field-names (eval ?supertype))))]
     `(do
-       (let [total-field-count# (+ ~(count ?field-specs) (:total-field-count ~?supertype))]
+       (let [total-field-count# (+ ~(count ?field-pairs) (:total-field-count ~?supertype))]
          (def ~?condition-type
            (->ConditionType '~?condition-type ~?supertype 
-                            '[~@(map first ?field-specs)] total-field-count#))
+                            '[~@(map first ?field-pairs)] total-field-count#))
          (defn ~?constructor
            [~@?constructor-params]
            (make-condition [(->ConditionComponent ~?condition-type (vector ~@?constructor-params))])) 
          (def ~?predicate (condition-predicate ~?condition-type))
          ~@(map (fn [[?field-name ?accessor]]
                   `(def ~?accessor (condition-accessor ~?condition-type '~?field-name)))
-                ?field-specs))))))
+                ?field-pairs))))))
 
 ; These standard condition types correspond directly to R6RS Scheme
 
 (define-condition-type &message &condition
   make-message-condition message-condition?
-  (message condition-message))
+  [message condition-message])
 
 (define-condition-type &warning &condition
-  make-warning warning?)
+  make-warning warning?
+  [])
 
 (define-condition-type &serious &condition
-  make-serious-condition serious-condition?)
+  make-serious-condition serious-condition?
+  [])
 
 (define-condition-type &error &serious
-  make-error error?)
+  make-error error?
+  [])
 
 (define-condition-type &violation &serious
-  make-violation violation?)
+  make-violation violation?
+  [])
 
 (define-condition-type &assertion &violation
-  make-assertion-violation assertion-violation?)
+  make-assertion-violation assertion-violation?
+  [])
 
 (define-condition-type &irritants &condition
   make-irritants-condition irritants-condition?
-  (irritants condition-irritants))
+  [irritants condition-irritants])
 
 (define-condition-type &who &condition
   make-who-condition who-condition?
-  (who condition-who))
+  [who condition-who])
 
 (define-condition-type &location &condition
   make-location-condition location-condition?
   ;; any of these can be nil
-  (namespace location-condition-namespace)
-  (file location-condition-file)
-  (line location-condition-line))
+  [namespace location-condition-namespace
+   file location-condition-file
+   line location-condition-line])
 
 (define-condition-type
   ^{:doc "Throwable value that's not a condition."} &throwable &serious
   make-throwable throwable?
-  (value throwable-value))
+  [value throwable-value])
 
 #?(:clj
 (defmacro throw-condition

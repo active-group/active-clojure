@@ -11,6 +11,7 @@
 
 #?(:clj
 (defmacro define-record-type
+  "Attach doc properties to the type and the field names to get reasonable docstrings."
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
   (when-not (and (list? ?constructor-call)
                  (not (empty? ?constructor-call)))

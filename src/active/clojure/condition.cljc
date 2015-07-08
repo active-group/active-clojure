@@ -21,6 +21,7 @@
                     [clojure.main :as main]))
   #?(:clj (:require [io.aviso.exception :as aviso-exception]
                     [io.aviso.columns :as aviso-columns]
+                    [io.aviso.ansi :as aviso-ansi]
                     [clojure.string :as string]))
   #?(:cljs (:require-macros [active.clojure.condition 
                              :refer (define-condition-type assert condition raise guard throw-condition)]
@@ -528,6 +529,20 @@
                        (condition-components con)))))]
 
     [type who message (concat stuff more-stuff)]))
+
+#?(:clj
+(alter-var-root  
+ #'io.aviso.exception/*fonts*
+ (constantly
+  {:exception     aviso-ansi/reset-font
+   :reset         aviso-ansi/reset-font
+   :message       aviso-ansi/reset-font
+   :property      aviso-ansi/reset-font
+   :source        aviso-ansi/reset-font
+   :function-name aviso-ansi/reset-font
+   :clojure-frame aviso-ansi/reset-font
+   :java-frame    aviso-ansi/reset-font
+   :omitted-frame aviso-ansi/reset-font})))
 
 #?(:clj
 (defn- preformat-stack-frame

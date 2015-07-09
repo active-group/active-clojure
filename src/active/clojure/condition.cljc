@@ -111,15 +111,19 @@
   {:pre [(condition? cond)]}
   (::components (ex-data cond)))
 
-(declare make-throwable make-error make-assertion-violation make-message-condition make-who-condition)
+(declare &message)
 
 (defn make-condition
   "Make a condition from components.
 
   For internal use only."
   [condition-components]
-  (ex-info #?(:clj (ex-info-msg *ns*))
-           #?(:cljs (ex-info-msg "<cljs>"))
+  (ex-info (or (some (fn [cmp]
+                       (and (condition-component-of-condition-type? &message cmp)
+                            (first (:arguments cmp))))
+                     condition-components)
+               #?(:clj (ex-info-msg *ns*))
+               #?(:cljs (ex-info-msg "<cljs>")))
            {::condition true
             ::components condition-components}))
 
@@ -136,6 +140,8 @@
         (if (and match (= "invoke" method))
           (apply format "%s/%s" (rest match))
           (format "%s.%s" class method)))))))
+
+(declare make-throwable make-error make-assertion-violation make-message-condition make-who-condition)
 
 #?(:clj
 (defn ->condition

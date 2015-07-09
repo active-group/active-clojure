@@ -32,8 +32,6 @@
   (and #?(:clj (instance? ExceptionInfo x))
        (contains? (ex-data x) ::condition)))
 
-(declare print-condition)
-
 ;; Printing conditions in ClojureScript:
 ;;
 ;; TODO `print-method` does not exist in ClojureScript and there is no
@@ -58,14 +56,12 @@
 ;; TODO Also, there is no run-time-independent way to get a stack
 ;; trace in ClojureScript.
 
+#?(:clj (declare print-condition))
 #?(:clj
 (defmethod print-method ExceptionInfo [^ExceptionInfo exc ^java.io.Writer w]
   (if (condition? exc)
     (print-condition exc w)
     (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc)))))))
-
-#?(:cljs
-(def *ns* "<cljs>"))
 
 (defn ^:private ex-info-msg 
   [namespace]

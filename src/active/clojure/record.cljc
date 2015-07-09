@@ -1,5 +1,4 @@
-(ns active.clojure.record
-  (:require [active.clojure.condition :refer (error)]))
+(ns active.clojure.record)
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -7,7 +6,7 @@
   #?(:clj (do))
   #?(:cljs
      (when-not (instance? type rec)
-       (throw (error accessor "Wrong record type passed to accessor." rec type)))))
+       (throw (js/Error. (str "Wrong record type passed to accessor." rec type))))))
 
 #?(:clj
 (defmacro define-record-type

@@ -4,7 +4,8 @@
    [active.clojure.debug-test]
    [active.clojure.lens-test]
    [active.clojure.record-test]
-   [active.clojure.condition-test]))
+   [active.clojure.condition-test]
+   [active.clojure.monad-test]))
 
 (enable-console-print!)
 

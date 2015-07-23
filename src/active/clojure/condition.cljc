@@ -604,12 +604,13 @@
           (.write w " [")
           (print who)
           (.write w "]"))
-        (doseq [irritant stuff]
-          (doto w
-            (.write "\n")
-            (.write spaces))
-          (pr irritant))
-        (.write w "\n")))
+        (binding [*print-length* 12]
+          (doseq [irritant stuff]
+            (doto w
+              (.write "\n")
+              (.write spaces))
+            (pr irritant))
+          (.write w "\n"))))
     (print-stack-trace-of w c))))
 
 #?(:cljs

@@ -29,28 +29,30 @@
 
 (defrecord ExplicitLens
     ^{:private true}
-  [yanker shover]
+  [yanker shover args]
   Lens
-  (-yank [lens data] (yanker data))
-  (-shove [lens data v] (shover data v)))
+  (-yank [lens data] (apply yanker data args))
+  (-shove [lens data v] (apply shover data v args)))
 
 (defn lens
-  "Returns a new lens defined by the given yanker function, which takes a data
-   structure and must return the focused value, and the given shover function
-   which takes a data structure and the new value in the focus."
-  [yank shove]
-  (ExplicitLens. yank shove))
+  "Returns a new lens defined by the given yanker function, which
+  takes a data structure and must return the focused value, and the
+  given shover function which takes a data structure and the new value
+  in the focus. Any additional arguments are passed unchanged to the yank
+  and shove functions."
+  [yank shove & args]
+  (ExplicitLens. yank shove args))
+
+(defn- xmap-yank [data f g & args]
+  (apply f data args))
+(defn- xmap-shove [data v f g & args]
+  (apply g v args))
 
 (defn xmap
   "Returns a \"view lens\", that transforms a whole data structure
    to something else (f) and back (g)."
-  [f g]
-  (lens f #(g %2)))
-
-(defrecord IdentityLens []
-  Lens
-  (-yank [_ data] data)
-  (-shove [_ data v] v))
+  [f g & args]
+  (apply lens xmap-yank xmap-shove f g args))
 
 (def
   ^{:doc "Identity lens, that just show a data structure as it is.
@@ -58,10 +60,14 @@
           reacl.lens/>>."}
   id (xmap identity identity))
 
+(defn- comb-yank [data l1 l2]
+  (yank (yank data l1) l2))
+(defn- comb-shove [data v l1 l2]
+  (shove data l1 (shove (yank data l1) l2 v)))
+
 (defn- >>2
   [l1 l2]
-  (lens (fn [data] (yank (yank data l1) l2))
-        (fn [data v] (shove data l1 (shove (yank data l1) l2 v)))))
+  (lens comb-yank comb-shove l1 l2))
 
 (defn >>
   "Returns a concatenation of two or more lenses, so that the combination shows the
@@ -75,11 +81,15 @@
       res
       (recur (>>2 res (first lmore)) (rest lmore)))))
 
+(defn- default-yank [data dflt]
+  (if (nil? data) dflt data))
+(defn- default-shove [v dflt]
+  (if (= dflt v) nil v))
+
 (defn default
-  "Returns a lens that shows nil as the given value, but does not change any other value."
-  [v]
-  (xmap #(if (nil? %) v %)
-        #(if (= v %) nil %)))
+  "Returns a lens that shows nil as the given default value, but does not change any other value."
+  [dflt]
+  (xmap default-yank default-shove dflt))
 
 (defn- consx [v coll]
   (if (and (nil? v) (empty? coll))
@@ -134,52 +144,71 @@
            %1
            (seq %2))))
 
+(defn- contains-shove [data mem? v]
+  (if mem?
+    (conj data v)
+    (disj data v)))
+
 (defn contains
   "Returns a lens showing the membership of the given value in a set."
   [v]
-  (lens #(contains? % v)
-        #(if %2
-           (conj %1 v)
-           (disj %1 v))))
+  (lens contains?
+        contains-shove
+        v))
 
 (def ^{:doc "A lens that views a sequence of pairs as a map."}
   as-map
   (xmap #(into {} %) seq))
+
+(defn- member-shove [data v key not-found]
+  (if (= v not-found)
+    (dissoc data key)
+    (assoc data key v)))
 
 (defn member
   "Returns a lens showing the value mapped to the given key in a map,
   not-found or nil if key is not present. Note that when not-found (or
   nil) is shoved into the map, the association is removed."
   [key & [not-found]]
-  (lens #(get % key not-found)
-        #(if (= %2 not-found)
-           (dissoc %1 key)
-           (assoc %1 key %2))))
+  (lens get
+        member-shove
+        key not-found))
 
 (def ^{:doc "A trivial lens that just shows nil over anything, and does never change anything."}
   void
   (lens (constantly nil) (fn [data _] data)))
 
+(defn- is-shove [data is? cmp]
+  (if is?
+    cmp
+    (if (= data cmp)
+      nil
+      data)))
+
 (defn is
   "Returns a lens showing if a data structure equals the non-nil value v."
   [v]
   (assert (not (nil? v)))
-  (lens #(= % v)
-        #(if %2
-           v
-           (if (= %1 v)
-             nil
-             %1))))
+  (lens =
+        is-shove
+        v))
+
+(defn- mult-yank [data lenses]
+  (map yank
+       data lenses))
+
+(defn- mult-shove [data v lenses]
+  (map shove
+       data lenses v))
 
 (defn **
   "Return the product of several lenses, which means that each lens is
   held over an element of a collection in the order they appear in the
   argument list."
   [& lenses]
-  (lens (fn [data] (map #(yank %1 %2)
-                       data lenses))
-        (fn [data v] (map #(shove %1 %2 %3)
-                         data lenses v))))
+  (lens mult-yank
+        mult-shove
+        lenses))
 
 ;; not very general: 
 ;; (defn repeated
@@ -190,28 +219,35 @@
 ;;                     v)
 ;;               data))))
 
+(defn- plus-yank [data lenses]
+  (map yank
+       (repeat data)
+       lenses))
+(defn- plus-shove [data v lenses]
+  (reduce (fn [data [l v]] (shove data l v))
+          data
+          (map vector lenses v)))
+
 (defn ++
   "Returns a lens over some data structure that shows a sequence of
   elements that each of the given lenses show on that. Note that the
   behaviour is undefined if those lenses do not show distrinct parts
   of the data structure."
   [& lenses]
-  (lens (fn [data] (map #(yank %1 %2)
-                       (repeat data)
-                       lenses))
-        (fn [data v] (reduce (fn [data [l v]] (shove data l v))
-                            data
-                            (map vector lenses v)))))
+  (lens plus-yank
+        plus-shove
+        lenses))
 
-
+(defn- at-index-shove [coll v n]
+  (let [[front back] (split-at n coll)]
+    (concat front
+            [v]
+            (rest back))))
 
 (defn at-index
   "Returns a lens that focuses on the value at position n in a sequence.
   The sequence must have >= n elements."
   [n]
-  (lens (fn [coll] (nth coll n))
-        (fn [coll v]
-          (let [[front back] (split-at n coll)]
-            (concat front
-                    [v]
-                    (rest back))))))
+  (lens nth
+        at-index-shove
+        n))

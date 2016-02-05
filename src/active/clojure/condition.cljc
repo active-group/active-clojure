@@ -304,7 +304,7 @@
                                                (map (fn [[?field ?accessor]]
                                                       (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)))
                                                     ?field-pairs))))))
-           (->ConditionType '~?condition-type ~?supertype 
+           (->ConditionType '~(symbol (str *ns*) (name ?condition-type)) ~?supertype 
                             '[~@(map first ?field-pairs)] total-field-count#))
          (def ~(document ?constructor 
                          (str "Construct a " (reference ?condition-type) " condition."))

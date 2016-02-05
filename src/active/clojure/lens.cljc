@@ -48,6 +48,14 @@
 (defn- xmap-shove [data v f g & args]
   (apply g v args))
 
+(defn overhaul
+  "Updates data using a lens.  The new value will be determined by
+  applying `f` to the old value and any other supplied arguments."
+  ([data lens f]
+   (shove data lens (f (yank data lens))))
+  ([data lens f & args]
+   (shove data lens (apply f (yank data lens) args))))
+
 (defn xmap
   "Returns a \"view lens\", that transforms a whole data structure
    to something else (f) and back (g)."

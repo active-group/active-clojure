@@ -29,6 +29,12 @@
        (law-2-holds l data)
        (law-3-holds l data v1 v2)))
 
+(deftest t-overhaul
+  (is (= {:foo 24}
+         (lens/overhaul {:foo 23} :foo inc)))
+  (is (= {:foo 42}
+         (lens/overhaul {:foo 23} :foo + 19))))
+
 (deftest void
   (lens-laws-hold lens/void {} nil nil)
   (is (= nil

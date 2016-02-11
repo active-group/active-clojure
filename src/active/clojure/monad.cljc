@@ -289,7 +289,8 @@
 
   - `command-config` is the configuration object for running commands
   - `m` is the computation to run
-  - `state` an optional initial state (from a previous run)
+  - `state` an optional initial state (from a previous run) that is merged
+    into the one from `command-config`
 
   Returns [result state]"
   [^MonadCommandConfig command-config m & [state]]
@@ -298,8 +299,8 @@
         ;; we could try to add the initial-state of command-configs
         ;; that haven't been used yet; but a map-valued state is not
         ;; required by the interface. So we can only take one of them
-        state (or state
-                  (monad-command-config-state command-config))
+        state (merge (monad-command-config-state command-config)
+                     state)
         unknown-command (fn [bind m]
                           (if-let [{line :line column :column statement :statement} (meta bind)]
                             (c/assertion-violation `run-free-reader-state-exception 

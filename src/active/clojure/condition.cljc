@@ -22,9 +22,11 @@
   #?(:clj (:require [io.aviso.exception :as aviso-exception]
                     [io.aviso.columns :as aviso-columns]
                     [io.aviso.ansi :as aviso-ansi]
-                    [clojure.string :as string]))
+                    [clojure.string :as string]
+                    [active.clojure.macro :refer (if-cljs)]))
   #?(:cljs (:require-macros [active.clojure.condition 
                              :refer (define-condition-type assert condition raise guard throw-condition)]
+                            [active.clojure.macro :refer (if-cljs)]
                             [cljs.core :as core]))
   #?(:clj (:import clojure.lang.ExceptionInfo)))
 
@@ -424,7 +426,9 @@
              ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
              ?line  (:line (meta &form))]
          `(when-not ~x
-            (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
+            (assertion-violation (if-cljs
+                                   nil
+                                   (stack-trace-who (.getStackTrace (Thread/currentThread))))
                                  (str "Assertion failed")
                                  (make-location-condition '~?ns ~?file ~?line)
                                  '~x)))))
@@ -435,7 +439,9 @@
              ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
              ?line  (:line (meta &form))]
          `(when-not ~x
-            (assertion-violation (stack-trace-who (.getStackTrace (Thread/currentThread)))
+            (assertion-violation (if-cljs
+                                  nil
+                                  (stack-trace-who (.getStackTrace (Thread/currentThread))))
                                  (str "Assert failed: " ~message)
                                  (make-location-condition '~?ns ~?file ~?line)
                                  '~x)))))))
@@ -445,7 +451,9 @@
 (defmacro condition
   [?base ?message & ?irritants]
   `(combine-conditions ~?base
-                       (make-who-condition (stack-trace-who (.getStackTrace (Thread/currentThread))))
+                       (if-cljs
+                        nil
+                        (make-who-condition (stack-trace-who (.getStackTrace (Thread/currentThread)))))
                        (make-message-condition ~?message)
                        (make-irritants-condition [~@?irritants]))))
 

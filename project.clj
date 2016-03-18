@@ -19,14 +19,18 @@
                                 :pretty-print true}}
                :test {:source-paths ["src" "test"]
                       :compiler {:output-to "target/test.js"
+                                 ;; this fixes an error from doo
+                                 :output-dir "target"
                                  :source-map "target/test.map"
+                                 :main active.clojure.test-runner
                                  :optimizations :whitespace
-                                 :pretty-print true}}}
-              :test-commands {"phantomjs" ["phantomjs" 
-                                           "test/vendor/unit-test.js" "test/vendor/unit-test.html"]
-                              }}
+                                 :pretty-print true}}}}
 
+  :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}}
 
-  :plugins [[lein-cljsbuild "1.1.3"]]
+  :aliases {"test-nashorn" ["doo" "nashorn" "test"]}
+
+  :plugins [[lein-cljsbuild "1.1.3"]
+            [lein-doo "0.1.6"]]
 
   :global-vars {*warn-on-reflection* true})

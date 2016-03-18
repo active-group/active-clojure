@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "0.0-3308"]
-                 [io.aviso/pretty "0.1.18"]]
+                 [org.clojure/clojurescript "1.7.228"]
+                 [io.aviso/pretty "0.1.24"]]
 
   :generated-paths ["target"]
     
@@ -27,6 +27,6 @@
                               }}
 
 
-  :plugins [[lein-cljsbuild "1.0.6"]]
+  :plugins [[lein-cljsbuild "1.1.3"]]
 
   :global-vars {*warn-on-reflection* true})

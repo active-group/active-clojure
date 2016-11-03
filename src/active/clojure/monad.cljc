@@ -34,13 +34,16 @@
                              mv)))
 
   (cond
-   ;; normalize nested binds
-   (free-bind? mv) (Bind. (free-bind-monad mv)
+   ;; normalize nested binds, keeping original meta (source, line)
+   (free-bind? mv) (with-meta
+                      (Bind. (free-bind-monad mv)
                           (fn [x]
                             (let [next ((free-bind-cont mv) x)] ; yields a monad
                               (free-bind next f))))
+                      (meta mv))
 
-   :else (make-free-bind mv f)))
+   :else (with-meta (make-free-bind mv f)
+           (meta mv))))
 
 #?(:clj
 (defmacro monadic

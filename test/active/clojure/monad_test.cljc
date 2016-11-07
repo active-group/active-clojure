@@ -272,10 +272,10 @@
                                                    (return [x y]))))))
 
 (deftest frse-state
-  (is (= ['foo 'bar]
-         (run-free-reader-state-exception (null-monad-command-config 'nil 'foo)
+  (is (= [{:x 'foo} {:x 'bar}]
+         (run-free-reader-state-exception (null-monad-command-config 'nil {:x 'foo})
                                           (monadic [x (get-state)]
-                                                   (put-state! 'bar)
+                                                   (put-state! {:x 'bar})
                                                    (return x))))))
 
 (deftest null-config

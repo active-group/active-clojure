@@ -5,6 +5,7 @@
   (:require #?(:clj [active.clojure.record :refer :all])
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])
+            #?(:cljs active.clojure.record) ;; for check-type in define-record-type
             [active.clojure.condition :as c]))
 
 (define-record-type ^:no-doc Return

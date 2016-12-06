@@ -3,8 +3,8 @@
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.228"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojurescript "1.9.293"]
                  [io.aviso/pretty "0.1.24"]]
 
   :generated-paths ["target"]

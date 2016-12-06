@@ -3,6 +3,7 @@
   #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
                             [active.clojure.monad :refer (monadic)]))
   (:require #?(:clj [active.clojure.record :refer :all])
+            #?(:cljs active.clojure.record)
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])
             [active.clojure.condition :as c]))

@@ -247,3 +247,13 @@
                                           []
                                           {:outer {:inherits {:foo 5}}}))))
 
+
+(deftest subconfig-test
+  (let [config
+        (c/make-configuration
+         schema3
+         []
+         {})
+        subconfig (c/section-subconfig config nested3)]
+    (is (= 0
+           (c/access subconfig foo-setting section3)))))

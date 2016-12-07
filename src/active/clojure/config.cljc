@@ -32,7 +32,6 @@ Each profile has the same format as the top-level configuration itself
   #?(:clj (:import [java.net URL])))
 
 ;; TODO
-;; - make configs composable, i.e. allow extracting "subconfigs" and using them with access
 ;; - provide better support for reaching inside of collection ranges
 
 (define-record-type 
@@ -745,6 +744,12 @@ Each profile has the same format as the top-level configuration itself
                              "setting not found"
                              (setting-key setting) (map section-key sections) setting config)
       val)))
+
+(defn section-subconfig
+  "Extract a section from a config as a config."
+  [config & sections]
+  (really-make-configuration (apply access-section config sections)
+                             (section-schema (last sections))))
 
 (defn reduce-scalar-config-settings
   "Reduce over all scalary config values in config, where `f` is

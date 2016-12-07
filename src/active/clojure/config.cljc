@@ -31,6 +31,10 @@ Each profile has the same format as the top-level configuration itself
             #?(:clj [active.clojure.record :refer :all]))
   #?(:clj (:import [java.net URL])))
 
+;; TODO
+;; - make configs composable, i.e. allow extracting "subconfigs" and using them with access
+;; - provide better support for reaching inside of collection ranges
+
 (define-record-type 
   ^{:doc "Description of a range of values."}
   ValueRange ; used to be called Range, but conflicts with cljs.core/->Range

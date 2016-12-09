@@ -4,7 +4,6 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.293"]
                  [io.aviso/pretty "0.1.24"]]
 
   :generated-paths ["target"]
@@ -26,7 +25,8 @@
                                  :optimizations :whitespace
                                  :pretty-print true}}}}
 
-  :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}}
+  :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}
+             :cljs {:dependencies [[org.clojure/clojurescript "1.9.293"]]}}
 
   :aliases {"test-nashorn" ["doo" "nashorn" "test"]}
 

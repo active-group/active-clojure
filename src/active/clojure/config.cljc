@@ -75,7 +75,7 @@ Each profile has the same format as the top-level configuration itself
   (make-range description completer
               (fn [range path f res val]
                 (let [v' (completer range path val)]
-                  (assert (not (range-error? v')) (pr-str v'))
+                  (c/assert (not (range-error? v')) (pr-str v'))
                   (f range path res v')))))
 
 (defn any-value-range
@@ -218,7 +218,7 @@ Each profile has the same format as the top-level configuration itself
               (fn [range path f res val]
                 (loop [rs rs]
                   (if (empty? rs)
-                    (assert false)
+                    (c/assert false)
                     (let [this-range (first rs)
                           v ((range-completer this-range) this-range path val)]
                       (if (range-error? v)
@@ -289,7 +289,7 @@ Each profile has the same format as the top-level configuration itself
                        ret)))))
               (fn [this-range path f res val]
                 (let [v ((range-completer this-range) this-range path val)]
-                  (assert (not (range-error? v)) (pr-str v))
+                  (c/assert (not (range-error? v)) (pr-str v))
                   (reduce (fn [res [i x]]
                             ((range-reduce range) range (conj path i) f res x))
                           res
@@ -334,7 +334,7 @@ Each profile has the same format as the top-level configuration itself
                   (make-range-error this-range path val)))
               (fn [this-range path f res val]
                 (let [v ((range-completer this-range) this-range path val)]
-                  (assert (not (range-error? v)) (pr-str v))
+                  (c/assert (not (range-error? v)) (pr-str v))
                   (reduce (fn [res [i [v range]]]
                             ((range-reduce range) range (conj path i)
                              f res v))
@@ -370,7 +370,7 @@ Each profile has the same format as the top-level configuration itself
                    :else (make-range-error this-range ky vl))))
               (fn [this-range path f res val]
                 (let [v ((range-completer this-range) this-range path val)]
-                  (assert (not (range-error? v)) (pr-str v))
+                  (c/assert (not (range-error? v)) (pr-str v))
                   (reduce (fn [res [k v]]
                             ((range-reduce val-range) val-range (conj path k) f
                              ((range-reduce key-range) key-range path f res k)
@@ -483,7 +483,7 @@ Each profile has the same format as the top-level configuration itself
   (let [cmap ((range-completer range) range path val)
         settings (schema-settings-map schema)
         sections (schema-sections-map schema)]
-    (assert (not (range-error? cmap)) (pr-str cmap))
+    (c/assert (not (range-error? cmap)) (pr-str cmap))
     (reduce (fn [res [k v]]                            
               (if-let [setting (get settings k)]
                 ((range-reduce (setting-range setting))
@@ -618,7 +618,7 @@ Each profile has the same format as the top-level configuration itself
                      (let [res
                            (normalize&check-config-map (section-schema section) profile-names {}
                                                        inherited-map (concat path [key]))]
-                       (assert (not (range-error? res)) (pr-str res))
+                       (c/assert (not (range-error? res)) (pr-str res))
                        {key res}))))]
 
          (let [sections-map (schema-sections-map schema)

@@ -456,7 +456,7 @@ Each profile has the same format as the top-level configuration itself
   (make-section key schema (if inherit? true false)))
 
 (define-record-type
-  ^{:doc "A schema describes a config format, and can be used for
+  ^{:doc "A schema describes a map-structured config format, and can be used for
   validation and completion."}
   Schema
   (^{:doc "Make a [[Schema]] object describing a config format.
@@ -467,48 +467,77 @@ Each profile has the same format as the top-level configuration itself
   - `settings-map` is a map from setting keys to settings
   - `sections` is a collection of [[Section]]s
   - `sections-map` is a map from section keys to sections"}
-   make-schema description settings settings-map sections sections-map)
-  schema?
-  [description schema-description
-   settings schema-settings
-   settings-map schema-settings-map
-   sections schema-sections
-   sections-map schema-sections-map])
+   make-map-schema description settings settings-map sections sections-map)
+  map-schema?
+  [description map-schema-description
+   settings map-schema-settings
+   settings-map map-schema-settings-map
+   sections map-schema-sections
+   sections-map map-schema-sections-map])
 
-(declare normalize&check-config-map)
+(define-record-type
+  ^{:doc "A sequence schema describes a sequence config format."}
+  SequenceSchema
+  (make-sequence-schema description element-schema)
+  sequence-schema?
+  [description sequence-schema-description
+   element-schema sequence-schema-element-schema])
+
+(defn sequence-schema
+  [desc el-schema]
+  (make-sequence-schema desc el-schema))
+
+(declare normalize&check-config-object)
 
 (declare schema-range)
 
-(defn- schema-reduce [schema range path f res val]
-  (let [cmap ((range-completer range) range path val)
-        settings (schema-settings-map schema)
-        sections (schema-sections-map schema)]
-    (c/assert (not (range-error? cmap)) (pr-str cmap))
-    (reduce (fn [res [k v]]                            
-              (if-let [setting (get settings k)]
-                ((range-reduce (setting-range setting))
-                 (setting-range setting)
-                 (conj path (setting-key setting))
-                 f res v)
-                ;; if not a setting, it must be a section:
-                (let [section (get sections k)]
-                  (schema-reduce (section-schema section)
-                                 (schema-range (section-schema section))
-                                 (conj path (section-key section))
-                                 f res v))))
-            res
-            cmap)))
+(defn- schema-reduce
+  [schema range path f res val]
+  (cond
+    (map-schema? schema)
+    (let [cmap ((range-completer range) range path val)
+          settings (map-schema-settings-map schema)
+          sections (map-schema-sections-map schema)]
+      (c/assert (not (range-error? cmap)) (pr-str cmap))
+      (reduce (fn [res [k v]]                            
+                (if-let [setting (get settings k)]
+                  ((range-reduce (setting-range setting))
+                   (setting-range setting)
+                   (conj path (setting-key setting))
+                   f res v)
+                  ;; if not a setting, it must be a section:
+                  (let [section (get sections k)]
+                    (schema-reduce (section-schema section)
+                                   (schema-range (section-schema section))
+                                   (conj path (section-key section))
+                                   f res v))))
+              res
+              cmap))
+
+    (sequence-schema? schema)
+    (let [v ((range-completer range) range path val)
+          element-schema (sequence-schema-element-schema schema)]
+      (c/assert (not (range-error? v)) (pr-str v))
+      (reduce (fn [res [i x]]
+                (schema-reduce element-schema (conj path i) f res x))
+              res
+              (map-indexed vector v)))))
 
 (defn schema-range
   "Range for a configuration object matching a schema."
   [schema]
-  (make-range (schema-description schema)
-              (fn [range path val]
-                (cond
-                  (nil? val) (normalize&check-config-map schema [] {})
-                  (map? val) (normalize&check-config-map schema [] val)
-                  :else (make-range-error range path val)))
-              (partial schema-reduce schema)))
+  (cond
+    (map-schema? schema)
+    (make-range (map-schema-description schema)
+                (fn [range path val]
+                  (cond
+                    (nil? val) (normalize&check-config-object schema [] {})
+                    (map? val) (normalize&check-config-object schema [] val)
+                    :else (make-range-error range path val)))
+                (partial schema-reduce schema))
+
+    (sequence-schema? schema)
+    (sequence-of-range (schema-range (sequence-schema-element-schema schema)))))
 
 ; Note that a global setting which can be overridden locally needs to
 ; be listed both at the top level and within the section.
@@ -516,7 +545,7 @@ Each profile has the same format as the top-level configuration itself
 ; FIXME: check that they're both identical
 
 (defn schema
-  "Construct a schema.
+  "Construct a map schema.
 
   - `description` is a human-readable description
   - `element-list' is a list of the [[Setting]]s and [[Section]]s of the schema"
@@ -525,84 +554,89 @@ Each profile has the same format as the top-level configuration itself
   ;; FIXME: should make sure there are no duplicates
   (let [settings (filter setting? element-list)
         sections (filter section? element-list)]
-    (make-schema
+    (make-map-schema
      description
      (set settings)
      (zipmap (map setting-key settings) settings)
      (set sections)
      (zipmap (map section-key sections) sections))))
 
-(defn- merge-config-maps-sans-profiles
-  "Merge two config maps into one, with the latter taking precedence.
+(defn- merge-config-objects-sans-profiles
+  "Merge two configs into one, with the latter taking precedence.
 
   This helper assumes there are no profiles."
   [schema path c1 c2]
   (when-not (map? c1)
-    (c/error `merge-config-maps-sans-profiles
+    (c/error `merge-config-objects-sans-profiles
              "configuration is not a map" path c1))
   (when-not (map? c2)
-    (c/error `merge-config-maps-sans-profiles
+    (c/error `merge-config-objects-sans-profiles
              "configuration is not a map" path c2))
-  (let [sections-map (schema-sections-map schema)
-        settings-map (schema-settings-map schema)]
-    (loop [c {}
-           all-keys (seq (set/union (set (keys c1))
-                                    (set (keys c2))))]
-      (if all-keys
-        (let [key (first all-keys)
-              val1 (get c1 key)
-              val2 (get c2 key)]
-          (if (contains? settings-map key)
-            (recur (assoc c 
-                     ;; that `nil` is a valid value
-                     key 
-                     (if (contains? c2 key)
-                       val2
-                       val1))
-                   (next all-keys))
-            (if-let [section (get sections-map key)]
-              (recur (assoc c key 
-                            (merge-config-maps-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
+  (cond
+    (map-schema? schema)
+    (let [sections-map (map-schema-sections-map schema)
+          settings-map (map-schema-settings-map schema)]
+      (loop [c {}
+             all-keys (seq (set/union (set (keys c1))
+                                      (set (keys c2))))]
+        (if all-keys
+          (let [key (first all-keys)
+                val1 (get c1 key)
+                val2 (get c2 key)]
+            (if (contains? settings-map key)
+              (recur (assoc c 
+                            ;; that `nil` is a valid value
+                            key 
+                            (if (contains? c2 key)
+                              val2
+                              val1))
                      (next all-keys))
-              (c/error `merge-config-maps-sans-profiles
-                       "unknown path in config"
-                       (conj path key) (if (contains? c1 key) val1 val2) nil (if (contains? c1 key) c1 c2)))))
-        c))))
+              (if-let [section (get sections-map key)]
+                (recur (assoc c key 
+                              (merge-config-objects-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
+                       (next all-keys))
+                (c/error `merge-config-objects-sans-profiles
+                         "unknown path in config"
+                         (conj path key) (if (contains? c1 key) val1 val2) nil (if (contains? c1 key) c1 c2)))))
+          c)))
 
-(defn merge-config-maps
+    (sequence-schema? schema)
+    (concat c1 c2)))
+
+(defn merge-config-objects
   "Merge several config maps into one, with the latter taking precedence."
   ([schema c] c)
   ([schema c1 c2]
      (let [profiles-1 (get c1 :profiles)
            profiles-2 (get c2 :profiles)]
-       (assoc (merge-config-maps-sans-profiles schema []
+       (assoc (merge-config-objects-sans-profiles schema []
                                                (dissoc c1 :profiles)
                                                (dissoc c2 :profiles))
          :profiles (merge profiles-1 profiles-2))))
   ([schema c1 c2 & cs] ; Clojure won't let us do [schema c1 & cs]
-     (reduce (partial merge-config-maps schema) (concat [c1 c2] cs))))
+     (reduce (partial merge-config-objects schema) (concat [c1 c2] cs))))
 
 (defn- apply-profiles
   "Apply named profiles within a config map."
-  [schema config-map profile-names]
-  (if-let [profile-map (:profiles config-map)]
-    (let [config-map (dissoc config-map :profiles)
+  [schema config-object profile-names]
+  (if-let [profile-map (:profiles config-object)]
+    (let [config-object (dissoc config-object :profiles)
           profiles (map (fn [n]
                           (or (profile-map n)
                               (c/error `apply-profiles "profile does not exist" n)))                              
                         profile-names)]
-      (reduce (partial merge-config-maps-sans-profiles schema []) config-map profiles))
-    config-map))
+      (reduce (partial merge-config-objects-sans-profiles schema []) config-object profiles))
+    config-object))
 
-(defn normalize&check-config-map
-  "Normalize and check the validity of a config-map.
+(defn normalize&check-config-object
+  "Normalize and check the validity of a configuration object.
 
   In  the result, every setting has an associated value."
-  ([schema profile-names config-map]
-     (normalize&check-config-map schema profile-names config-map {} []))
+  ([schema profile-names config]
+     (normalize&check-config-object schema profile-names config {} []))
 
-  ([schema profile-names config-map inherited-map path]
-     (let [config-map (apply-profiles schema config-map profile-names)]
+  ([schema profile-names config inherited-map path]
+     (let [config (apply-profiles schema config profile-names)]
        (letfn [(complete-settings
                  [inherited-map settings-map]
                  (zipmap (keys settings-map)
@@ -616,148 +650,218 @@ Each profile has the same format as the top-level configuration itself
                    (if-let [entry (get inherited-map key)]
                      {key entry}
                      (let [res
-                           (normalize&check-config-map (section-schema section) profile-names {}
+                           (normalize&check-config-object (section-schema section) profile-names {}
                                                        inherited-map (concat path [key]))]
                        (c/assert (not (range-error? res)) (pr-str res))
                        {key res}))))]
 
-         (let [sections-map (schema-sections-map schema)
-               res
-               ;; go through the settings first, as we need to collect
-               ;; the inherited settings
-               (loop [entries (seq config-map)
-                      c {}
-                      inherited-map inherited-map
-                      settings-map (schema-settings-map schema)]
-                 (if entries
-                   (let [[key val] (first entries)]
-                     (if-let [setting (get settings-map key)]
-                       (let [range (setting-range setting)
-                             res ((range-completer range) range (concat path [key]) val)]
-                         (if (range-error? res)
-                           res
-                           (recur (next entries)
-                                  (assoc c key res)
-                                  (if (setting-inherit? setting)
-                                    (assoc inherited-map key val)
-                                    inherited-map)
-                                  (dissoc settings-map key))))
-                       (if (contains? sections-map key) ; do sections later
-                         (recur (next entries) c inherited-map settings-map)
-                         (make-range-error nil (concat path [key]) val))))
-                   [(merge c (complete-settings inherited-map settings-map))
-                    inherited-map settings-map]))]
-           (if (range-error? res)
-             res
-             (let [[c inherited-map settings-map] res]
-               ;; now go through the sections
-               (loop [entries (seq config-map)
-                      c c
-                      inherited-map inherited-map
-                      sections-map sections-map]
-                 (if entries
-                   (let [[key val] (first entries)]
-                     (if-let [section (get sections-map key)]
-                       (let [res (normalize&check-config-map (section-schema section)
-                                                             profile-names
-                                                             val
-                                                             inherited-map
-                                                             (concat path [key]))]
-                         (if (range-error? res)
-                           res
-                           (recur (next entries)
-                                  (assoc c key res)
-                                  (if (section-inherit? section)
-                                    (assoc inherited-map key res)
-                                    inherited-map)
-                                  (dissoc sections-map key))))
-                       (recur (next entries) c inherited-map sections-map)))
-                   (apply merge c (map (partial complete-section inherited-map) (vals sections-map))))))))))))
+         (cond
+           (map-schema? schema)
+           (if (not (map? config))
+             (make-range-error nil path config)
+             (let [sections-map (map-schema-sections-map schema)
+                   res
+                   ;; go through the settings first, as we need to collect
+                   ;; the inherited settings
+                   (loop [entries (seq config)
+                          c {}
+                          inherited-map inherited-map
+                          settings-map (map-schema-settings-map schema)]
+                     (if entries
+                       (let [[key val] (first entries)]
+                         (if-let [setting (get settings-map key)]
+                           (let [range (setting-range setting)
+                                 res ((range-completer range) range (concat path [key]) val)]
+                             (if (range-error? res)
+                               res
+                               (recur (next entries)
+                                      (assoc c key res)
+                                      (if (setting-inherit? setting)
+                                        (assoc inherited-map key val)
+                                        inherited-map)
+                                      (dissoc settings-map key))))
+                           (if (contains? sections-map key) ; do sections later
+                             (recur (next entries) c inherited-map settings-map)
+                             (make-range-error nil (concat path [key]) val))))
+                       [(merge c (complete-settings inherited-map settings-map))
+                        inherited-map settings-map]))]
+               (if (range-error? res)
+                 res
+                 (let [[c inherited-map settings-map] res]
+                   ;; now go through the sections
+                   (loop [entries (seq config)
+                          c c
+                          inherited-map inherited-map
+                          sections-map sections-map]
+                     (if entries
+                       (let [[key val] (first entries)]
+                         (if-let [section (get sections-map key)]
+                           (let [res (normalize&check-config-object (section-schema section)
+                                                                 profile-names
+                                                                 val
+                                                                 inherited-map
+                                                                 (concat path [key]))]
+                             (if (range-error? res)
+                               res
+                               (recur (next entries)
+                                      (assoc c key res)
+                                      (if (section-inherit? section)
+                                        (assoc inherited-map key res)
+                                        inherited-map)
+                                      (dissoc sections-map key))))
+                           (recur (next entries) c inherited-map sections-map)))
+                       (apply merge c (map (partial complete-section inherited-map) (vals sections-map)))))))))
+
+           (sequence-schema? schema)
+           (let [el-schema (sequence-schema-element-schema schema)]
+             (loop [idx 0
+                    els config   ; FIXME: now misnamed
+                    res (transient [])]
+               (if (empty? els)
+                 (persistent! res)
+                 (let [r (normalize&check-config-object el-schema
+                                                     profile-names
+                                                     (first els)
+                                                     inherited-map
+                                                     (concat path [idx]))]
+                   (if (range-error? r)
+                     r
+                     (recur (+ 1 idx)
+                            (rest els)
+                            (conj! res r))))))))))))
 
 (define-record-type ^{:doc "Validated and expanded configuration object."}
   Configuration
-  (really-make-configuration map schema)
+  (really-make-configuration object schema)
   configuration?
-  [map configuration-map
+  [object configuration-object
    schema configuration-schema])
 
 (defn make-configuration
   "Make a configuration from a map."
-  [schema profile-names config-map]
-  (let [res (normalize&check-config-map schema profile-names config-map)]
+  [schema profile-names config-object]
+  (let [res (normalize&check-config-object schema profile-names config-object)]
     (if (range-error? res)
       (c/error `make-configuration
                "range error in configuration map"
                (range-error-path res)
                (range-error-value res)
-               (range-description (range-error-range res))
+               (if-let [r (range-error-range res)]
+                 (range-description r)
+                 "<no range>")
                (range-error-range res))
       (really-make-configuration res schema))))
 
-(defn diff-configuration-maps
+(defn diff-configuration-objects
   "Returns sequence of triples `[path-vector version-1 version-2]` of settings that differ.
 
-  The config maps must be validated and completed."
-  [schema config-map-1 config-map-2]
-  (concat (filter identity
-                  (map (fn [[key _]]
-                         (let [v1 (get config-map-1 key)
-                               v2 (get config-map-2 key)]
-                           (and (not= v1 v2)
-                                [[key] v1 v2])))
-                       (schema-settings-map schema)))
-          (mapcat (fn [[key section]]
-                    (map (fn [[path v1 v2]]
-                           [(vec (cons key path)) v1 v2])
-                         (diff-configuration-maps (section-schema section) 
-                                                  (get config-map-1 key) (get config-map-2 key))))
-                  (schema-sections-map schema))))
+  The config objects must be validated and completed."
+  [schema config-object-1 config-object-2]
+  (cond
+    (map-schema? schema)
+    (concat (filter identity
+                    (map (fn [[key _]]
+                           (let [v1 (get config-object-1 key)
+                                 v2 (get config-object-2 key)]
+                             (and (not= v1 v2)
+                                  [[key] v1 v2])))
+                         (map-schema-settings-map schema)))
+            (mapcat (fn [[key section]]
+                      (map (fn [[path v1 v2]]
+                             [(vec (cons key path)) v1 v2])
+                           (diff-configuration-objects (section-schema section) 
+                                                (get config-object-1 key) (get config-object-2 key))))
+                    (map-schema-sections-map schema)))
+
+    (sequence-schema? schema)
+    (let [count1 (count config-object-1)
+          count2 (count config-object-2)
+          common-count (min count1 count2)
+          el-schema (sequence-schema-element-schema schema)
+          triples-common (mapcat (fn [idx el1 el2]
+                                   (map (fn [[path v1 v2]]
+                                          [(vec (cons idx path)) v1 v2])
+                                        (diff-configuration-objects el-schema el1 el2)))
+                                 (map vector
+                                      (range)
+                                      (take common-count config-object-1)
+                                      (take common-count config-object-2)))
+          triples-1 (if (> count1 count2)
+                      (map (fn [idx v]
+                             [[(+ idx count2)] v nil])
+                           (range) config-object-1)
+                      [])
+          triples-2 (if (> count2 count1)
+                      (map (fn [idx v]
+                             [[(+ idx count1)] nil v])
+                           (range) config-object-2)
+                      [])]
+      (concat triples-common triples-1 triples-2))))
+
     
 (defn diff-configurations
   "Returns sequence of triples [path-vectors version-1 version-2] of settings that differ."
   [schema config-1 config-2]
-  (diff-configuration-maps schema
-                           (configuration-map config-1)
-                           (configuration-map config-2)))
+  (diff-configuration-objects schema
+                              (configuration-object config-1)
+                              (configuration-object config-2)))
 
-(defn access-section
-  "Access the settings of a section."
-  [config & sections]
-  (let [val (get-in (configuration-map config)
-                    (map section-key sections)
-                    :section-not-found)]
-    (if (= val :section-not-found)
-      (c/assertion-violation `access-section
-                             "section not found"
-                             (map section-key sections) config)
-      val)))
+(defn- access-section
+  "Access the settings of a section.
+
+  - `on-last` is a function to be applied the config object at the end of the path"
+  [config sections on-last]
+  (letfn [(recurse [sections cf]
+            (if (empty? sections)
+              (on-last cf)
+              (let [sec (first sections)
+                    cf (get cf (section-key sec) ::section-not-found)]
+                (case cf
+                  ::section-not-found
+                  (c/assertion-violation `access-section
+                                         "section not found"
+                                         (map section-key sections) config)
+                  
+                  (letfn [(schemarec [schema cf]
+                            (cond
+                              (map-schema? schema)
+                              (recurse (rest sections) cf)
+                              
+                              (sequence-schema? schema)
+                              (map (fn [subcf]
+                                     (schemarec (sequence-schema-element-schema schema)
+                                                subcf))
+                                   cf)))]
+                    (schemarec (section-schema sec) cf))))))]
+    (recurse sections (configuration-object config))))
 
 (defn access
   "Access the value of a setting.
 
   Note that the setting comes first, followed by the access path."
   [config setting & sections]
-  (let [sct (apply access-section config sections)
-        val (get sct (setting-key setting) :setting-not-found)]
-    (if (= val :setting-not-found)
-      (c/assertion-violation `access
-                             "setting not found"
-                             (setting-key setting) (map section-key sections) setting config)
-      val)))
+  (access-section config sections
+                  (fn [cf]
+                    (let [val (get cf (setting-key setting) ::setting-not-found)]
+                      (if (= val ::setting-not-found)
+                        (c/assertion-violation `access
+                                               "setting not found"
+                                               (setting-key setting) (map section-key sections) setting config)
+                        val)))))
 
 (defn section-subconfig
   "Extract a section from a config as a config."
   [config & sections]
-  (really-make-configuration (apply access-section config sections)
+  (really-make-configuration (access-section config sections identity)
                              (section-schema (last sections))))
 
 (defn reduce-scalar-config-settings
   "Reduce over all scalary config values in config, where `f` is
   called as `(f range key init val)`, where `val` matches the scalary
   `range`."
-  [schema f init config-map]
+  [schema f init config-object]
   (let [r (schema-range schema)]
-    ((range-reduce r) r [] f init config-map)))
+    ((range-reduce r) r [] f init config-object)))
 
 (defn or-dot-range
   "Given range `r` is required in the first line,

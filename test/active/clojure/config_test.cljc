@@ -32,19 +32,19 @@
   (is (= {:mode :development
           :initialize? false
           :programmable-counters {:initialize? true}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema1
           []
           {:mode :development
            :programmable-counters {:initialize? true}})))
   (is (c/range-error?
-       (c/normalize&check-config-map
+       (c/normalize&check-config-object
         schema1
         []
         {:mode :development
          :programmable-counters {:initialize? 'foo}})))
   (is (c/range-error?
-       (c/normalize&check-config-map
+       (c/normalize&check-config-object
         schema1
         []
         {:mode :developpment
@@ -54,7 +54,7 @@
   (is (= {:mode :production
           :initialize? false
           :programmable-counters {:initialize? false}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema1
           []
           {}))))
@@ -63,7 +63,7 @@
   (is (= {:mode :production 
           :initialize? true
           :programmable-counters {:initialize? true}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema1
           []
           {:initialize? true
@@ -71,7 +71,7 @@
   (is (= {:mode :production 
           :initialize? true
           :programmable-counters {:initialize? true}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema1
           []
           {:initialize? true}))))
@@ -81,7 +81,7 @@
     (is (= {:mode :production 
             :initialize? false
             :programmable-counters {:initialize? true}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema1
             [:dev]
             {:programmable-counters {:initialize? true}
@@ -92,7 +92,7 @@
     (is (= {:mode :production 
           :initialize? false
             :programmable-counters {:initialize? true}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema1
             [:dev]
             {:profiles
@@ -103,7 +103,7 @@
     (is (= {:mode :production 
             :initialize? false
             :programmable-counters {:initialize? true}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema1
             [:dev]
             {:programmable-counters {:initialize? false}
@@ -115,7 +115,7 @@
     (is (= {:mode :production
             :initialize? false
             :programmable-counters {:initialize? true}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema1
             []
             {:programmable-counters {:initialize? true}
@@ -141,7 +141,7 @@
             {:initialize? false
              :programmable-counters
              {:initialize? true}}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema2
             []
             {:section2
@@ -154,7 +154,7 @@
             {:initialize? false
              :programmable-counters
              {:initialize? false}}}
-           (c/normalize&check-config-map
+           (c/normalize&check-config-object
             schema2
             [:dev]
             {:section2
@@ -203,13 +203,13 @@
 (deftest section-inheritance
   (is (= {:inherits {:foo 5}
           :outer {:inherits {:foo 5}}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema3
           []
           {:inherits {:foo 5}})))
   (is (= {:inherits {:foo 0}
           :outer {:inherits {:foo 0}}}
-         (c/normalize&check-config-map
+         (c/normalize&check-config-object
           schema3
           []
           {}))))
@@ -257,3 +257,42 @@
         subconfig (c/section-subconfig config nested3)]
     (is (= 0
            (c/access subconfig foo-setting section3)))))
+
+(def string-setting
+  (c/setting :string
+             "string setting"
+             (c/default-string-range "foo")))
+
+(def strings-section
+  (c/section :strings
+             (c/sequence-schema
+              "Sequence of string sections"
+              (c/schema
+               "String section"
+               string-setting))))
+
+(def strings-schema
+  (c/schema "Mapping access"
+            strings-section))
+
+;; FIXME: also need to test merging, diff
+
+(deftest sequence-schemas-test
+  (let [config
+        (c/make-configuration
+         strings-schema
+         []
+         {:strings
+          [{:string "foo"}
+           {:string "bar"}
+           {:string "baz"}]})]
+    (is (= {:strings
+            [{:string "foo"}
+             {:string "foo"}
+             {:string "foo"}]}
+           (c/normalize&check-config-object
+            strings-schema
+            []
+            {:strings [{} {} {}]})))
+    (is (= ["foo" "bar" "baz"]
+           (c/access config string-setting strings-section)))))

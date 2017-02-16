@@ -248,3 +248,10 @@
          (lens/shove 'baz lens/id 'bar))))
 
 
+(deftest fct
+  (is (= 1
+         (lens/nel-head [1 2 3 4])))
+  (is (= [5 2 3 4]
+         (lens/nel-head [1 2 3 4] 5)))
+  (is (= [5 2 3 4]
+         (apply lens/nel-head [1 2 3 4] [5]))))

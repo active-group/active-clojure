@@ -852,8 +852,10 @@ Each profile has the same format as the top-level configuration itself
 (defn section-subconfig
   "Extract a section from a config as a config."
   [config & sections]
-  (really-make-configuration (access-section config sections identity)
-                             (section-schema (last sections))))
+  (access-section config sections
+                  (fn [cf]
+                    (really-make-configuration cf
+                                               (section-schema (last sections))))))
 
 (defn reduce-scalar-config-settings
   "Reduce over all scalary config values in config, where `f` is

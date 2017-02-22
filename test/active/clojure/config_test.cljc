@@ -1,6 +1,6 @@
 (ns ^:config active.clojure.config-test
   (:require [active.clojure.config :as c]
-            #?(:cljs [clojure.test :as t])
+            #?(:cljs [cljs.test :as t])
             #?(:clj [clojure.test :refer :all]))
   #?(:cljs (:require-macros [cljs.test :refer (is deftest run-tests testing)])))
 

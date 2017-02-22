@@ -29,6 +29,11 @@ languages](http://www.haskellforall.com/2013/05/program-imperatively-using-haske
 The `active.clojure.debug` namespace implements some useful debugging
 tools such as a macro `pret` that prints and returns its argument.
 
+### Pattern Matching
+
+The `active.clojure.match` namespaces provides some syntactic sugar
+for map matching around `core.match`.
+
 ## License
 
 Copyright © 2014 Active Group GmbH

@@ -1,8 +1,11 @@
 (ns ^{:doc "Syntactic sugar for map matching around `core.match`."}
   active.clojure.match
-  (:require [clojure.core.match :refer [match]]
-            [clojure.core.match.regex :refer :all]))
+  (:require #?(:clj [clojure.core.match :refer [match]])
+            #?(:clj [clojure.core.match.regex]))
+  #?(:cljs
+  (:require-macros [clojure.core.match :refer [match]])))
 
+#?(:clj
 (defmacro map-matcher
   "Construct a map matcher.  Syntactic sugar for `core.match`.
 
@@ -33,7 +36,9 @@
   `<key-and-name>` is a keyword, it is converted to a name for binding
   the value (and usesd as keyword when used as a key).
 
-  `<value>` can be any value, regular expressions are also possible.
+  `<value>` can be any value, regular expressions are also
+  possible (only in Clojure, though, `core.match` does not support
+  regex matching in ClojureScript).
 
   `map-matcher` returns a function that accepts a map and evaluates
   `<consequent>` with all the `<name>`s bound when the message matches
@@ -114,8 +119,9 @@
     `(fn [~message]
        (let ~bindings
          (match ~message
-                ~@match-clauses+consequents)))))
+                ~@match-clauses+consequents))))))
 
+#?(:clj
 (defmacro defpattern
   "Bind a match pattern to a name.
   
@@ -123,4 +129,4 @@
   pattern for `map-matcher`, where this binding is supposed
   to be used with."
   [binding pattern]
-  `(def ~binding (quote ~pattern)))
+  `(def ~binding (quote ~pattern))))

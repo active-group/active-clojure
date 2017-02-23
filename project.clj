@@ -29,7 +29,7 @@
   :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}
              :cljs {:dependencies [[org.clojure/clojurescript "1.9.293"]]}}
 
-  :aliases {"test-nashorn" ["doo" "nashorn" "test"]}
+  :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]}
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-doo "0.1.6"]]

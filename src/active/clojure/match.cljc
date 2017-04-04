@@ -1,9 +1,9 @@
 (ns ^{:doc "Syntactic sugar for map matching around `core.match`."}
   active.clojure.match
-  (:require #?(:clj [clojure.core.match :refer [match]])
+  (:require #?(:clj [clojure.core.match :as match])
             #?(:clj [clojure.core.match.regex]))
   #?(:cljs
-  (:require-macros [clojure.core.match :refer [match]])))
+  (:require-macros [clojure.core.match :as match])))
 
 #?(:clj
 (defmacro map-matcher
@@ -118,8 +118,8 @@
         message `message#]
     `(fn [~message]
        (let ~bindings
-         (match ~message
-                ~@match-clauses+consequents))))))
+         (match/match ~message
+                      ~@match-clauses+consequents))))))
 
 #?(:clj
 (defmacro defpattern
@@ -130,3 +130,15 @@
   to be used with."
   [binding pattern]
   `(def ~binding (quote ~pattern))))
+
+#?(:clj
+(defmacro matcher
+  [& args]
+  (let [event `event#]
+    `(fn [~event]
+       ((map-matcher ~@args) ~event)))))
+
+#?(:clj
+(defmacro match
+  [event & args]
+  `((matcher ~@args) ~event)))

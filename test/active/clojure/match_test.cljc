@@ -51,3 +51,18 @@
   (is (= ["a" "b" "c" 42 23 65 "bar"]
          (example-matcher two-data)))
   (is (= false (example-matcher {:kind "none"})))))
+
+#?(:clj
+(deftest t-map-matcher-optional
+  (is (= ["a" "b" "c" "C" 42 23 nil]
+         ((map-matcher
+           [(:kind #"two")
+            (? :a :as a)
+            (? :b)
+            (? :c "C" :as c)
+            (? :C "C" :as C)
+            (? [:d Z] :as Z)
+            (? [:d Y] "y")
+            (? [:d U])]
+           [a b c C Z Y U])
+          two-data)))))

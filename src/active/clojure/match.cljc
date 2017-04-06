@@ -25,6 +25,22 @@
   - `<key-and-name>` which requires `<key-and-name>` to be present in
     the map and binds `<key-and-name>` to its value
 
+  The map matcher also supports optional keys:
+
+  - `(? <key> <default> :as <name>)` binds `<name>` to to the value of
+    `<key>` in the map or to `<default>` if `<key>` is not in the map.
+
+  - `(? <key-and-name> <default>)` binds `<key-and-name>` to the value of
+    `<key-and-name>` in the map or to `<default>` if `<key-and-name>` is not
+    in the map.
+
+  - `(? <key> :as <name>)` binds `<name>` to to the value of `<key>`
+    in the map or to `nil` if `<key>` is not in the map.
+
+  - `(? <key-and-name>)` binds `<key-and-name>` to the value of
+    `<key-and-name>` in the map or to `nil` if `<key-and-name>` is not
+    in the map.
+
   Access to nested values is also possible.  Use `[<key>+]` to access
   a nested value, where `[<key>+]` is a sequence of keys.  When no
   `:as <name>` clause is given, the last `<key>` of the sequence of
@@ -75,14 +91,15 @@
   [& args]
   (when-not (even? (count args))
     (throw (IllegalArgumentException. (str "expecting an even number of arguments " *ns* " " (meta &form)))))
-  (let [[bindings match-clauses+consequents]
+  (let [message `message#
+        [bindings match-clauses+consequents]
         (reduce (fn [[b mcc] [clauses consequent]]
                   (if (= :else clauses)
                     [b (concat mcc [clauses consequent])]
                     (let [clauses (if (symbol? clauses) (eval clauses) clauses)
-                          match-and-bind-clauses-with-as (filter #(and (seq? %) (= 4 (count %))) clauses)
-                          destructure-clauses-with-as (filter #(and (seq? %) (= 3 (count %))) clauses)
-                          match-and-bind-clauses (filter #(and (seq? %) (= 2 (count %))) clauses)
+                          match-and-bind-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 4 (count %))) clauses)
+                          destructure-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 3 (count %))) clauses)
+                          match-and-bind-clauses (filter #(and (seq? %) (not= '? (first %)) (= 2 (count %))) clauses)
                           destructure-clauses (filter #(or (keyword? %) (symbol? %) (vector? %)) clauses)
                           make-name #(if (keyword? %) (symbol (name %)) %)
                           make-binding (fn [b v] [(make-name (if (vector? b) (last b) b)) v])
@@ -112,10 +129,24 @@
                                                 (map (fn [[k v _ b]] [k v]) match-and-bind-clauses-with-as)
                                                 (map (fn [[kb v]] [kb v]) match-and-bind-clauses)
                                                 (map (fn [[k _ b]] [k b]) destructure-clauses-with-as)
-                                                (map (fn [kb] [kb (make-name kb)]) destructure-clauses)))]
-                      [(vec (concat b bindings)) (concat mcc [match-clause consequent])])))
-                [[] []] (partition 2 args))
-        message `message#]
+                                                (map (fn [kb] [kb (make-name kb)]) destructure-clauses)))
+                          all-optional-clauses (filter #(and (seq? %) (= '? (first %))) clauses)
+                          optional-clauses (filter #(= 2 (count %)) all-optional-clauses)
+                          optional-clauses-with-default (filter #(= 3 (count %)) all-optional-clauses)
+                          optional-clauses-with-as (filter #(= 4 (count %)) all-optional-clauses)
+                          optional-clauses-with-as-and-default (filter #(= 5 (count %)) all-optional-clauses)
+                          make-keys #(if (vector? %) (vec (map make-key %)) [(make-key %)])
+                          make-optional-binding (fn [b k d] (make-binding b `(get-in ~message ~(make-keys k) ~d)))
+                          optional-bindings
+                          (vec (concat
+                                (mapcat (fn [[? k d _ b]] (make-optional-binding b k d)) optional-clauses-with-as-and-default)
+                                (mapcat (fn [[? k _ b]] (make-optional-binding b k nil)) optional-clauses-with-as)
+                                (mapcat (fn [[? kb d]] (make-optional-binding kb kb d)) optional-clauses-with-default)
+                                (mapcat (fn [[? kb]] (make-optional-binding kb kb nil)) optional-clauses)))]
+                      [(vec (concat b bindings)) (concat mcc [match-clause (if (empty? optional-bindings)
+                                                                             consequent
+                                                                             `(let ~optional-bindings ~consequent))])])))
+                [[] []] (partition 2 args))]
     `(fn [~message]
        (let ~bindings
          (match/match ~message

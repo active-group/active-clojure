@@ -18,6 +18,9 @@
    :d {"Z" 42 "Y" 23 "X" 65
        "W" {"foo" "bar"}}})
 
+(def three-data
+  {:different-kind "one" :x "x" :y "y" :z "z" :w "w"})
+
 #?(:clj
 (defpattern one
   [(:kind #"one")
@@ -66,3 +69,8 @@
             (? [:d U])]
            [a b c C Z Y U])
           two-data)))))
+
+#?(:clj
+   (deftest t-map-matcher-regex-key-not-found
+     (is (= false
+            (example-matcher three-data)))))

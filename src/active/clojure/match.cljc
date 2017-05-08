@@ -6,6 +6,11 @@
   (:require-macros [clojure.core.match :as match])))
 
 #?(:clj
+(defmethod match/to-source ::match/regex
+  [pat ocr]
+  `(and (not= ~ocr ::match/not-found) (re-matches ~(:regex pat) ~ocr))))
+
+#?(:clj
 (defmacro map-matcher
   "Construct a map matcher.  Syntactic sugar for `core.match`.
 

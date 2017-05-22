@@ -61,6 +61,9 @@
   possible (only in Clojure, though, `core.match` does not support
   regex matching in ClojureScript).
 
+  `<value>` also can be a list of alternative values in the form of:
+  `(:or <value> <value>*)`.
+
   `map-matcher` returns a function that accepts a map and evaluates
   `<consequent>` with all the `<name>`s bound when the message matches
   the given `<clause>`s, otherwise it evaluates `<alternative>`. or
@@ -69,7 +72,7 @@
 
   Example:
 
-        (def example-map-matcher 
+        (def example-map-matcher
           (map-matcher
             [(:x \"x\" :as x)
              (:y \"y\")
@@ -86,12 +89,12 @@
             (println a b c Z Y X foo)
             :else false))
 
-        (example-map-matcher {:a \"a\" :b \"b\" :c \"c\" 
+        (example-map-matcher {:a \"a\" :b \"b\" :c \"c\"
                               :d {\"Z\" 42 \"Y\" 23 \"X\" 65
-                                  \"W\" {\"foo\" \"bar\"}}}) 
+                                  \"W\" {\"foo\" \"bar\"}}})
 
     prints
-      
+
      \"a b c d 42 23 65 bar\""
   [& args]
   (when-not (even? (count args))
@@ -107,17 +110,15 @@
                           match-and-bind-clauses (filter #(and (seq? %) (not= '? (first %)) (= 2 (count %))) clauses)
                           destructure-clauses (filter #(or (keyword? %) (symbol? %) (vector? %)) clauses)
                           make-name #(if (keyword? %) (symbol (name %)) %)
-                          make-binding (fn [b v] [(make-name (if (vector? b) (last b) b)) v])
-                          bindings (vec (concat
-                                         (mapcat (fn [[_ v _ b]] (make-binding b v)) match-and-bind-clauses-with-as)
-                                         (mapcat (fn [[b v]] (make-binding b v)) match-and-bind-clauses)))
-                          _ (let [names (map first (partition 2 bindings))]
-                              (when (not (apply distinct? names))
-                                (throw (IllegalArgumentException. (str "binding names must be unique in " *ns* " "
-                                                                       (meta &form) ": names "
-                                                                       (mapv key (remove (comp #{1} val) (frequencies names)))
-                                                                       " are not uniqe")))))
                           make-key #(if (keyword? %) % (str %))
+                          make-keys #(if (vector? %) (vec (map make-key %)) [(make-key %)])
+                          special-default #(if (and (list? %) (= :or (first %))) nil %)
+                          make-binding (fn [b v] [(make-name (if (vector? b) (last b) b)) v])
+                          make-post-binding (fn [b k d] (make-binding b `(get-in ~message ~(make-keys k) ~(special-default d))))
+                          required-bindings
+                          (vec (concat
+                                (mapcat (fn [[k v _ b]] (make-post-binding b k v)) match-and-bind-clauses-with-as)
+                                (mapcat (fn [[kb v]] (make-post-binding kb kb v)) match-and-bind-clauses)))
                           assoc-once (fn [m k v] (if (get-in m k)
                                                    (throw (IllegalArgumentException. (str "keys must be unique in " *ns* " " (meta &form) ": key " k " is already in " m)))
                                                    (assoc-in m k v)))
@@ -140,22 +141,26 @@
                           optional-clauses-with-default (filter #(= 3 (count %)) all-optional-clauses)
                           optional-clauses-with-as (filter #(= 4 (count %)) all-optional-clauses)
                           optional-clauses-with-as-and-default (filter #(= 5 (count %)) all-optional-clauses)
-                          make-keys #(if (vector? %) (vec (map make-key %)) [(make-key %)])
-                          make-optional-binding (fn [b k d] (make-binding b `(get-in ~message ~(make-keys k) ~d)))
                           optional-bindings
                           (vec (concat
-                                (mapcat (fn [[? k d _ b]] (make-optional-binding b k d)) optional-clauses-with-as-and-default)
-                                (mapcat (fn [[? k _ b]] (make-optional-binding b k nil)) optional-clauses-with-as)
-                                (mapcat (fn [[? kb d]] (make-optional-binding kb kb d)) optional-clauses-with-default)
-                                (mapcat (fn [[? kb]] (make-optional-binding kb kb nil)) optional-clauses)))]
-                      [(vec (concat b bindings)) (concat mcc [match-clause (if (empty? optional-bindings)
+                                (mapcat (fn [[? k d _ b]] (make-post-binding b k d)) optional-clauses-with-as-and-default)
+                                (mapcat (fn [[? k _ b]] (make-post-binding b k nil)) optional-clauses-with-as)
+                                (mapcat (fn [[? kb d]] (make-post-binding kb kb d)) optional-clauses-with-default)
+                                (mapcat (fn [[? kb]] (make-post-binding kb kb nil)) optional-clauses)))
+                          bindings (vec (concat required-bindings optional-bindings))
+                          _ (let [names (map first (partition 2 required-bindings))]
+                              (when (not (apply distinct? names))
+                                (throw (IllegalArgumentException. (str "binding names must be unique in " *ns* " "
+                                                                       (meta &form) ": names "
+                                                                       (mapv key (remove (comp #{1} val) (frequencies names)))
+                                                                       " are not uniqe")))))]
+                      [(vec (concat b bindings)) (concat mcc [match-clause (if (empty? bindings)
                                                                              consequent
-                                                                             `(let ~optional-bindings ~consequent))])])))
+                                                                             `(let ~bindings ~consequent))])])))
                 [[] []] (partition 2 args))]
     `(fn [~message]
-       (let ~bindings
          (match/match ~message
-                      ~@match-clauses+consequents))))))
+                      ~@match-clauses+consequents)))))
 
 #?(:clj
 (defmacro defpattern

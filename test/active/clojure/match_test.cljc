@@ -43,7 +43,7 @@
 #?(:clj
 (def example-matcher
   (map-matcher
-   one [x (str y) z w]
+   one [x y z w]
    two [a b c Z Y X foo]
    :else false)))
 
@@ -74,3 +74,25 @@
    (deftest t-map-matcher-regex-key-not-found
      (is (= false
             (example-matcher three-data)))))
+
+(defpattern one-or
+  [(:kind #"one")
+   (:x (:or "a" "b" "c" "x") :as x)
+   (:y (:or "x" "y" "z"))
+   (:z :as z)
+   :w])
+
+#?(:clj
+   (def example-or-matcher
+     (map-matcher
+      one-or [x y z w]
+      two [a b c Z Y X foo]
+      :else false)))
+
+#?(:clj
+   (deftest t-map-matcher-or
+     (is (= ["x" "y" "z" "w"]
+            (example-or-matcher one-data)))
+     (is (= ["a" "b" "c" 42 23 65 "bar"]
+            (example-or-matcher two-data)))
+     (is (= false (example-matcher {:kind "none"})))))

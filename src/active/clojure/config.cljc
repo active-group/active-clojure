@@ -857,14 +857,6 @@ Each profile has the same format as the top-level configuration itself
                     (really-make-configuration cf
                                                (section-schema (last sections))))))
 
-(defn reduce-scalar-config-settings
-  "Reduce over all scalary config values in config, where `f` is
-  called as `(f range key init val)`, where `val` matches the scalary
-  `range`."
-  [schema f init config-object]
-  (let [r (schema-range schema)]
-    ((range-reduce r) r [] f init config-object)))
-
 (defn or-dot-range
   "Given range `r` is required in the first line,
 the remainder of the lines the field holds \".\"."

@@ -429,11 +429,8 @@ Each profile has the same format as the top-level configuration itself
              nil)]
     (if (range-error? val)
       (c/error `setting-default-value
-               "setting is missing in configuration map"
-               (range-error-path val)
-               (range-error-value val)
-               (range-description (range-error-range val))
-               (range-error-range val))
+               (str "setting " (vec (range-error-path val)) " is missing in configuration map")
+               val)
       val)))
 
 (define-record-type
@@ -596,7 +593,7 @@ Each profile has the same format as the top-level configuration itself
                               (merge-config-objects-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
                        (next all-keys))
                 (c/error `merge-config-objects-sans-profiles
-                         "unknown path in config"
+                         (str "unknown path " (vec (conj path key)) " in config")
                          (conj path key) (if (contains? c1 key) val1 val2) nil (if (contains? c1 key) c1 c2)))))
           c)))
 
@@ -743,13 +740,17 @@ Each profile has the same format as the top-level configuration itself
   (let [res (normalize&check-config-object schema profile-names config-object)]
     (if (range-error? res)
       (c/error `make-configuration
-               "range error in configuration map"
-               (range-error-path res)
-               (range-error-value res)
-               (if-let [r (range-error-range res)]
-                 (range-description r)
-                 "<no range>")
-               (range-error-range res))
+               (str "range error at path "
+                    (vec (range-error-path res))
+                    " in configuration map: "
+                    "value "
+                    (range-error-value res)
+                    " should be in range "
+                    (if-let [r (range-error-range res)]
+                      (range-description r)
+                      "<no range>")
+                    " but isn't")
+               res)
       (really-make-configuration res schema))))
 
 (defn diff-configuration-objects
@@ -818,10 +819,10 @@ Each profile has the same format as the top-level configuration itself
                     cf (get cf (section-key sec) ::section-not-found)]
                 (case cf
                   ::section-not-found
-                  (c/assertion-violation `access-section
-                                         "section not found"
-                                         (map section-key sections) config)
-                  
+                  (let [path (map section-key sections)]
+                    (c/assertion-violation `access-section
+                                           (str "section " (vec path) " not found")
+                                           path config))
                   (letfn [(schemarec [schema cf]
                             (cond
                               (map-schema? schema)
@@ -844,9 +845,11 @@ Each profile has the same format as the top-level configuration itself
                   (fn [cf]
                     (let [val (get cf (setting-key setting) ::setting-not-found)]
                       (if (= val ::setting-not-found)
-                        (c/assertion-violation `access
-                                               "setting not found"
-                                               (setting-key setting) (map section-key sections) setting config)
+                        (let [path (map section-key sections)]
+                          (c/assertion-violation `access
+                                                 (str "setting " (setting-key setting)
+                                                      " not found at path " (vec path))
+                                                 path setting config))
                         val)))))
 
 (defn section-subconfig

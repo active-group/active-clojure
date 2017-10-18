@@ -186,7 +186,10 @@
                                :programmable-counters {}})]
     (is (= true
            (c/access c2
-                     initialize? programmable-counters)))))
+                     initialize? programmable-counters)))
+    (is (= {:initialize? true}
+           (c/access c2
+                     programmable-counters)))))
 
 (def section3
   (c/section :inherits

@@ -836,20 +836,27 @@ Each profile has the same format as the top-level configuration itself
                     (schemarec (section-schema sec) cf))))))]
     (recurse sections (configuration-object config))))
 
+(defn- setting-or-section-key
+  [sos]
+  (cond
+    (setting? sos) (setting-key sos)
+    (section? sos) (section-key sos)))
+
 (defn access
-  "Access the value of a setting.
+  "Access the value of a setting or map of a section.
 
   Note that the setting comes first, followed by the access path."
-  [config setting & sections]
+  [config setting-or-section & sections]
   (access-section config sections
                   (fn [cf]
-                    (let [val (get cf (setting-key setting) ::setting-not-found)]
+                    (let [key (setting-or-section-key setting-or-section)
+                          val (get cf key ::setting-not-found)]
                       (if (= val ::setting-not-found)
                         (let [path (map section-key sections)]
                           (c/assertion-violation `access
-                                                 (str "setting " (setting-key setting)
+                                                 (str "setting " key
                                                       " not found at path " (vec path))
-                                                 path setting config))
+                                                 path setting-or-section config))
                         val)))))
 
 (defn section-subconfig

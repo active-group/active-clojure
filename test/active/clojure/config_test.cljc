@@ -239,15 +239,6 @@
            []
            {})))))
 
-(deftest reduce-scalar-config-settings-test
-  ;; basic
-  (is (= [[[:outer :inherits :foo] 5] [[:inherits :foo] 0]]
-         (c/reduce-scalar-config-settings schema3 (fn [range k res st]
-                                                    (conj res [k st]))
-                                          []
-                                          {:outer {:inherits {:foo 5}}}))))
-
-
 (deftest subconfig-test
   (let [config
         (c/make-configuration

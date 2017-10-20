@@ -489,6 +489,7 @@ Each profile has the same format as the top-level configuration itself
 (declare schema-range)
 
 (defn- schema-reduce
+  ;; FIXME: docstring
   [schema range path f res val]
   (cond
     (map-schema? schema)
@@ -503,20 +504,25 @@ Each profile has the same format as the top-level configuration itself
                    (conj path (setting-key setting))
                    f res v)
                   ;; if not a setting, it must be a section:
-                  (let [section (get sections k)]
-                    (schema-reduce (section-schema section)
-                                   (schema-range (section-schema section))
+                  (let [section (get sections k)
+                        schema (section-schema section)]
+                    (schema-reduce schema
+                                   (schema-range schema)
                                    (conj path (section-key section))
                                    f res v))))
               res
               cmap))
 
+    ;; FIXME: test for this case
     (sequence-schema? schema)
     (let [v ((range-completer range) range path val)
-          element-schema (sequence-schema-element-schema schema)]
+          element-schema (sequence-schema-element-schema schema)
+          element-range (schema-range element-schema)]
       (c/assert (not (range-error? v)) (pr-str v))
       (reduce (fn [res [i x]]
-                (schema-reduce element-schema (conj path i) f res x))
+                (schema-reduce element-schema
+                               element-range
+                               (conj path i) f res x))
               res
               (map-indexed vector v)))))
 

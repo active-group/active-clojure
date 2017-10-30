@@ -631,107 +631,119 @@ Each profile has the same format as the top-level configuration itself
       (reduce (partial merge-config-objects-sans-profiles schema []) config-object profiles))
     config-object))
 
+(declare normalize&check-config-object-internal)
+
+(defn complete-section
+  [inherited-map path section]
+  (let [key (section-key section)]
+    (if-let [entry (get inherited-map key)]
+      {key entry}
+      (let [res
+            (normalize&check-config-object-internal (section-schema section) {}
+                                                    inherited-map (concat path [key]))]
+        (c/assert (not (range-error? res)) (pr-str res))
+        {key res}))))
+
+(defn complete-settings
+  [inherited-map settings-map]
+  (zipmap (keys settings-map)
+          (map (fn [setting]
+                 (or (get inherited-map (setting-key setting))
+                     (setting-default-value setting)))
+               (vals settings-map))))
+
+(defn check-section
+  [section val inherited-map path] 
+  (normalize&check-config-object-internal (section-schema section)
+                                          val
+                                          inherited-map
+                                          (conj (vec path) (section-key section))))
+
+(defn- normalize&check-config-object-internal
+  [schema config inherited-map path]
+  (letfn []
+    (cond
+      (map-schema? schema)
+      (if (not (map? config))
+        (make-range-error nil path config)
+        (let [sections-map (map-schema-sections-map schema)
+              res
+              ;; go through the settings first, as we need to collect
+              ;; the inherited settings
+              (loop [entries (seq config)
+                     c {}
+                     inherited-map inherited-map
+                     settings-map (map-schema-settings-map schema)]
+                (if entries
+                  (let [[key val] (first entries)]
+                    (if-let [setting (get settings-map key)]
+                      (let [range (setting-range setting)
+                            res ((range-completer range) range (concat path [key]) val)]
+                        (if (range-error? res)
+                          res
+                          (recur (next entries)
+                                 (assoc c key res)
+                                 (if (setting-inherit? setting)
+                                   (assoc inherited-map key val)
+                                   inherited-map)
+                                 (dissoc settings-map key))))
+                      (if (contains? sections-map key) ; do sections later
+                        (recur (next entries) c inherited-map settings-map)
+                        (make-range-error nil (concat path [key]) val))))
+                  [(merge c (complete-settings inherited-map settings-map))
+                   inherited-map settings-map]))]
+          (if (range-error? res)
+            res
+            (let [[c inherited-map settings-map] res]
+              ;; now go through the sections
+              (loop [entries (seq config)
+                     c c
+                     inherited-map inherited-map
+                     sections-map sections-map]
+                (if entries
+                  (let [[key val] (first entries)]
+                    (if-let [section (get sections-map key)]
+                      (let [res (check-section section val inherited-map path)]
+                        (if (range-error? res)
+                          res
+                          (recur (next entries)
+                                 (assoc c key res)
+                                 (if (section-inherit? section)
+                                   (assoc inherited-map key res)
+                                   inherited-map)
+                                 (dissoc sections-map key))))
+                      (recur (next entries) c inherited-map sections-map)))
+                  (apply merge c
+                         (map (partial complete-section inherited-map path)
+                              (vals sections-map)))))))))
+
+      (sequence-schema? schema)
+      (let [el-schema (sequence-schema-element-schema schema)]
+        (loop [idx 0
+               els config   ; FIXME: now misnamed
+               res (transient [])]
+          (if (empty? els)
+            (persistent! res)
+            (let [r (normalize&check-config-object-internal el-schema
+                                                            (first els)
+                                                            inherited-map
+                                                            (concat path [idx]))]
+              (if (range-error? r)
+                r
+                (recur (+ 1 idx)
+                       (rest els)
+                       (conj! res r))))))))))
+  
 (defn normalize&check-config-object
   "Normalize and check the validity of a configuration object.
 
   In  the result, every setting has an associated value."
   ([schema profile-names config]
-     (normalize&check-config-object schema profile-names config {} []))
+   (normalize&check-config-object schema profile-names config {} []))
 
   ([schema profile-names config inherited-map path]
-     (let [config (apply-profiles schema config profile-names)]
-       (letfn [(complete-settings
-                 [inherited-map settings-map]
-                 (zipmap (keys settings-map)
-                         (map (fn [setting]
-                                (or (get inherited-map (setting-key setting))
-                                    (setting-default-value setting)))
-                              (vals settings-map))))
-               (complete-section
-                 [inherited-map section]
-                 (let [key (section-key section)]
-                   (if-let [entry (get inherited-map key)]
-                     {key entry}
-                     (let [res
-                           (normalize&check-config-object (section-schema section) profile-names {}
-                                                       inherited-map (concat path [key]))]
-                       (c/assert (not (range-error? res)) (pr-str res))
-                       {key res}))))]
-
-         (cond
-           (map-schema? schema)
-           (if (not (map? config))
-             (make-range-error nil path config)
-             (let [sections-map (map-schema-sections-map schema)
-                   res
-                   ;; go through the settings first, as we need to collect
-                   ;; the inherited settings
-                   (loop [entries (seq config)
-                          c {}
-                          inherited-map inherited-map
-                          settings-map (map-schema-settings-map schema)]
-                     (if entries
-                       (let [[key val] (first entries)]
-                         (if-let [setting (get settings-map key)]
-                           (let [range (setting-range setting)
-                                 res ((range-completer range) range (concat path [key]) val)]
-                             (if (range-error? res)
-                               res
-                               (recur (next entries)
-                                      (assoc c key res)
-                                      (if (setting-inherit? setting)
-                                        (assoc inherited-map key val)
-                                        inherited-map)
-                                      (dissoc settings-map key))))
-                           (if (contains? sections-map key) ; do sections later
-                             (recur (next entries) c inherited-map settings-map)
-                             (make-range-error nil (concat path [key]) val))))
-                       [(merge c (complete-settings inherited-map settings-map))
-                        inherited-map settings-map]))]
-               (if (range-error? res)
-                 res
-                 (let [[c inherited-map settings-map] res]
-                   ;; now go through the sections
-                   (loop [entries (seq config)
-                          c c
-                          inherited-map inherited-map
-                          sections-map sections-map]
-                     (if entries
-                       (let [[key val] (first entries)]
-                         (if-let [section (get sections-map key)]
-                           (let [res (normalize&check-config-object (section-schema section)
-                                                                 profile-names
-                                                                 val
-                                                                 inherited-map
-                                                                 (concat path [key]))]
-                             (if (range-error? res)
-                               res
-                               (recur (next entries)
-                                      (assoc c key res)
-                                      (if (section-inherit? section)
-                                        (assoc inherited-map key res)
-                                        inherited-map)
-                                      (dissoc sections-map key))))
-                           (recur (next entries) c inherited-map sections-map)))
-                       (apply merge c (map (partial complete-section inherited-map) (vals sections-map)))))))))
-
-           (sequence-schema? schema)
-           (let [el-schema (sequence-schema-element-schema schema)]
-             (loop [idx 0
-                    els config   ; FIXME: now misnamed
-                    res (transient [])]
-               (if (empty? els)
-                 (persistent! res)
-                 (let [r (normalize&check-config-object el-schema
-                                                     profile-names
-                                                     (first els)
-                                                     inherited-map
-                                                     (concat path [idx]))]
-                   (if (range-error? r)
-                     r
-                     (recur (+ 1 idx)
-                            (rest els)
-                            (conj! res r))))))))))))
+   (let [config (apply-profiles schema config profile-names)]
+     (normalize&check-config-object-internal schema config inherited-map path))))
 
 (define-record-type ^{:doc "Validated and expanded configuration object."}
   Configuration

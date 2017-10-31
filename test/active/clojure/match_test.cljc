@@ -75,12 +75,13 @@
      (is (= false
             (example-matcher three-data)))))
 
+#?(:clj
 (defpattern one-or
   [(:kind #"one")
    (:x (:or "a" "b" "c" "x") :as x)
    (:y (:or "x" "y" "z"))
    (:z :as z)
-   :w])
+   :w]))
 
 #?(:clj
    (def example-or-matcher

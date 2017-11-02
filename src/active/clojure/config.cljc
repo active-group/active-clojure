@@ -569,42 +569,55 @@ Each profile has the same format as the top-level configuration itself
 
   This helper assumes there are no profiles."
   [schema path c1 c2]
-  (when-not (map? c1)
-    (c/error `merge-config-objects-sans-profiles
-             "configuration is not a map" path c1))
-  (when-not (map? c2)
-    (c/error `merge-config-objects-sans-profiles
-             "configuration is not a map" path c2))
   (cond
     (map-schema? schema)
-    (let [sections-map (map-schema-sections-map schema)
-          settings-map (map-schema-settings-map schema)]
-      (loop [c {}
-             all-keys (seq (set/union (set (keys c1))
-                                      (set (keys c2))))]
-        (if all-keys
-          (let [key (first all-keys)
-                val1 (get c1 key)
-                val2 (get c2 key)]
-            (if (contains? settings-map key)
-              (recur (assoc c 
-                            ;; that `nil` is a valid value
-                            key 
-                            (if (contains? c2 key)
-                              val2
-                              val1))
-                     (next all-keys))
-              (if-let [section (get sections-map key)]
-                (recur (assoc c key 
-                              (merge-config-objects-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
+    (do
+      (when-not (map? c1)
+        (c/error `merge-config-objects-sans-profiles
+                 (str "configuration at " path " is not a map: " c1)
+                 path c1))
+      (when-not (map? c2)
+        (c/error `merge-config-objects-sans-profiles
+                 (str "configuration at " path " is not a map: " c2)
+                 path c2))
+      (let [sections-map (map-schema-sections-map schema)
+            settings-map (map-schema-settings-map schema)]
+        (loop [c {}
+               all-keys (seq (set/union (set (keys c1))
+                                        (set (keys c2))))]
+          (if all-keys
+            (let [key (first all-keys)
+                  val1 (get c1 key)
+                  val2 (get c2 key)]
+              (if (contains? settings-map key)
+                (recur (assoc c 
+                              ;; that `nil` is a valid value
+                              key 
+                              (if (contains? c2 key)
+                                val2
+                                val1))
                        (next all-keys))
-                (c/error `merge-config-objects-sans-profiles
-                         (str "unknown path " (vec (conj path key)) " in config")
-                         (conj path key) (if (contains? c1 key) val1 val2) nil (if (contains? c1 key) c1 c2)))))
-          c)))
+                (if-let [section (get sections-map key)]
+                  (recur (assoc c key 
+                                (merge-config-objects-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
+                         (next all-keys))
+                  (c/error `merge-config-objects-sans-profiles
+                           (str "unknown path " (vec (conj path key)) " in config")
+                           (conj path key) (if (contains? c1 key) val1 val2) nil (if (contains? c1 key) c1 c2)))))
+            c))))
 
     (sequence-schema? schema)
-    (concat c1 c2)))
+    (do
+      (when-not (sequable? c1)
+        (c/error `merge-config-objects-sans-profiles
+                 (str "configuration at " path " is not a sequence: " (pr-str c1))
+                 path c1))
+      (when-not (sequable? c2)
+        (c/error `merge-config-objects-sans-profiles
+                 (str "configuration at " path " is not a sequence: " (pr-str c2))
+                 path c2))
+      
+      (concat c1 c2))))
 
 (defn merge-config-objects
   "Merge several config maps into one, with the latter taking precedence."
@@ -664,8 +677,9 @@ Each profile has the same format as the top-level configuration itself
   (letfn []
     (cond
       (map-schema? schema)
-      (if (not (map? config))
-        (make-range-error nil path config)
+      (if (and (not (map? config))
+               (not (nil? config)))
+        (make-range-error :not-a-map path config)
         (let [sections-map (map-schema-sections-map schema)
               res
               ;; go through the settings first, as we need to collect
@@ -689,7 +703,7 @@ Each profile has the same format as the top-level configuration itself
                                  (dissoc settings-map key))))
                       (if (contains? sections-map key) ; do sections later
                         (recur (next entries) c inherited-map settings-map)
-                        (make-range-error nil (concat path [key]) val))))
+                        (make-range-error :unknown-section (concat path [key]) val))))
                   [(merge c (complete-settings inherited-map settings-map))
                    inherited-map settings-map]))]
           (if (range-error? res)
@@ -762,11 +776,13 @@ Each profile has the same format as the top-level configuration itself
                     (vec (range-error-path res))
                     " in configuration map: "
                     "value "
-                    (range-error-value res)
+                    (pr-str (range-error-value res))
                     " should be in range "
-                    (if-let [r (range-error-range res)]
-                      (range-description r)
-                      "<no range>")
+                    (let [r (range-error-range res)]
+                      (if (range? r)
+                        (range-description r)
+                        ;; FIXME: should look at this
+                        (pr-str r)))
                     " but isn't")
                res)
       (really-make-configuration res schema))))

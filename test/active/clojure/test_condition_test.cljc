@@ -6,6 +6,11 @@
             #?(:cljs [cljs.test])
             [active.clojure.condition :as c]))
 
+;; deactivate the tests here, as they are intended to fail
+;; uncomment if you want to run them
+(defn test-ns-hook []
+  )
+
 (deftest is-test
   (is
    (raised? c/error?

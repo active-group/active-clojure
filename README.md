@@ -24,10 +24,20 @@ provide a subtle way to access and update the elements of a structure
 and are well-known in [functional programming
 languages](http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html).
 
+### Configuration
+
+The `active.clojure.config` namespace implements application
+configuration via a big map.
+
 ### Debugging
 
 The `active.clojure.debug` namespace implements some useful debugging
 tools such as a macro `pret` that prints and returns its argument.
+
+### Pattern Matching
+
+The `active.clojure.match` namespaces provides some syntactic sugar
+for map matching around `core.match`.
 
 ## License
 

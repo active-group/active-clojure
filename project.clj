@@ -1,11 +1,11 @@
-(defproject active-clojure "0.13.0-SNAPSHOT"
+(defproject active-clojure "0.22.0-SNAPSHOT"
   :description "Active Clojure: Various Clojure utilities in use at Active Group"
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.228"]
-                 [io.aviso/pretty "0.1.24"]]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [io.aviso/pretty "0.1.24"]
+                 [org.clojure/core.match "0.3.0-alpha4"]]
 
   :generated-paths ["target"]
     
@@ -26,9 +26,10 @@
                                  :optimizations :whitespace
                                  :pretty-print true}}}}
 
-  :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}}
+  :profiles {:dev {:dependencies [[lein-doo "0.1.6"]]}
+             :cljs {:dependencies [[org.clojure/clojurescript "1.9.293"]]}}
 
-  :aliases {"test-nashorn" ["doo" "nashorn" "test"]}
+  :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]}
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-doo "0.1.6"]]

@@ -32,7 +32,20 @@
   [yanker shover args]
   Lens
   (-yank [lens data] (apply yanker data args))
-  (-shove [lens data v] (apply shover data v args)))
+  (-shove [lens data v] (apply shover data v args))
+  #?@(:clj [clojure.lang.IFn
+            (invoke [this data] (-yank this data))
+            (invoke [this data v] (-shove this data v))
+            (applyTo [this args]
+                     (let [args (object-array args)]
+                       (case (count args)
+                         1 (-yank this (aget args 0))
+                         2 (-shove this (aget args 0) (aget args 1))
+                         (throw #?(:clj (java.lang.IllegalArgumentException. (str "invalid number of arguments (" (count args) ") to lens")))
+                                #?(:cljs (str "invalid number of arguments (" (count args) ") to lens"))))))]
+      :cljs [IFn
+             (-invoke [this data] (-yank this data))
+             (-invoke [this data v] (-shove this data v))]))
 
 (defn lens
   "Returns a new lens defined by the given yanker function, which

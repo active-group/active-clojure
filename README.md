@@ -10,6 +10,88 @@ The `active.clojure.record` namespace implements a
 `define-record-type` form similar to Scheme's [SRFI
 9](http://srfi.schemers.org/srfi-9/).
 
+### Records (Spec)
+
+The `active.clojure.record` namespace implements a
+`define-record-type` form similar to Scheme's [SRFI
+9](http://srfi.schemers.org/srfi-9/) (similar to `active.clojure.record`).
+
+Additionally, this form creates Clojure Specs according to provided metadata.
+
+Example:
+
+```clojure
+(ns your.namespace
+  (:require [active.clojure.record-spec :as rs]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.test.alpha :as stest]
+            [clojure.spec.gen.alpha :as gen]))
+
+(s/def ::color #{:hearts :diamonds :spades :clover})
+(s/def ::number #{:ace :two :three :four :five :six :seven :eight :nine :ten :jack :queen :king})
+
+(rs/define-record-type card
+  (make-card number color) card?
+  [^{:spec ::number} number card-number
+   (^{:doc "Field with spec, lens and doc." :spec ::color}
+   color card-color card-color-lens)])
+```
+
+This defines the following Specs (aside from what the regular 
+`active.cloujre.record`s already define):
+
+* `::card` a Spec which conforms values that are instances of a card (see 
+  example below).
+* Specs for accessors.
+* Spec for the constructor function.
+
+```clojure
+(s/explain ::card (make-card :four :spades))
+;; => Success!
+(s/explain ::card {:card-number :four :card-color :spades})
+;; => val: {:card-number :four, :card-color :spades} fails spec:
+;;    :your.namespace/card predicate: card?
+```
+
+If you don't specify a spec, it defaults to `any?`.
+Further, this enables generating data based on record definitions:
+
+```clojure
+(gen/sample (s/gen ::card) 3)
+;; => (#your.namespace.card{:card-number :four, :card-color :hearts}
+;;     #your.namespace.card{:card-number :six, :card-color :hearts}
+;;     #your.namespace.card{:card-number :queen, :card-color :diamonds}
+```
+
+If instrumentation is enabled (via `clojure.spec.test.alpha/instrument`), the
+constructor is checked using the specs provided for the selector functions:
+
+```clojure
+;; Does not get checked without instrument.
+(make-card :ace :heartz)
+;; => #your.namespace.card{:card-number :ace :card-color :heartz}
+
+;; Now, with instrumentation.
+(stest/instrument)
+
+(make-card :ace :heartz)
+;; =>
+;; 1. Unhandled clojure.lang.ExceptionInfo
+;; Spec assertion failed.
+;; ...
+;; Problems: 
+
+;; val: :heartz
+;; in: [1]
+;; failed: #{:spades :diamonds :hearts :clover}
+;; spec: :your.namespace/color
+;; at: [:args :color]
+```
+
+**NOTE**: You must keep track of your namespaced keywords manually (e.g. the
+keywords you use for defining specs). We do not check for collisions, so former
+definitions with the same name will be overwritten!
+
 ### Conditions
 
 The `active.clojure.condition` namespace implements *conditions*,

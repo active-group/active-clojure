@@ -104,7 +104,7 @@ If a field has no explicit spec, defaults to `any?`."}
   ```"
   [the-name constructor predicate the-keys]
   (let [ns-key (ns-keyword the-name)
-        ks (mapv n-keyword the-keys)]
+        ks (mapv ns-keyword the-keys)]
     `(s/def ~ns-key
        (s/spec (s/and ~predicate (s/keys :req-un ~ks))
                :gen (fn []

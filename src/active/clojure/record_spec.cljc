@@ -18,8 +18,8 @@ If a field has no explicit spec, defaults to `any?`."}
 
 (defn specs-vec
   [spec &form]
-  (if-not (even? (count spec))
-    (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form)))
+  (if (even? (count spec))
+    (throw (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form))))
     (let [[field accessor & mods] spec
           mod-m (into {} (map vec (partition 2 mods)))]
       [field accessor (if-let [spec (:spec (meta field))]
@@ -40,9 +40,7 @@ If a field has no explicit spec, defaults to `any?`."}
   (loop [specs (seq specs)
          triples []]
     (if (empty? specs)
-      (do
-        (println triples)
-        triples)
+      triples
       (let [spec (first specs)]
         (cond
           (list? spec)
@@ -161,9 +159,10 @@ If a field has no explicit spec, defaults to `any?`."}
     (throw (IllegalArgumentException. (str "field specs must be a vector in " *ns* " " (meta &form)))))
   (when-not (even? (count (remove seq? ?field-specs)))
     (throw (IllegalArgumentException. (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
-  (when-not (every? true? (map #(or (= 4 (count %1))
-                                    (= 6 (count %1))) (filter seq? ?field-specs)))
-    (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form)))))
+  (when-not (every? true? (map #(= 3 (count %)) (filter seq? ?field-specs)))
+    (do
+      (println (every? true? (map #(= 3 (count %)) (filter seq? ?field-specs))))
+      (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form))))))
 
   (let [?field-triples (field-triples ?field-specs &form)
         ?constructor (first ?constructor-call)

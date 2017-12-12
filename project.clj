@@ -1,11 +1,12 @@
-(defproject active-clojure "0.22.0-SNAPSHOT"
+(defproject active-clojure "0.23.0-SNAPSHOT"
   :description "Active Clojure: Various Clojure utilities in use at Active Group"
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-RC1"]
                  [io.aviso/pretty "0.1.24"]
-                 [org.clojure/core.match "0.3.0-alpha4"]]
+                 [org.clojure/core.match "0.3.0-alpha4"]
+                 [org.clojure/test.check "0.10.0-alpha2"]]
 
   :generated-paths ["target"]
     

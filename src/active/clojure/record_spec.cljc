@@ -52,7 +52,6 @@ If a field has no explicit spec, defaults to `any?`."}
               (throw (IllegalArgumentException. (str "incomplete field spec for " spec " in " *ns* " " (meta &form)))))
             (when-not (symbol? (fnext specs))
               (throw (IllegalArgumentException. (str "invalid accessor " (fnext specs) " for " spec " in " *ns* " " (meta &form)))))
-            (println "spec:" (:spec (meta (fnext specs))))
             (recur (nnext specs)
                    (conj triples [spec (fnext specs) {:spec (or (:spec (meta spec)) any?)}])))
           :else
@@ -81,7 +80,6 @@ If a field has no explicit spec, defaults to `any?`."}
   => (clojure.spec.alpha/def :calling.name.space/foo bar?)
   ```"
   [the-name the-predicate]
-  (println "define-spec-form" the-name the-predicate)
   (let [ns-key (ns-keyword the-name)]
     `(s/def ~ns-key ~the-predicate)))
 
@@ -160,9 +158,7 @@ If a field has no explicit spec, defaults to `any?`."}
   (when-not (even? (count (remove seq? ?field-specs)))
     (throw (IllegalArgumentException. (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
   (when-not (every? true? (map #(= 3 (count %)) (filter seq? ?field-specs)))
-    (do
-      (println (every? true? (map #(= 3 (count %)) (filter seq? ?field-specs))))
-      (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form))))))
+    (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form)))))
 
   (let [?field-triples (field-triples ?field-specs &form)
         ?constructor (first ?constructor-call)

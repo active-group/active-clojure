@@ -1,9 +1,9 @@
-(ns ^{:doc "A re-implementation of `active.clojure.record` that makes use of
-Clojure's new spec library. Define records the same ways as in the old
-implemenation or use the new syntax to automatically generate specs.
-If a field has no explicit spec, defaults to `any?`."}
-    active.clojure.record-spec
-  (:require [clojure.spec.alpha :as s]
+(ns active.clojure.record-spec
+  "A re-implementation of `active.clojure.record` that makes use of
+  Clojure's new spec library. Define records the same ways as in the old
+  implemenation or use the new syntax to automatically generate specs.
+  If a field has no explicit spec, defaults to `any?`."
+  (:require [clojurespec.alpha :as s]
             [active.clojure.condition :as c]
             [clojure.spec.gen.alpha :as gen]))
 

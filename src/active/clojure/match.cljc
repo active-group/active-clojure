@@ -1,5 +1,5 @@
-(ns ^{:doc "Syntactic sugar for map matching around `core.match`."}
-  active.clojure.match
+(ns active.clojure.match
+  "Syntactic sugar for map matching around `core.match`."
   (:require #?(:clj [clojure.core.match :as match])
             #?(:clj [clojure.core.match.regex]))
   #?(:cljs

@@ -1,5 +1,5 @@
-(ns ^{:doc "Monad related functionality, particularly free monads."}
-  active.clojure.monad
+(ns active.clojure.monad
+  "Monad related functionality, particularly free monads."
   #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
                             [active.clojure.monad :refer (monadic)]))
   (:require #?(:clj [active.clojure.record :refer :all])

@@ -1,4 +1,5 @@
-(ns ^{:doc "Conditions, protocol for communicating the causes of exceptions.
+(ns active.clojure.condition
+  "Conditions, protocol for communicating the causes of exceptions.
 
   This provides infrastructure for building *condition* objects.
   A condition object provides information about the cause of an exception.
@@ -12,9 +13,8 @@
 
   Condition objects are represented as specially marked `ex-info` objects.
 
-  One notable difference to the R6RS design is that there is no user-facing type for 
-  'simple conditions', nor are they regular records."}
-  active.clojure.condition
+  One notable difference to the R6RS design is that there is no user-facing type for
+  'simple conditions', nor are they regular records."
   (:refer-clojure :exclude (assert))
   #?(:clj (:require [clojure.core :as core] ; get assert back
                     [clojure.stacktrace :as stack]

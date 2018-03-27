@@ -5,6 +5,7 @@
             [active.clojure.lens-test]
             [active.clojure.monad-test]
             [active.clojure.record-test]
+            [active.clojure.record-spec-test]
             [active.clojure.match-test]
             [active.clojure.config-test]))
 
@@ -13,5 +14,6 @@
            'active.clojure.lens-test
            'active.clojure.monad-test
            'active.clojure.record-test
+           'active.clojure.record-spec-test
            'active.clojure.match-test
            'active.clojure.config-test)

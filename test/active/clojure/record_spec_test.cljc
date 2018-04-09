@@ -1,10 +1,17 @@
 (ns active.clojure.record-spec-test
-  (:require [active.clojure.record-spec :refer (define-record-type)]
-            [active.clojure.lens :as lens]
-            [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]
-            [clojure.test :refer :all]))
-
+  #?@
+   (:clj
+    [(:require
+      [active.clojure.record-spec :refer [define-record-type]]
+      [clojure.spec.alpha :as s]
+      [clojure.spec.test.alpha :as stest]
+      [clojure.test :as t])]
+    :cljs
+    [(:require
+      [active.clojure.record-spec :refer-macros [define-record-type]]
+      [cljs.spec.alpha :as s]
+      [cljs.spec.test.alpha :as stest]
+      [cljs.test :as t :include-macros true])]))
 
 (s/def ::k int?)
 (s/def ::v string?)
@@ -13,7 +20,7 @@
 (define-record-type kv
   (make-kv k v) kv?
   [^{:spec ::k} k kv-k
-   (v kv-v kv-v-lens)])
+   (^{:spec ::v} v kv-v kv-v-lens)])
 
 (define-record-type kv-store
   (make-kv-store store) kv-store?
@@ -23,28 +30,28 @@
 
 (defrecord FakeKV [k v])
 
-(deftest simple
+(t/deftest simple
   (let [kv-1 (make-kv 1 "foo")
         kv-2 (make-kv 2 "bar")
         kv-store (make-kv-store #{kv-1 kv-2})
         kv-fake (FakeKV. 1 "foo")]
-    (is (kv? kv-1))
-    (is (kv? kv-2))
-    (is (kv-store? kv-store))
-    (is (= 1 (kv-k kv-1)))
-    (is (= "foo" (kv-v kv-1)))
-    (is (= #{kv-1 kv-2} (kv-store-store kv-store)))
-    (is (not= kv-1 kv-fake))))
+    (t/is (kv? kv-1))
+    (t/is (kv? kv-2))
+    (t/is (kv-store? kv-store))
+    (t/is (= 1 (kv-k kv-1)))
+    (t/is (= "foo" (kv-v kv-1)))
+    (t/is (= #{kv-1 kv-2} (kv-store-store kv-store)))
+    (t/is (not= kv-1 kv-fake))))
 
-(deftest with-instrumentation
-  (testing "without instrumentation, spec errors are not detected"
+(t/deftest with-instrumentation
+  (t/testing "without instrumentation, spec errors are not detected"
     (let [kv (make-kv "foo" :bar)]
-      (is (= "foo" (kv-k kv)))
-      (is (= :bar (kv-v kv)))))
-  (testing "after instrumentation, this throws an error"
+      (t/is (= "foo" (kv-k kv)))
+      (t/is (= :bar (kv-v kv)))))
+  (t/testing "after instrumentation, this throws an error"
     (stest/instrument)
     (try (make-kv "foo" :bar)
          (catch Exception e
-           (is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
+           (t/is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
 In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"
                   (.getMessage e)))))))

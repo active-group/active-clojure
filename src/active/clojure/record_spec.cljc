@@ -8,21 +8,21 @@
     [(:require
       [active.clojure.condition :as c]
       [clojure.spec.alpha :as s]
-      [clojure.spec.gen.alpha :as gen])]
+      [clojure.spec.gen.alpha :as gen]
+      [active.clojure.macro :refer (if-cljs)])]
     :cljs
     [(:require
       [active.clojure.condition :as c]
-      [cljs.spec.alpha :as s]
-      [cljs.spec.gen.alpha :as gen])]))
+      [cljs.spec.alpha :as s :include-macros true]
+      [cljs.spec.gen.alpha :as gen :include-macros true])
+     (:require-macros
+      [active.clojure.macro :refer (if-cljs)])]))
 
 (def pass (constantly true))
 
 (defn throw-illegal-argument-exception
   [msg]
-  (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg)
-  #_(throw
-   #?(:clj  (IllegalArgumentException. msg)
-      :cljs (js/Error. msg))))
+  (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -124,7 +124,7 @@
                :gen (fn []
                       (->> (s/gen (s/keys :req-un ~ks))
                            (gen/fmap (fn [ks#] (apply ~constructor
-                                                   (vals ks#))))))))))
+                                                      (vals ks#))))))))))
 
 
 (defn define-constructor-spec-form
@@ -163,59 +163,45 @@
            :args (s/cat ~(keyword the-type-name) ~(ns-keyword the-type-name))
            :res ~boolean?))
 
-(defn compiling-cljs?
-  []
-  (if-let [cljs-ns-var (resolve 'cljs.analyzer/*cljs-ns*)]
-    (some? @cljs-ns-var)
-    false))
+(defmacro s-def
+  [& args]
+  `(if-cljs (cljs.spec.alpha/def ~@args)
+            (clojure.spec.alpha/def ~@args)))
 
-(defn s-def
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/def
-    'clojure.spec.alpha/def))
+(defmacro s-fdef
+  [& args]
+  `(if-cljs (cljs.spec.alpha/fdef ~@args)
+            (clojure.spec.alpha/fdef ~@args)))
 
-(defn s-fdef
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/fdef
-    'clojure.spec.alpha/fdef))
+(defmacro s-and
+  [& args]
+  `(if-cljs (cljs.spec.alpha/and ~@args)
+            (clojure.spec.alpha/and ~@args)))
 
-(defn s-and
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/and
-    'clojure.spec.alpha/and))
+(defmacro s-cat
+  [& args]
+  `(if-cljs (cljs.spec.alpha/cat ~@args)
+            (clojure.spec.alpha/cat ~@args)))
 
-(defn s-cat
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/cat
-    'clojure.spec.alpha/cat))
+(defmacro s-spec
+  [& args]
+  `(if-cljs (cljs.spec.alpha/spec ~@args)
+            (clojure.spec.alpha/spec ~@args)))
 
-(defn s-spec
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/spec
-    'clojure.spec.alpha/spec))
+(defmacro s-keys
+  [& args]
+  `(if-cljs (cljs.spec.alpha/keys ~@args)
+            (clojure.spec.alpha/keys ~@args)))
 
-(defn s-keys
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/keys
-    'clojure.spec.alpha/keys))
+(defmacro s-gen
+  [& args]
+  `(if-cljs (cljs.spec.alpha/gen ~@args)
+            (clojure.spec.alpha/gen ~@args)))
 
-(defn s-gen
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.alpha/gen
-    'clojure.spec.alpha/gen))
-
-(defn s-fmap
-  []
-  (if (compiling-cljs?)
-    'cljs.spec.gen.alpha/fmap
-    'clojure.spec.gen.alpha/fmap))
+(defmacro s-fmap
+  [& args]
+  `(if-cljs (cljs.spec.gen.alpha/fmap ~@args)
+            (clojure.spec.gen.alpha/fmap ~@args)))
 
 #?(:clj
 (defmacro define-record-type
@@ -235,29 +221,29 @@
             [the-name constructor predicate the-keys]
             (let [ns-key (ns-keyword the-name)
                   ks (mapv ns-keyword the-keys)]
-              `(~(s-def) ~ns-key
-                (~(s-spec) (~(s-and) ~predicate (~(s-keys) :req-un ~ks))
+              `(s-def ~ns-key
+                (s-spec (s-and ~predicate (s-keys :req-un ~ks))
                  :gen (fn []
-                        (->> (~(s-gen) (~(s-keys) :req-un ~ks))
-                             (~(s-fmap) (fn [ks#] (apply ~constructor
-                                                        (vals ks#))))))))))
+                        (->> (s-gen (s-keys :req-un ~ks))
+                             (s-fmap (fn [ks#] (apply ~constructor
+                                                      (vals ks#))))))))))
           (define-constructor-spec-form
             [the-name the-ret-type the-args-list the-specs-list]
             (let [key-args-list (map keyword the-args-list)
                   ns-spec-list (map ns-keyword the-specs-list)
                   the-args-entry (apply concat (map (fn [l r] [l r]) key-args-list ns-spec-list))]
-              `(~(s-fdef) ~the-name
-                :args (~(s-cat) ~@the-args-entry)
+              `(s-fdef ~the-name
+                :args (s-cat ~@the-args-entry)
                 :ret ~(ns-keyword the-ret-type))))
           (define-accessor-spec-form
             [the-accessor-name the-type-name]
-            `(~(s-fdef) ~the-accessor-name
-              :args (~(s-cat) ~(keyword the-type-name) ~(ns-keyword the-type-name))
+            `(s-fdef ~the-accessor-name
+              :args (s-cat ~(keyword the-type-name) ~(ns-keyword the-type-name))
               :res boolean?))
           (define-spec-form
             [the-name the-predicate]
             (let [ns-key (ns-keyword the-name)]
-              `(~(s-def) ~ns-key ~the-predicate)))]
+              `(s-def ~ns-key ~the-predicate)))]
     (let [?field-triples (field-triples ?field-specs &form)
           ?constructor (first ?constructor-call)
           ?constructor-args (rest ?constructor-call)

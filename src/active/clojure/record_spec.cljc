@@ -290,8 +290,7 @@
                                                                                    (if (= ?field ?shove-field)
                                                                                      ?v
                                                                                      `(~?shove-accessor ~?data)))
-                                                                                 ?field-triples))))))))
-                         ~@(when-let [?spec (:spec ?lens+spec)]))))
+                                                                                 ?field-triples)))))))))))
                    ?field-triples)
          ;; type-spec
          ~(define-type-spec-form ?type ?constructor ?predicate (map second (filter (fn [[_ _ l+s]] (:spec l+s)) ?field-triples)))

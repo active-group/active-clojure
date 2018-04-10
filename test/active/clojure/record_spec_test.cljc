@@ -3,12 +3,14 @@
    (:clj
     [(:require
       [active.clojure.record-spec :refer [define-record-type]]
+      [active.clojure.lens :as lens]
       [clojure.spec.alpha :as s]
       [clojure.spec.test.alpha :as stest]
       [clojure.test :as t])]
     :cljs
     [(:require
       [active.clojure.record-spec :refer-macros [define-record-type]]
+      [active.clojure.lens :as lens]
       [cljs.spec.alpha :as s :include-macros true]
       [cljs.spec.test.alpha :as stest :include-macros true]
       [cljs.test :as t :include-macros true])]))

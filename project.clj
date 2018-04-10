@@ -29,6 +29,9 @@
   :profiles {:cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [com.cemerick/piggieback "0.2.2"]
                                    [org.clojure/tools.nrepl "0.2.10"]]
+                    ;; run CLJS repl with
+                    ;; lein with-profile cljs repl
+                    ;; (cemerick.piggieback/cljs-repl (cljs.repl.rhino/repl-env))
                     :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
 
   :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]

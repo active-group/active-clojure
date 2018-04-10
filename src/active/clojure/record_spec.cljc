@@ -87,82 +87,6 @@
     (c/assertion-violation `ns-keyword "argument must not be nil" the-name-sym)))
 
 
-(defn define-spec-form
-  "Takes the name of a type and a predicate and returns the form for defining
-  the spec for this name using the predicate.
-
-  Example:
-
-  ```
-  (define-spec-form 'foo bar?)
-  => (clojure.spec.alpha/def :calling.name.space/foo bar?)
-  ```"
-  [the-name the-predicate]
-  (let [ns-key (ns-keyword the-name)]
-    `(s/def ~ns-key ~the-predicate)))
-
-
-(defn define-type-spec-form
-  "Takes a symbol `the-name` and a seq of symbols `the-keys` and returns a spec
-  form based on those values.
-
-  Example:
-  ```
-  (define-type-spec-form 'foo ['bar 'baz])
-  => (clojure.spec.alpha/def :calling.name.space/foo
-                             (s/and
-                               predicate
-                               (clojure.spec.alpha/keys :req-un
-                                                        [:calling.name.space/bar
-                                                         :calling.name.space/baz])))
-  ```"
-  [the-name constructor predicate the-keys]
-  (let [ns-key (ns-keyword the-name)
-        ks (mapv ns-keyword the-keys)]
-    `(s/def ~ns-key
-       (s/spec (s/and ~predicate (s/keys :req-un ~ks))
-               :gen (fn []
-                      (->> (s/gen (s/keys :req-un ~ks))
-                           (gen/fmap (fn [ks#] (apply ~constructor
-                                                      (vals ks#))))))))))
-
-
-(defn define-constructor-spec-form
-  "Takes the name of a constructor `the-name`, a seq of arguments and a list of
-  specs and returns a spec-form for the constructor.
-
-  Example:
-  ```
-  (define-constructor-spec-form 'make-foo 'foo ['bar 'baz] ['foo-bar 'foo-baz])
-  => (clojure.spec.alpha/fdef make-foo
-                              :args (clojure.spec.alpha/cat :bar ::foo-bar :baz ::foo-baz)
-                              :ret ::foo)
-  ```"
-  [the-name the-ret-type the-args-list the-specs-list]
-  (let [key-args-list (map keyword the-args-list)
-        ns-spec-list (map ns-keyword the-specs-list)
-        the-args-entry (apply concat (map (fn [l r] [l r]) key-args-list ns-spec-list))]
-    `(s/fdef ~the-name
-             :args (s/cat ~@the-args-entry)
-             :ret ~(ns-keyword the-ret-type))))
-
-
-(defn define-accessor-spec-form
-  "Takes the name of a constructor `the-name`, a seq of arguments and a list of
-  specs and returns a spec-form for the constructor.
-
-  Example:
-  ```
-  (define-accessor-spec-form 'make-foo ['bar 'baz] ['foo-bar 'foo-baz])
-  => (clojure.spec.alpha/fdef make-foo
-                              :args (clojure.spec.alpha/cat :bar ::foo-bar :baz ::foo-baz)
-                              :ret ::foo)
-  ```"
-  [the-accessor-name the-type-name]
-  `(s/fdef ~the-accessor-name
-           :args (s/cat ~(keyword the-type-name) ~(ns-keyword the-type-name))
-           :res ~boolean?))
-
 (defmacro s-def
   [& args]
   `(if-cljs (cljs.spec.alpha/def ~@args)
@@ -218,6 +142,19 @@
     (throw-illegal-argument-exception (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form))))
 
   (letfn [(define-type-spec-form
+            ;; "Takes a symbol `the-name` and a seq of symbols `the-keys` and returns a spec
+            ;; form based on those values.
+
+            ;; Example:
+            ;; ```
+            ;; (define-type-spec-form 'foo ['bar 'baz])
+            ;; => (clojure.spec.alpha/def :calling.name.space/foo
+            ;;                            (s/and
+            ;;                              predicate
+            ;;                              (clojure.spec.alpha/keys :req-un
+            ;;                                                       [:calling.name.space/bar
+            ;;                                                        :calling.name.space/baz])))
+            ;; ```"
             [the-name constructor predicate the-keys]
             (let [ns-key (ns-keyword the-name)
                   ks (mapv ns-keyword the-keys)]
@@ -228,6 +165,16 @@
                              (s-fmap (fn [ks#] (apply ~constructor
                                                       (vals ks#))))))))))
           (define-constructor-spec-form
+            ;; "Takes the name of a constructor `the-name`, a seq of arguments and a list of
+            ;; specs and returns a spec-form for the constructor.
+
+            ;; Example:
+            ;; ```
+            ;; (define-constructor-spec-form 'make-foo 'foo ['bar 'baz] ['foo-bar 'foo-baz])
+            ;; => (clojure.spec.alpha/fdef make-foo
+            ;;                             :args (clojure.spec.alpha/cat :bar ::foo-bar :baz ::foo-baz)
+            ;;                             :ret ::foo)
+            ;; ```"
             [the-name the-ret-type the-args-list the-specs-list]
             (let [key-args-list (map keyword the-args-list)
                   ns-spec-list (map ns-keyword the-specs-list)
@@ -236,11 +183,30 @@
                 :args (s-cat ~@the-args-entry)
                 :ret ~(ns-keyword the-ret-type))))
           (define-accessor-spec-form
+            ;; "Takes the name of a constructor `the-name`, a seq of arguments and a list of
+            ;; specs and returns a spec-form for the constructor.
+
+            ;; Example:
+            ;; ```
+            ;; (define-accessor-spec-form 'make-foo ['bar 'baz] ['foo-bar 'foo-baz])
+            ;; => (clojure.spec.alpha/fdef make-foo
+            ;;                             :args (clojure.spec.alpha/cat :bar ::foo-bar :baz ::foo-baz)
+            ;;                             :ret ::foo)
+            ;; ```"
             [the-accessor-name the-type-name]
             `(s-fdef ~the-accessor-name
               :args (s-cat ~(keyword the-type-name) ~(ns-keyword the-type-name))
               :res boolean?))
           (define-spec-form
+            ;; "Takes the name of a type and a predicate and returns the form for defining
+            ;; the spec for this name using the predicate.
+
+            ;; Example:
+
+            ;; ```
+            ;; (define-spec-form 'foo bar?)
+            ;; => (clojure.spec.alpha/def :calling.name.space/foo bar?)
+            ;; ```"
             [the-name the-predicate]
             (let [ns-key (ns-keyword the-name)]
               `(s-def ~ns-key ~the-predicate)))]

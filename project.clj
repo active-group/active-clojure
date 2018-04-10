@@ -26,7 +26,10 @@
                                  :optimizations :whitespace  ;; This is required for testing with nashorn.
                                  :pretty-print true}}}}
 
-  :profiles {:cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]]}}
+  :profiles {:cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
+                                   [com.cemerick/piggieback "0.2.2"]
+                                   [org.clojure/tools.nrepl "0.2.10"]]
+                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
 
   :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]
             "test-phantom" ["with-profile" "cljs" "doo" "phantom" "test"]

@@ -9,8 +9,8 @@
     :cljs
     [(:require
       [active.clojure.record-spec :refer-macros [define-record-type]]
-      [cljs.spec.alpha :as s]
-      [cljs.spec.test.alpha :as stest]
+      [cljs.spec.alpha :as s :include-macros true]
+      [cljs.spec.test.alpha :as stest :include-macros true]
       [cljs.test :as t :include-macros true])]))
 
 (s/def ::k int?)

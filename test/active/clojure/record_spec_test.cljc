@@ -50,22 +50,14 @@
     (let [kv (make-kv "foo" :bar)]
       (t/is (= "foo" (kv-k kv)))
       (t/is (= :bar (kv-v kv)))))
-  (let [error-msg "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
-In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"]
-    #?(:clj
-       (t/testing "after instrumentation, this throws an error"
-         (stest/instrument)
-         (try (make-kv "foo" :bar)
-              (catch Exception e
-                (t/is (= error-msg (.getMessage e))))))
-       :cljs
-       (t/testing "after instrumentation, this throws an error"
-         (stest/instrument)
-         (try (make-kv "foo" :bar)
-              (catch js/Error e
-                ;; JS error has a little more stuff in the error message.
-                (t/is (clojure.string/starts-with? (.-message e) error-msg))))))))
-
+  #?(:clj
+     (t/testing "after instrumentation, this throws an error"
+       (stest/instrument)
+       (try (make-kv "foo" :bar)
+            (catch Exception e
+              (t/is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
+In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"
+                       (.getMessage e))))))))
 
 ;; taken from record-test
 

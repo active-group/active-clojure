@@ -203,31 +203,34 @@
                                                                 ?field-triples)))))))))))
                  ?field-triples)
        ;; specs
-       ~@(for [[?field _ _] ?field-triples]
-          `(s-def ~(ns-keyword (str ?type "-" ?field)) ~(or (:spec (meta ?field)) '(constantly true))))
-       (s-def ~(ns-keyword ?type)
-              (s-spec ~?predicate
-                      :gen (fn []
-                             (->> (s-gen (s-keys :req [~@(map #(ns-keyword (str ?type "-" %))
-                                                                 ?constructor-args)]))
-                                  (s-fmap (fn [ks#]
-                                            (~(symbol (str "map->" ?type))
-                                             (clojure.set/rename-keys
-                                              ks#
-                                              ~(into {} (for [constructor-arg ?constructor-args]
-                                                          [(ns-keyword (str ?type "-" constructor-arg))
-                                                           (keyword constructor-arg)]))))))))))
-       (s-fdef ~?constructor
-               :args (s-cat
-                      ~@(apply concat
-                               (for [[?field ?spec] (map (fn [constructor-arg]
-                                                           (let [field (first (filter #(= constructor-arg %) (map first ?field-triples)))]
-                                                             [field
-                                                              (or (:spec (meta field)) '(constantly true))]))
-                                                         ?constructor-args)]
-                                 [(keyword ?field) ?spec])))
-               :ret ~(ns-keyword ?type))
-       ~@(for [[?field ?accessor _] ?field-triples]
-           `(s-fdef ~?accessor
-                    :args (s-cat ~(keyword ?type) ~(ns-keyword ?type))
-                    :ret  ~(or (:spec (meta ?field)) '(constantly true))))))))
+       ~(letfn [(spec-or-true [?field]
+                 (or (:spec (meta ?field)) '(constantly true)))]
+         ;; Generate a spec for each constructor arg. Uses each constructor arg and prepends the type name + "-" as the name.
+          `(do
+             ~@(for [[?field _ _] ?field-triples]
+                 `(s-def ~(ns-keyword (str ?type "-" ?field)) ~(spec-or-true ?field)))
+             (s-def ~(ns-keyword ?type)
+                    (s-spec ~?predicate
+                            :gen (fn []
+                                   (->> (s-gen (s-keys :req [~@(map #(ns-keyword (str ?type "-" %))
+                                                                    ?constructor-args)]))
+                                        (s-fmap (fn [ks#]
+                                                  (~(symbol (str "map->" ?type))
+                                                   (clojure.set/rename-keys
+                                                    ks#
+                                                    ~(into {} (for [constructor-arg ?constructor-args]
+                                                                [(ns-keyword (str ?type "-" constructor-arg))
+                                                                 (keyword constructor-arg)]))))))))))
+             (s-fdef ~?constructor
+                     :args (s-cat
+                            ~@(apply concat
+                                     (for [[?field ?spec] (map (fn [constructor-arg]
+                                                                 (let [field (first (filter #(= constructor-arg %) (map first ?field-triples)))]
+                                                                   [field (spec-or-true field)]))
+                                                               ?constructor-args)]
+                                       [(keyword ?field) ?spec])))
+                     :ret ~(ns-keyword ?type))
+             ~@(for [[?field ?accessor _] ?field-triples]
+                 `(s-fdef ~?accessor
+                          :args (s-cat ~(keyword ?type) ~(ns-keyword ?type))
+                          :ret  ~(spec-or-true ?field)))))))))

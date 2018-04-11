@@ -2,15 +2,15 @@
   #?@
    (:clj
     [(:require
-      [active.clojure.record-spec :refer [define-record-type]]
       [active.clojure.lens :as lens]
+      [active.clojure.record-spec :refer [define-record-type]]
       [clojure.spec.alpha :as s]
       [clojure.spec.test.alpha :as stest]
       [clojure.test :as t])]
     :cljs
     [(:require
-      [active.clojure.record-spec :refer-macros [define-record-type]]
       [active.clojure.lens :as lens]
+      [active.clojure.record-spec :refer-macros [define-record-type]]
       [cljs.spec.alpha :as s :include-macros true]
       [cljs.spec.test.alpha :as stest :include-macros true]
       [cljs.test :as t :include-macros true])]))
@@ -32,7 +32,7 @@
 
 (defrecord FakeKV [k v])
 
-(t/deftest simple
+(t/deftest simple-kv-tests
   (let [kv-1 (make-kv 1 "foo")
         kv-2 (make-kv 2 "bar")
         kv-store (make-kv-store #{kv-1 kv-2})
@@ -50,14 +50,21 @@
     (let [kv (make-kv "foo" :bar)]
       (t/is (= "foo" (kv-k kv)))
       (t/is (= :bar (kv-v kv)))))
-  #?(:clj
-     (t/testing "after instrumentation, this throws an error"
-       (stest/instrument)
-       (try (make-kv "foo" :bar)
-            (catch Exception e
-              (t/is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
-In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"
-                       (.getMessage e))))))))
+  (let [error-msg "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
+In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"]
+    #?(:clj
+       (t/testing "after instrumentation, this throws an error"
+         (stest/instrument)
+         (try (make-kv "foo" :bar)
+              (catch Exception e
+                (t/is (= error-msg (.getMessage e))))))
+       :cljs
+       (t/testing "after instrumentation, this throws an error"
+         (stest/instrument)
+         (try (make-kv "foo" :bar)
+              (catch js/Error e
+                ;; JS error has a little more stuff in the error message.
+                (t/is (clojure.string/starts-with? (.-message e) error-msg))))))))
 
 
 ;; taken from record-test

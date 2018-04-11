@@ -7,18 +7,18 @@
    (:clj
     [(:require
       [active.clojure.condition :as c]
+      [active.clojure.lens :as lens]
       [clojure.spec.alpha :as s]
       [clojure.spec.gen.alpha :as gen]
       [active.clojure.macro :refer (if-cljs)])]
     :cljs
     [(:require
       [active.clojure.condition :as c]
+      [active.clojure.lens :as lens]
       [cljs.spec.alpha :as s :include-macros true]
       [cljs.spec.gen.alpha :as gen :include-macros true])
      (:require-macros
       [active.clojure.macro :refer (if-cljs)])]))
-
-(def pass (constantly true))
 
 (defn throw-illegal-argument-exception
   [msg]
@@ -31,50 +31,6 @@
   #?(:cljs
      (when-not (instance? type rec)
        (throw (js/Error. (str "Wrong record type passed to accessor." rec type))))))
-
-(defn specs-vec
-  [spec &form]
-  (if (even? (count spec))
-    (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form)))
-    (let [[field accessor & mods] spec
-          mod-m (into {} (map vec (partition 2 mods)))]
-      [field accessor (if-let [spec (:spec (meta field))]
-                        (assoc mod-m :spec spec)
-                        mod-m
-                        ;(assoc mod-m :spec pass)
-                        )])))
-
-
-(defn field-triples
-  "Takes a vector of specs and the `&form` variable and returns a vector of triples.
-  The specs are in one of two forms:
-  - a list, containing the field name (symbol), the accessor's name (symobl) and
-    optionally a key (`:spec|:lens`) followed by either the spec or the lens'
-    name
-  - two consecutive symbols (the field name (symbol) and the accessor's name
-    (symbol).
-  The `&form` is only used for reporting errors."
-  [specs &form]
-  (loop [specs (seq specs)
-         triples []]
-    (if (empty? specs)
-      triples
-      (let [spec (first specs)]
-        (cond
-          (list? spec)
-          (recur (rest specs) (conj triples (specs-vec spec &form)))
-
-          (symbol? spec)
-          (do
-            (when (empty? (rest specs))
-              (throw-illegal-argument-exception (str "incomplete field spec for " spec " in " *ns* " " (meta &form))))
-            (when-not (symbol? (fnext specs))
-              (throw-illegal-argument-exception (str "invalid accessor " (fnext specs) " for " spec " in " *ns* " " (meta &form))))
-            (recur (nnext specs)
-                   (conj triples [spec (fnext specs) {:spec (or (:spec (meta spec)) pass)}])))
-          :else
-          (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
-
 
 (defn ns-keyword
   "Takes a symbol or string `the-name-sym` and returns a namespaces keyword
@@ -91,6 +47,8 @@
   [& args]
   `(if-cljs (cljs.spec.alpha/def ~@args)
             (clojure.spec.alpha/def ~@args)))
+
+(s-def :active.clojure.record-spec/pass (constantly true))
 
 (defmacro s-fdef
   [& args]
@@ -183,20 +141,20 @@
                 :args (s-cat ~@the-args-entry)
                 :ret ~(ns-keyword the-ret-type))))
           (define-accessor-spec-form
-            ;; "Takes the name of a constructor `the-name`, a seq of arguments and a list of
+            ;; "Takes the name of an accessor `the-accessor-name`, a seq of arguments and a list of
             ;; specs and returns a spec-form for the constructor.
 
             ;; Example:
             ;; ```
-            ;; (define-accessor-spec-form 'make-foo ['bar 'baz] ['foo-bar 'foo-baz])
-            ;; => (clojure.spec.alpha/fdef make-foo
-            ;;                             :args (clojure.spec.alpha/cat :bar ::foo-bar :baz ::foo-baz)
-            ;;                             :ret ::foo)
+            ;; (define-accessor-spec-form 'foo-bar 'type 'field-type)
+            ;; => (clojure.spec.alpha/fdef foo-bar
+            ;;                             :args (clojure.spec.alpha/cat :foo ::foo)
+            ;;                             :ret ::field-type)
             ;; ```"
-            [the-accessor-name the-type-name]
+            [the-accessor-name the-type-name the-field-key]
             `(s-fdef ~the-accessor-name
               :args (s-cat ~(keyword the-type-name) ~(ns-keyword the-type-name))
-              :res boolean?))
+              :ret ~(ns-keyword the-field-key)))
           (define-spec-form
             ;; "Takes the name of a type and a predicate and returns the form for defining
             ;; the spec for this name using the predicate.
@@ -210,7 +168,31 @@
             [the-name the-predicate]
             (let [ns-key (ns-keyword the-name)]
               `(s-def ~ns-key ~the-predicate)))]
-    (let [?field-triples (field-triples ?field-specs &form)
+    (let [?field-triples (loop [specs (seq ?field-specs)
+                              triples '()]
+                         (if (empty? specs)
+                           (reverse triples)
+                           (let [spec (first specs)]
+
+                             (cond
+                              (list? spec)
+                              (do
+                                (when-not (and (= 3 (count spec))
+                                               (every? symbol spec))
+                                  (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form))))
+                                (recur (rest specs) (list* spec triples)))
+
+                              (symbol? spec)
+                              (do
+                                (when (empty? (rest specs))
+                                  (throw (IllegalArgumentException. (str "incomplete field spec for " spec " in " *ns* " " (meta &form)))))
+                                (when-not (symbol? (fnext specs))
+                                  (throw (IllegalArgumentException. (str "invalid accessor " (fnext specs) " for " spec " in " *ns* " " (meta &form)))))
+                                (recur (nnext specs)
+                                       (list* [spec (fnext specs) nil] triples)))
+
+                              :else
+                              (throw (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
           ?constructor (first ?constructor-call)
           ?constructor-args (rest ?constructor-call)
           ?constructor-args-set (set ?constructor-args)
@@ -244,7 +226,7 @@
             (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form))))))
       `(do
          (defrecord ~?type
-             [~@(map #(->> % first (str ?type "-") symbol) ?field-triples)]
+             [~@(map first ?field-triples)]
            ~@?opt+specs)
          (def ~(document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
            (fn [x#]
@@ -255,10 +237,10 @@
                                            (name-doc ?type)
                                            " record.\n"
                                            (apply str
-                                                  (map (fn [[?field ?accessor ?lens+spec]]
+                                                  (map (fn [[?field ?accessor ?lens]]
                                                          (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
-                                                              (if (:lens ?lens+spec)
-                                                                (str ", lens " (reference (:lens ?lens+spec)))
+                                                              (if ?lens
+                                                                (str ", lens " (reference ?lens))
                                                                 "")))
                                                        ?field-triples))))
            (fn [~@?constructor-args]
@@ -268,35 +250,34 @@
                              `~?field
                              `nil))
                          ?field-triples))))
-         (declare ~@(map (fn [[?field ?accessor ?lens+spec]] ?accessor) ?field-triples))
-         ~@(mapcat (fn [[?field ?accessor ?lens+spec]]
+         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
+         ~@(mapcat (fn [[?field ?accessor ?lens]]
                      (let [?rec (with-meta `rec# {:tag ?type})]
                        `((def ~(document-with-arglist ?accessor (vector ?type)  (str "Access `" ?field "` field"
                                                                                      (name-doc ?field)
                                                                                      " from a [[" ?type "]] record. " ?docref))
                            (fn [~?rec]
                              (check-type ~?type ~?rec ~?accessor)
-                             (. ~?rec ~(symbol (str ?type "-" ?field)))))
-                         ~@(when-let [?lens (:lens ?lens+spec)]
+                             (. ~?rec ~(symbol (str "-" ?field)))))
+                         ~@(if ?lens
                              (let [?data `data#
                                    ?v `v#]
                                `((def ~(document ?lens (str "Lens for the `" ?field "` field"
                                                             (name-doc ?field)
                                                             " from a [[" ?type "]] record." ?docref))
-                                   (active.clojure.lens/lens ~?accessor
-                                                             (fn [~?data ~?v]
-                                                               (~?constructor ~@(map
-                                                                                 (fn [[?shove-field ?shove-accessor]]
-                                                                                   (if (= ?field ?shove-field)
-                                                                                     ?v
-                                                                                     `(~?shove-accessor ~?data)))
-                                                                                 ?field-triples)))))))))))
+                                   (lens/lens ~?accessor
+                                              (fn [~?data ~?v]
+                                                (~?constructor ~@(map
+                                                                  (fn [[?shove-field ?shove-accessor]]
+                                                                    (if (= ?field ?shove-field)
+                                                                      ?v
+                                                                      `(~?shove-accessor ~?data)))
+                                                                  ?field-triples)))))))))))
                    ?field-triples)
-         ;; type-spec
-         ~(define-type-spec-form ?type ?constructor ?predicate (map second (filter (fn [[_ _ l+s]] (:spec l+s)) ?field-triples)))
-         ~(define-constructor-spec-form (first ?constructor-call) ?type (map first ?field-triples) (map second ?field-triples))
-         ;; field-specs
-         ~@(for [[_field ?accessor ?lens+spec] ?field-triples :when (:spec ?lens+spec)]
-             (define-spec-form ?accessor (:spec ?lens+spec)))
-         ~@(for [[_field ?accessor ?lens+spec] ?field-triples :when (:spec ?lens+spec)]
-             (define-accessor-spec-form ?accessor ?type)))))))
+         ;; specs
+         ~@(for [[?field _accessor _lens] ?field-triples]
+             (define-spec-form ?field (or (:spec (meta ?field)) '(constantly true))))
+         ~(define-type-spec-form ?type ?constructor ?predicate (map first ?field-triples))
+         ~(define-constructor-spec-form ?constructor ?type ?constructor-args ?constructor-args)
+         ~@(for [[?field ?accessor _lens] ?field-triples]
+             (define-accessor-spec-form ?accessor ?type ?field)))))))

@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [io.aviso/pretty "0.1.34"]
-                 [org.clojure/core.match "0.3.0-alpha4"]
+                 [org.clojure/core.match "0.3.0-alpha5"]
                  [org.clojure/test.check "0.10.0-alpha2"]]
 
   :generated-paths ["target"]

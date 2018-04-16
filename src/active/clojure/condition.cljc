@@ -66,7 +66,7 @@
     (print-condition exc w)
     (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc)))))))
 
-(defn ^:private ex-info-msg 
+(defn ^:private ex-info-msg
   [namespace]
   (str "This is a " namespace " active.clojure.condition."))
 
@@ -387,7 +387,7 @@
                    (and (not-empty irritants#) (make-irritants-condition irritants#))
                    conditions#)))))
 
-(defn error 
+(defn error
   "Throw an exception that signals that an error has occurred.
 
   This function should be called when an error has occurred,
@@ -502,7 +502,7 @@
   "Return a keyword describing the type,
   a symbol or string describing the source of the problem, an error
   message or nil, and a sequence of other objects describing the
-  problem.  
+  problem.
 
   Valid type symbols include: `:error`, `:assertion-violation`,
   `:violation`, `:serious`."
@@ -625,4 +625,3 @@
         (print spaces)
         (pr irritant))
       (print "\n")))))
-

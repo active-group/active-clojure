@@ -71,7 +71,7 @@
                     (if-let [doc (:doc (meta field))]
                       (str " (" doc ")")
                       ""))
-        
+
         ?field-names (map first ?field-triples)
         reference (fn [name]
                     (str "[[" (ns-name *ns*) "/" name "]]"))
@@ -80,7 +80,6 @@
       (doseq [?constructor-arg ?constructor-args]
         (when-not (contains? ?field-names-set ?constructor-arg)
           (throw (IllegalArgumentException. (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
-    
 
     `(do
        (defrecord ~?type
@@ -89,7 +88,7 @@
        (def ~(document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
          (fn [x#]
            (instance? ~?type x#)))
-       (def ~(document-with-arglist ?constructor 
+       (def ~(document-with-arglist ?constructor
                                     (vec ?constructor-args)
                                     (str "Construct a `" ?type "`"
                                          (name-doc ?type)

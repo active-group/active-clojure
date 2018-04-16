@@ -40,7 +40,7 @@ Each profile has the same format as the top-level configuration itself
 ;; TODO
 ;; - provide better support for reaching inside of collection ranges
 
-(define-record-type 
+(define-record-type
   ^{:doc "Description of a range of values."}
   ValueRange ; used to be called Range, but conflicts with cljs.core/->Range
   (^{:doc "Make a [[Range]] range object.
@@ -191,7 +191,7 @@ Each profile has the same format as the top-level configuration itself
 (defn nonempty-string-range
   "Range for a non-empty string with optional max length."
   [& [max-length]]
-  (make-scalar-range (str "non-empty string" (if (some? max-length) 
+  (make-scalar-range (str "non-empty string" (if (some? max-length)
                                                (str " with maximum length of " max-length)
                                                ""))
                      (fn [range path val]
@@ -357,7 +357,7 @@ Each profile has the same format as the top-level configuration itself
                 (fn [this-range ky vl] ; we need the key & val functions
                   (cond
                    (nil? vl) {}
-                   
+
                    (map? vl)
                    (loop [kvs (seq vl)
                           ret {}]
@@ -372,7 +372,7 @@ Each profile has the same format as the top-level configuration itself
                           :else (recur (next kvs)
                                        (assoc ret k v))))
                        ret))
-                   
+
                    :else (make-range-error this-range ky vl))))
               (fn [this-range path f res val]
                 (let [v ((range-completer this-range) this-range path val)]
@@ -394,7 +394,6 @@ Each profile has the same format as the top-level configuration itself
                                  (string? val) val
                                  ;; FIXME: more cases?
                                  :else (make-range-error range path val))))))
-                 
 
 ;; Schemas
 
@@ -503,7 +502,7 @@ Each profile has the same format as the top-level configuration itself
           settings (map-schema-settings-map schema)
           sections (map-schema-sections-map schema)]
       (c/assert (not (range-error? cmap)) (pr-str cmap))
-      (reduce (fn [res [k v]]                            
+      (reduce (fn [res [k v]]
                 (if-let [setting (get settings k)]
                   ((range-reduce (setting-range setting))
                    (setting-range setting)
@@ -596,15 +595,15 @@ Each profile has the same format as the top-level configuration itself
                   val1 (get c1 key)
                   val2 (get c2 key)]
               (if (contains? settings-map key)
-                (recur (assoc c 
+                (recur (assoc c
                               ;; that `nil` is a valid value
-                              key 
+                              key
                               (if (contains? c2 key)
                                 val2
                                 val1))
                        (next all-keys))
                 (if-let [section (get sections-map key)]
-                  (recur (assoc c key 
+                  (recur (assoc c key
                                 (merge-config-objects-sans-profiles (section-schema section) (conj (vec path) key) (or val1 {}) (or val2 {})))
                          (next all-keys))
                   (c/error `merge-config-objects-sans-profiles
@@ -622,7 +621,7 @@ Each profile has the same format as the top-level configuration itself
         (c/error `merge-config-objects-sans-profiles
                  (str "configuration at " path " is not a sequence: " (pr-str c2))
                  path c2))
-      
+
       (concat c1 c2))))
 
 (defn merge-config-objects
@@ -645,7 +644,7 @@ Each profile has the same format as the top-level configuration itself
     (let [config-object (dissoc config-object :profiles)
           profiles (map (fn [n]
                           (or (profile-map n)
-                              (c/error `apply-profiles "profile does not exist" n)))                              
+                              (c/error `apply-profiles "profile does not exist" n)))
                         profile-names)]
       (reduce (partial merge-config-objects-sans-profiles schema []) config-object profiles))
     config-object))
@@ -672,7 +671,7 @@ Each profile has the same format as the top-level configuration itself
                (vals settings-map))))
 
 (defn check-section
-  [section val inherited-map path] 
+  [section val inherited-map path]
   (normalize&check-config-object-internal (section-schema section)
                                           val
                                           inherited-map
@@ -753,7 +752,7 @@ Each profile has the same format as the top-level configuration itself
                 (recur (+ 1 idx)
                        (rest els)
                        (conj! res r))))))))))
-  
+
 (defn normalize&check-config-object
   "Normalize and check the validity of a configuration object.
 
@@ -839,7 +838,7 @@ Each profile has the same format as the top-level configuration itself
                       [])]
       (concat triples-common triples-1 triples-2))))
 
-    
+
 (defn diff-configurations
   "Returns sequence of triples [path-vectors version-1 version-2] of settings that differ."
   [schema config-1 config-2]
@@ -867,7 +866,7 @@ Each profile has the same format as the top-level configuration itself
                             (cond
                               (map-schema? schema)
                               (recurse (rest sections) cf)
-                              
+
                               (sequence-schema? schema)
                               (map (fn [subcf]
                                      (schemarec (sequence-schema-element-schema schema)
@@ -912,4 +911,3 @@ Each profile has the same format as the top-level configuration itself
 the remainder of the lines the field holds \".\"."
   [r]
   (any-range (one-of-range #{"."} nil) r))
-

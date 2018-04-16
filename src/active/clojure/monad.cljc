@@ -30,7 +30,7 @@
                              (str "unknown monad command in bind, line " line ", column " column)
                              mv
                              statement)
-      (c/assertion-violation `free-bind 
+      (c/assertion-violation `free-bind
                              "unknown monad command in bind"
                              mv)))
 
@@ -389,7 +389,7 @@
       (run env state m))))
 
 (defn execute-free-reader-state-exception
-  "Run monadic computation in a reader-state-exception monad, turning exceptions 
+  "Run monadic computation in a reader-state-exception monad, turning exceptions
   into Clojure exceptions.
 
   - `command-config` is the configuration object for running commands

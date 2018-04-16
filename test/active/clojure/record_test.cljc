@@ -6,10 +6,10 @@
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
             #?(:cljs [cljs.test]))
-  #?(:cljs 
-  (:require-macros [cljs.test
-                    :refer (is deftest run-tests testing)]
-                   [active.clojure.record :refer (define-record-type)])))
+  #?(:cljs
+     (:require-macros [cljs.test
+                       :refer (is deftest run-tests testing)]
+                      [active.clojure.record :refer (define-record-type)])))
 
 #?(:cljs
 (enable-console-print!))

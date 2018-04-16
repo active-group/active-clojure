@@ -231,7 +231,7 @@
         mult-shove
         lenses))
 
-;; not very general: 
+;; not very general:
 ;; (defn repeated
 ;;   [n]
 ;;   (lens #(take n (repeat %))

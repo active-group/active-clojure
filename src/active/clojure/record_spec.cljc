@@ -24,7 +24,7 @@
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
-  [type rec accessor]
+  [type rec]
   #?(:clj (do))
   #?(:cljs
      (when-not (instance? type rec)
@@ -185,7 +185,7 @@
                                                                                    (name-doc ?field)
                                                                                    " from a [[" ?type "]] record. " ?docref))
                          (fn [~?rec]
-                           (check-type ~?type ~?rec ~?accessor)
+                           (check-type ~?type ~?rec)
                            (. ~?rec ~(symbol (str "-" ?field)))))
                        ~@(if ?lens
                            (let [?data `data#

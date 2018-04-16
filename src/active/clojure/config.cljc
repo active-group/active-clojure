@@ -24,12 +24,18 @@ settings that can be mixed in, like so:
 
 Each profile has the same format as the top-level configuration itself
   (sans the `:profiles` key)."
-  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]))
-  (:require [clojure.set :as set]
-            [active.clojure.condition :as c]
-            #?(:cljs [active.clojure.record])
-            #?(:clj [active.clojure.record :refer :all]))
-  #?(:clj (:import [java.net URL])))
+  (:refer-clojure :exclude [boolean?])
+  #?@
+   (:clj
+    [(:require
+      [active.clojure.condition :as c]
+      [active.clojure.record :refer :all]
+      [clojure.set :as set])
+     (:import java.net.URL)]
+    :cljs
+    [(:require [active.clojure.condition :as c] [clojure.set :as set])
+     (:require-macros
+      [active.clojure.record :refer [define-record-type]])]))
 
 ;; TODO
 ;; - provide better support for reaching inside of collection ranges

@@ -1,4 +1,5 @@
-(ns active.clojure.record)
+(ns active.clojure.record
+  (:require [active.clojure.lens :as lens]))
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -122,13 +123,13 @@
                              `((def ~(document ?lens (str "Lens for the `" ?field "` field"
                                                           (name-doc ?field)
                                                           " from a [[" ?type "]] record." ?docref))
-                                 (active.clojure.lens/lens ~?accessor
-                                                           (fn [~?data ~?v]
-                                                             (~?constructor ~@(map
-                                                                               (fn [[?shove-field ?shove-accessor]]
-                                                                                 (if (= ?field ?shove-field)
-                                                                                   ?v
-                                                                                   `(~?shove-accessor ~?data)))
-                                                                               ?field-triples)))))))
+                                 (lens/lens ~?accessor
+                                            (fn [~?data ~?v]
+                                              (~?constructor ~@(map
+                                                                (fn [[?shove-field ?shove-accessor]]
+                                                                  (if (= ?field ?shove-field)
+                                                                    ?v
+                                                                    `(~?shove-accessor ~?data)))
+                                                                ?field-triples)))))))
                            '()))))
                  ?field-triples)))))

@@ -33,7 +33,9 @@ Each profile has the same format as the top-level configuration itself
       [clojure.set :as set])
      (:import java.net.URL)]
     :cljs
-    [(:require [active.clojure.condition :as c] [clojure.set :as set])
+    [(:require [active.clojure.condition :as c]
+               [clojure.set :as set]
+               active.clojure.record)
      (:require-macros
       [active.clojure.record :refer [define-record-type]])]))
 

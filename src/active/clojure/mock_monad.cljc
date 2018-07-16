@@ -1,8 +1,11 @@
 (ns active.clojure.mock-monad
   "Mock monadic programs"
-  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]))
+  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
+                            [active.clojure.macro :refer [if-cljs]]
+                            [cljs.test :refer [is]]))
   (:require #?(:clj [active.clojure.record :refer :all])
             #?(:cljs active.clojure.record)
+            #?(:clj [active.clojure.macro :refer [if-cljs]])
             [active.clojure.monad :as monad]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))
@@ -41,6 +44,7 @@
    {::mocks mocks}))
 
 ;; clojure-check assertions as a monadic command:
+;; NOTE Don't use this in CLJS
 (defmacro m-is [& forms]
   `(monad/return (is ~@forms)))
 
@@ -48,15 +52,22 @@
   (monad/monadic
    [mocks (monad/get-state-component ::mocks)]
    (let [rmocks (map monad/reify-command mocks)])
-   (m-is (empty? rmocks) "Did not see expected mocked commands.")
-   (monad/return nil)))
+   (if-cljs
+    ;; We must be careful here to call the function version in CLJS
+    ;; (otherwise, it expands to clojure.test/is and not cljs.test/is)
+     (monad/return (is (empty? rmocks) "Did not see expected mocked commands."))
+     (m-is (empty? rmocks) "Did not see expected mocked commands."))
+    (monad/return nil)))
 
 (defn mock-effect
   "If `(= m-expected m)` returns true for a command `m`, then execute `m-replacement` instead."
   [m-expected m-replacement]
   (mock (fn [m]
-          (is (= (monad/reify-command m-expected)
-                 (monad/reify-command m))))
+          (if-cljs
+           (cljs.test/is (= (monad/reify-command m-expected)
+                            (monad/reify-command m)))
+           (clojure.test/is (= (monad/reify-command m-expected)
+                               (monad/reify-command m)))))
         (constantly m-replacement)))
 
 (defn mock-result

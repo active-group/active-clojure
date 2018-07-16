@@ -376,7 +376,7 @@
 
   For internal use."
   [?base ?who ?message ?irritants]
-  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (instance? Throwable thing#))) ~?irritants)
+  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (if-cljs (instance? js/Error thing#) (instance? Throwable thing#)))) ~?irritants)
          irritants# (get g# false)
          conditions# (get g# true)
          who# ~?who]

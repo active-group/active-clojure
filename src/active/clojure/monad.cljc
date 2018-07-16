@@ -69,20 +69,18 @@
 (defmacro monadic-1
   [?meta & ?stmts]
   (if (empty? ?stmts)
-    (throw (IllegalArgumentException. (str "there must be at least one statement in " *ns* " " ?meta)))
-
+    (throw-illegal-argument-exception (str "there must be at least one statement in " *ns* " " ?meta))
     (let [?stmt (first ?stmts)
           check-bindings (fn [bindings]
                            (when-not (vector? bindings)
-                             (throw (IllegalArgumentException. (str "bindings must be an vector in "
-                                                                    *ns* " " ?meta))))
+                             (throw-illegal-argument-exception (str "bindings must be an vector in "
+                                                                    *ns* " " ?meta)))
                            (when (empty? bindings)
-                             (throw (IllegalArgumentException. (str "bindings must be non-empty in "
-                                                                    *ns* " " ?meta))))
+                             (throw-illegal-argument-exception  (str "bindings must be non-empty in "
+                                                                     *ns* " " ?meta)))
                            (when-not (even? (count bindings))
-                             (throw (IllegalArgumentException. (str "bindings must be even-sized vector in "
-                                                                    *ns* " " ?meta)))))]
-
+                             (throw-illegal-argument-exception (str "bindings must be even-sized vector in "
+                                                                    *ns* " " ?meta))))]
       (cond
        (vector? ?stmt)
        (do
@@ -101,8 +99,8 @@
        (and (list? ?stmt)
             (= 'let (first ?stmt)))
        (do (when-not (= 2 (count ?stmt))
-             (throw (IllegalArgumentException. (str "let statement must have exactly one subform in "
-                                                    *ns* " " ?meta))))
+             (throw-illegal-argument-exception  (str "let statement must have exactly one subform in "
+                                                     *ns* " " ?meta)))
            (check-bindings (second ?stmt))
            `(let ~(second ?stmt)
               (monadic-1 ~?meta ~@(rest ?stmts))))

@@ -1,6 +1,7 @@
 (ns active.clojure.condition-test
   (:require [active.clojure.condition :refer (&condition combine-conditions #?(:clj define-condition-type) #?(:clj guard) ->condition
                                               make-error
+                                              assertion-violation
                                               throwable? error? assertion-violation?
                                               #?(:cljs Throwable))]
             [active.clojure.condition :as c]
@@ -9,7 +10,7 @@
   #?(:cljs 
   (:require-macros [cljs.test
                     :refer (is deftest run-tests testing)]
-                   [active.clojure.condition :refer (define-condition-type guard)])))
+                   [active.clojure.condition :refer (define-condition-type assertion-violation guard)])))
 
 #?(:cljs
 (enable-console-print!))
@@ -139,3 +140,12 @@
 
 (deftest combine-nil
   (is (error? (combine-conditions false (make-error) nil))))
+
+(deftest exception-in-macro
+  (try (or false (assertion-violation `exception-in-macro "I should throw."))
+       #?(:clj
+          (catch Exception ^Exception e
+            (is (= "I should throw." (.getMessage e))))
+          :cljs
+          (catch js/Error e
+            (is (= "I should throw." (.-message e)))))))

@@ -1,7 +1,8 @@
 (ns active.clojure.mock-monad-test
   #?(:cljs (:require-macros [cljs.test :refer (is deftest run-tests testing)]))
   (:require [active.clojure.monad :as monad]
-            [active.clojure.mock-monad :as mock]
+            #?(:clj [active.clojure.mock-monad :as mock]
+               :cljs [active.clojure.mock-monad :as mock :include-macros true])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))
 

@@ -46,6 +46,10 @@
    :else (with-meta (make-free-bind mv f)
            (meta mv))))
 
+(defn throw-illegal-argument-exception
+  [msg]
+  (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
+
 #?(:clj
 (defmacro monadic
   "Construct a monadic computation.
@@ -81,6 +85,7 @@
                            (when-not (even? (count bindings))
                              (throw-illegal-argument-exception (str "bindings must be even-sized vector in "
                                                                     *ns* " " ?meta))))]
+
       (cond
        (vector? ?stmt)
        (do

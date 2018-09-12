@@ -1,7 +1,7 @@
 (ns active.clojure.record-spec
   "A re-implementation of `active.clojure.record` that makes use of
   Clojure's new spec library. Define records the same ways as in the old
-  implemenation or use the new syntax to automatically generate specs.
+  implementation or use the new syntax to automatically generate specs.
   If a field has no explicit spec, defaults to `any?`."
   #?@
    (:clj
@@ -31,7 +31,7 @@
        (throw (js/Error. (str "Wrong record type passed to accessor." rec type))))))
 
 (defn ns-keyword
-  "Takes a symbol or string `the-name-sym` and returns a namespaces keyword
+  "Takes a symbol or string `the-name-sym` and returns a namespaced keyword
   based on that symbol.
 
   Example: `(ns-keyword 'foo) => :calling.name.space/foo`"
@@ -39,7 +39,6 @@
   (if the-name-sym
     (keyword (str (ns-name *ns*)) (str the-name-sym))
     (c/assertion-violation `ns-keyword "argument must not be nil" the-name-sym)))
-
 
 (defmacro s-def
   [& args]
@@ -209,7 +208,7 @@
             ;; Generate a spec for each constructor arg. Uses each constructor arg and prepends the type name + "-" as the name.
             `(do
                ~@(mapv (fn [[?field _ _] ?field-spec]
-                         `(s-def ?field-spec ~(spec-or-true ?field)))
+                         `(s-def ~?field-spec ~(spec-or-true ?field)))
                        ?field-triples ?field-specs)
                (s-def ~(ns-keyword ?type)
                       (s-spec ~?predicate
@@ -237,3 +236,4 @@
                                   :args (s-cat ~(keyword ?type) ~(ns-keyword ?type))
                                   :ret  ~(spec-or-true ?field)))
                        ?field-triples))))))))
+

@@ -18,7 +18,6 @@
 (s/def ::k int?)
 (s/def ::v string?)
 
-
 (define-record-type kv
   (make-kv k v) kv?
   [^{:spec ::k} k kv-k
@@ -58,6 +57,31 @@
               (t/is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
 In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"
                        (.getMessage e))))))))
+
+(define-record-type Dith
+  (make-dith tso)
+  dith?
+  [^{:spec string?} tso dith-tso])
+
+(define-record-type Xom
+  (make-xom baz dith)
+  xom?
+  [^{:spec integer?} baz xom-baz
+   ^{:spec ::Dith} dith xom-dith])
+
+(t/deftest record-spec-tests
+  (t/testing "Selector spec validity"
+    (t/is (s/valid? ::Xom-dith (make-dith "dith")))
+    (t/is (not (s/valid? ::Dith-tso 31947))))
+  (t/testing "Record spec validity"
+    (t/is (s/valid? ::Dith (make-dith 23)))
+    (t/is (s/valid?
+           ::Xom
+           (make-xom 1000 (make-dith "five"))))
+    #_(t/is (not (s/valid? ::Dith (make-dith "abc")))) ; not yet working as intended
+    #_(t/is (not (s/valid?
+                ::Xom
+                (make-xom 23 (make-dith 128)))))))
 
 ;; taken from record-test
 

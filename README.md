@@ -44,7 +44,7 @@ This defines the following Specs (aside from what the regular
   example below).
 * Specs `::card-number` and `::card-color` for accessors. Note that these names
   are **not** based on the given accessor names but rather a concatenation of
-  the record and variable names.
+  the record type and field names.
 * Spec for the constructor function.
 
 ```clojure

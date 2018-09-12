@@ -82,6 +82,11 @@
   `(if-cljs (cljs.spec.gen.alpha/fmap ~@args)
             (clojure.spec.gen.alpha/fmap ~@args)))
 
+(defmacro s-valid?
+  [& args]
+  `(if-cljs (cljs.spec.alpha/valid? ~@args)
+            (clojure.spec.alpha/valid? ~@args)))
+
 #?(:clj
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
@@ -211,17 +216,21 @@
                          `(s-def ~?field-spec ~(spec-or-true ?field)))
                        ?field-triples ?field-specs)
                (s-def ~(ns-keyword ?type)
-                      (s-spec ~?predicate
-                              :gen (fn []
-                                     (->> (s-gen (s-keys :req [~@(map #(ns-keyword (str ?type "-" %))
-                                                                      ?constructor-args)]))
-                                          (s-fmap (fn [ks#]
-                                                    (~(symbol (str "map->" ?type))
-                                                     (clojure.set/rename-keys
-                                                      ks#
-                                                      ~(into {} (for [constructor-arg ?constructor-args]
-                                                                  [(ns-keyword (str ?type "-" constructor-arg))
-                                                                   (keyword constructor-arg)]))))))))))
+                      (s-spec
+                       (s-and ~?predicate
+                              ~@(mapv (fn [[?field ?accessor _] ?field-spec]
+                                        `#(s-valid? ~?field-spec (~?accessor %)))
+                                      ?field-triples ?field-specs))
+                       :gen (fn []
+                              (->> (s-gen (s-keys :req [~@(map #(ns-keyword (str ?type "-" %))
+                                                               ?constructor-args)]))
+                                   (s-fmap (fn [ks#]
+                                             (~(symbol (str "map->" ?type))
+                                              (clojure.set/rename-keys
+                                               ks#
+                                               ~(into {} (for [constructor-arg ?constructor-args]
+                                                           [(ns-keyword (str ?type "-" constructor-arg))
+                                                            (keyword constructor-arg)]))))))))))
                (s-fdef ~?constructor
                        :args (s-cat
                               ~@(apply concat
@@ -236,4 +245,3 @@
                                   :args (s-cat ~(keyword ?type) ~(ns-keyword ?type))
                                   :ret  ~(spec-or-true ?field)))
                        ?field-triples))))))))
-

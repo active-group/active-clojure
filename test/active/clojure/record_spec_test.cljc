@@ -74,12 +74,15 @@ In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :
     (t/is (s/valid? ::Xom-dith (make-dith "dith")))
     (t/is (not (s/valid? ::Dith-tso 31947))))
   (t/testing "Record spec validity"
-    (t/is (s/valid? ::Dith (make-dith 23)))
+    (t/is (s/valid? ::Dith (make-dith "some string")))
     (t/is (s/valid?
            ::Xom
            (make-xom 1000 (make-dith "five"))))
-    #_(t/is (not (s/valid? ::Dith (make-dith "abc")))) ; not yet working as intended
-    #_(t/is (not (s/valid?
+    (t/is (not (s/valid? ::Dith (make-dith :a))))
+    (t/is (not (s/valid?
+                ::Xom
+                (make-xom "wrong" (make-dith "correct")))))
+    (t/is (not (s/valid?
                 ::Xom
                 (make-xom 23 (make-dith 128)))))))
 

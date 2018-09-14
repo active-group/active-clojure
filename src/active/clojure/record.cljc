@@ -9,6 +9,13 @@
      (when-not (instance? type rec)
        (throw (js/Error. (str "Wrong record type passed to accessor." rec type))))))
 
+
+(defrecord UnresolvedRecordMeta
+    ;; unresolved store for record related symbols. May not leak outside this
+    ;; namespace. Contains ns to allow post-macro qualification; see `record-meta` function.
+    [predicate constructor ordered-accessors ns])
+
+
 #?(:clj
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
@@ -75,7 +82,14 @@
         ?field-names (map first ?field-triples)
         reference (fn [name]
                     (str "[[" (ns-name *ns*) "/" name "]]"))
-        ?docref (str "See " (reference ?constructor) ".")]
+        ?docref (str "See " (reference ?constructor) ".")
+
+        record-meta (->UnresolvedRecordMeta
+                     ?predicate ?constructor
+                     (mapv (fn [constr]
+                             (second (first (filter #(= (first %) constr) ?field-triples))))
+                           ?constructor-args)
+                     *ns*)]
     (let [?field-names-set (set ?field-names)]
       (doseq [?constructor-arg ?constructor-args]
         (when-not (contains? ?field-names-set ?constructor-arg)
@@ -85,21 +99,23 @@
        (defrecord ~?type
            [~@(map first ?field-triples)]
          ~@?opt+specs)
-       (def ~(document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
+
+       (def ~(vary-meta (document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
+                        assoc :meta record-meta)
          (fn [x#]
            (instance? ~?type x#)))
        (def ~(document-with-arglist ?constructor
-                                    (vec ?constructor-args)
-                                    (str "Construct a `" ?type "`"
-                                         (name-doc ?type)
-                                         " record.\n"
-                                         (apply str
-                                                (map (fn [[?field ?accessor ?lens]]
-                                                       (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
-                                                            (if ?lens
-                                                              (str ", lens " (reference ?lens))
-                                                              "")))
-                                                     ?field-triples))))
+                                 (vec ?constructor-args)
+                                 (str "Construct a `" ?type "`"
+                                      (name-doc ?type)
+                                      " record.\n"
+                                      (apply str
+                                             (map (fn [[?field ?accessor ?lens]]
+                                                    (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
+                                                         (if ?lens
+                                                           (str ", lens " (reference ?lens))
+                                                           "")))
+                                                  ?field-triples))))
          (fn [~@?constructor-args]
            (new ~?type
                 ~@(map (fn [[?field _]]
@@ -132,3 +148,33 @@
                                                                 ?field-triples)))))))
                            '()))))
                  ?field-triples)))))
+
+
+(define-record-type RecordMeta
+  (make-record-meta predicate constructor ordered-accessors) record-meta?
+  [predicate record-meta-predicate
+   constructor record-meta-constructor
+   ordered-accessors record-meta-ordered-accessors])
+
+
+(defn- resolve-meta [meta]
+  ;; When passed an UnresolvedRecordMeta it constructs a RecordMeta record
+  ;; with resolved value.
+  ;; else returns nil.
+  (when (instance? UnresolvedRecordMeta meta)
+   (let [ns (:ns meta)]
+     (make-record-meta
+      (ns-resolve ns (:predicate meta))
+      (ns-resolve ns (:constructor meta))
+      (map #(ns-resolve ns %) (:ordered-accessors meta))))))
+
+
+(defn predicate->record-meta [predicate]
+  ;; Expects a namespace resolved predicate
+  ;; if the predicate meta contains UnresolvedRecordMeta it returns a RecordMeta
+  ;; record with resolved values. Else nil.
+  (resolve-meta (:meta (meta predicate))))
+
+(defn record-type-predicate? [foo]
+  (record-meta? (predicate->record-meta foo)))
+

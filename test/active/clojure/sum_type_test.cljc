@@ -153,7 +153,7 @@
 
     (is (= "You got red with green" (crazy (make-ultra-violet (make-red "green")))))
     (is (= "You got blue with green" (crazy (make-ultra-violet (make-blue "green")))))
-    (is (= "Oh, this is green!" (crazy (make-ultra-violet (make-red "green")))))
+    (is (= "Oh, this is green!" (crazy (make-ultra-violet (make-green "green")))))
     (is (= "It wasn rgb in invisible disguise :(" (crazy (make-infra-red 123))))))
 
 

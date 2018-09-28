@@ -7,14 +7,11 @@
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
             #?(:cljs [cljs.test]))
-
   #?(:cljs
      (:require-macros [cljs.test
                        :refer (is deftest run-tests testing)]
                       [active.clojure.record :refer (define-record-type)]
-                      [active.clojure.sum-type :refer (define-sum-type)])))
-
-
+                      [active.clojure.sum-type :refer (define-sum-type match)])))
 
 (define-record-type Red
   (make-red saturation) red?
@@ -156,7 +153,6 @@
     (is (= "Oh, this is green!" (crazy (make-ultra-violet (make-green "green")))))
     (is (= "It wasn rgb in invisible disguise :(" (crazy (make-infra-red 123))))))
 
-
 (define-sum-type FormsAndColors forms&colors? [data/circle? data/square? rgb-color?])
 
 (deftest from-other-ns
@@ -169,3 +165,4 @@
     (is (= "It's a circle!" (form-or-color (data/make-circle 12))))
     (is (= "It's a square with 12 and 42" (form-or-color (data/make-square 12 42))))
     (is (= "It's a color!" (form-or-color (make-red 42))))))
+

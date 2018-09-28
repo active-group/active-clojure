@@ -1,8 +1,6 @@
 (ns active.clojure.sum-type
-  (:require [active.clojure.lens :as lens]
-            [active.clojure.record :as record]))
-
-
+  (:require [active.clojure.record :as record])
+  #?(:cljs (:require-macros [active.clojure.record :as record])))
 
 (record/define-record-type UnresolvedSumTypeMeta
   ;; unresolved store for sum-type related symbols. May not leak outside this

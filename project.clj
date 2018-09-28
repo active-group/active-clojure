@@ -28,7 +28,8 @@
 
   :profiles {:cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [com.cemerick/piggieback "0.2.2"]
-                                   [org.clojure/tools.nrepl "0.2.10"]]
+                                   [org.clojure/tools.nrepl "0.2.10"]
+                                   [doo "0.1.10"]]
                     ;; run CLJS repl with
                     ;; lein with-profile cljs repl
                     ;; (cemerick.piggieback/cljs-repl (cljs.repl.rhino/repl-env))
@@ -38,7 +39,7 @@
             "test-phantom" ["with-profile" "cljs" "doo" "phantom" "test"]
             }
 
-  :plugins [[lein-cljsbuild "1.1.3"]
+  :plugins [[lein-cljsbuild "1.1.7"]
             [lein-doo "0.1.10"]]
 
   :global-vars {*warn-on-reflection* true})

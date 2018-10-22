@@ -1,17 +1,8 @@
 (ns active.clojure.sum-type-test
-  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
-            #?(:clj [active.clojure.sum-type :refer (define-sum-type match)])
-            #?(:clj [clojure.test :refer :all])
-            [active.clojure.sum-type-data-test :as data]
-            ;; The following is needed because the unique test
-            ;; below contains `Throwable`.
-            #?(:cljs [active.clojure.condition :refer (Throwable)])
-            #?(:cljs [cljs.test]))
-  #?(:cljs
-     (:require-macros [cljs.test
-                       :refer (is deftest run-tests testing)]
-                      [active.clojure.record :refer (define-record-type)]
-                      [active.clojure.sum-type :refer (define-sum-type match)])))
+  (:require [active.clojure.record :refer (define-record-type)]
+            [active.clojure.sum-type :refer (define-sum-type match)]
+            [clojure.test :refer :all]
+            [active.clojure.sum-type-data-test :as data]))
 
 (define-record-type Red
   (make-red saturation) red?
@@ -135,7 +126,7 @@
     (is (= (make-ultra-violet 123) (desaturate (make-ultra-violet 123))))))
 
 
-(deftest nestes-extractor
+(deftest nested-extractor
   (letfn [(crazy [color]
             (match all? color
 
@@ -165,4 +156,3 @@
     (is (= "It's a circle!" (form-or-color (data/make-circle 12))))
     (is (= "It's a square with 12 and 42" (form-or-color (data/make-square 12 42))))
     (is (= "It's a color!" (form-or-color (make-red 42))))))
-

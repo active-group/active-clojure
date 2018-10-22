@@ -1,7 +1,6 @@
 (ns active.clojure.sum-type-data-test
-  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
-            #?(:clj [active.clojure.sum-type :refer (define-sum-type match)])
-            ))
+  (:require [active.clojure.record :refer (define-record-type)]
+            [active.clojure.sum-type :refer (define-sum-type)]))
 
 
 (define-record-type Circle

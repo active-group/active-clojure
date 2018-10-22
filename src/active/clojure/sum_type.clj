@@ -1,44 +1,25 @@
 (ns active.clojure.sum-type
-  (:require [active.clojure.record :as record])
-  #?(:cljs (:require-macros [active.clojure.record :as record])))
-
-(record/define-record-type UnresolvedSumTypeMeta
-  ;; unresolved store for sum-type related symbols. May not leak outside this
-  ;; namespace. Contains an ns to allow post-macro qualification;
-  ;; see `predicate->sum-type-meta` function.
-  (make-unresolved-sum-type-meta predicate types ns) unresolved-sum-type-meta?
-  [predicate unresolved-sum-type-meta-predicate
-   types unresolved-sum-type-meta-types
-   ns unresolved-sum-type-meta-ns])
+  (:require [active.clojure.record :as record]))
 
 (record/define-record-type SumTypeMeta
-  ;; A SumTypeMeta represents a node of a tree strcuture, containing information of
-  ;; a sum-type. Types represent children of the node, again being a SumTypeMeta or
-  ;; a record/RecordMeta.
+  ;; A SumTypeMeta represents a node of a tree structure.
+  ;; Types represent children of the node, again being a SumTypeMeta or a record/RecordMeta.
   (make-sum-type-meta predicate types) sum-type-meta?
   [predicate sum-type-meta-predicate
    types sum-type-meta-types])
 
+(record/define-record-type RecordMeta
+  ;; Record meta record-type. Since in record definition no record-types
+  ;; are available we translate it.
+  (make-record-meta predicate constructor ordered-accessors) record-meta?
+  [predicate record-meta-predicate
+   constructor record-meta-constructor
+   ordered-accessors record-meta-ordered-accessors])
 
-(defn resolve-sum-type-meta [unresolved-meta]
-  (when (unresolved-sum-type-meta? unresolved-meta)
-    (let [ns (unresolved-sum-type-meta-ns unresolved-meta)]
-      (make-sum-type-meta
-       (ns-resolve ns (unresolved-sum-type-meta-predicate unresolved-meta))
-       (unresolved-sum-type-meta-types unresolved-meta)))))
 
-(defn predicate->sum-type-meta [predicate] (resolve-sum-type-meta (:meta (meta predicate))))
-(defn sum-type-predicate? [type-or-predicate] (sum-type-meta? (predicate->sum-type-meta type-or-predicate)))
-
-(record/define-record-type Predicate
-  (make-predicate predicate) predicate?
-  [predicate predicate-predicate])
-
-(record/define-record-type Constructor
-  (make-constructor call args) constructor?
-  [call constructor-call
-   args constructor-args])
-
+(defn predicate->sum-type-meta [predicate] (:meta (meta predicate)))
+(defn sum-type-predicate? [type-or-predicate]
+  (sum-type-meta? (predicate->sum-type-meta type-or-predicate)))
 
 ;; a clause is one of the following:
 ;; - ClauseWithPredicate, describing a matching clause based on a prediate
@@ -71,21 +52,21 @@
      (= predicate (sum-type-meta-predicate type-tree))
      (some identity (map #(has-predicate? predicate %) (sum-type-meta-types type-tree))))
 
-    (record/record-meta? type-tree)
-    (= (record/record-meta-predicate type-tree) predicate)))
+    (record-meta? type-tree)
+    (= (record-meta-predicate type-tree) predicate)))
 
 (defn collect-leafs [type-tree]
   ;; collects all leafs from a type-tree, that is, all record-types
   (cond
-    (record/record-meta? type-tree) [type-tree]
+    (record-meta? type-tree) [type-tree]
     (sum-type-meta? type-tree) (mapcat collect-leafs (sum-type-meta-types type-tree))))
 
 
 (defn remove-predicate [type-tree predicate]
   ;; removes all types having the given predicate as their predicate from the type-tree
   (cond
-    (record/record-meta? type-tree)
-    (when-not (= predicate (record/record-meta-predicate type-tree))
+    (record-meta? type-tree)
+    (when-not (= predicate (record-meta-predicate type-tree))
       type-tree)
 
     (sum-type-meta? type-tree)
@@ -139,34 +120,38 @@
     ;; requirement 3
     (when-not (or has-default (empty? missing-predicates))
       (throw (Exception. (str "Non exhaustive match would fail on the following type(s): "
-                              (mapv record/record-meta-predicate missing-predicates)))))))
+                              (mapv record-meta-predicate missing-predicates)))))))
 
 
+(defn- ->record-meta [untyped]
+  (make-record-meta
+   (:predicate untyped)
+   (:constructor untyped)
+   (:ordered-accessors untyped)))
 
 
 (defmacro define-sum-type [type-name predicate predicates]
   ;; TODO doc
-  (let [ns *ns*
-        qualified-predicates (doall (map #(ns-resolve *ns* %) predicates))]
+  (let [qualified-predicates (doall (map #(ns-resolve *ns* %) predicates))
+        _ (intern *ns* predicate)]
     (when-not (every? identity
-                      (map #(or (record/predicate->record-meta %) (sum-type-predicate? %))
+                      (map #(or (record/record-type-predicate? %) (sum-type-predicate? %))
                            qualified-predicates))
       (throw (IllegalArgumentException. (str "Predicates of active.clojure.record or active.clojure.sum-type "
-                                             "required, found: " qualified-predicates))))
+                                             "required, found: " (pr-str (map record/predicate->record-meta qualified-predicates))))))
 
     `(do
        (defn ~(vary-meta predicate
                         assoc :meta
-                        (make-unresolved-sum-type-meta
-                         predicate
+                        (make-sum-type-meta
+                         (resolve predicate)
                          (map #(cond
                                  (record/record-type-predicate? %)
-                                 (record/predicate->record-meta %)
+                                 (->record-meta (record/predicate->record-meta %))
 
                                  (sum-type-predicate? %)
                                  (predicate->sum-type-meta %))
-                              qualified-predicates)
-                         *ns*))
+                              qualified-predicates)))
          [arg#]
          (boolean (some identity (map (fn [pred#] (pred# arg#)) ~predicates))))
        )))
@@ -180,8 +165,8 @@
     (some identity (map #(find-meta-by-constructor constructor %)
                         (sum-type-meta-types type-tree)))
 
-    (record/record-meta? type-tree)
-    (when (= (record/record-meta-constructor type-tree) constructor)
+    (record-meta? type-tree)
+    (when (= (record-meta-constructor type-tree) constructor)
       type-tree)))
 
 (defn parse-clause-with-extraction [condition clause sum-type-meta]
@@ -190,8 +175,8 @@
   ;; throws if not every constructor argument is a symbol (`_` are ignored).
   ;; throws if constructor is not found in sum-type
   (if-let [meta (find-meta-by-constructor (first condition) sum-type-meta)]
-    (let [predicate (record/record-meta-predicate meta)
-          ordered-accessors (record/record-meta-ordered-accessors meta)]
+    (let [predicate (record-meta-predicate meta)
+          ordered-accessors (record-meta-ordered-accessors meta)]
 
       ;; check correct number of arguments in constructor
       (when-not (= (count ordered-accessors) (count (rest condition)))

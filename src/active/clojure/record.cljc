@@ -10,7 +10,7 @@
        (throw (js/Error. (str "Wrong record type passed to accessor." rec type))))))
 
 
-(defrecord UnresolvedRecordMeta
+(defrecord RecordMeta
     ;; unresolved store for record related symbols. May not leak outside this
     ;; namespace. Contains ns to allow post-macro qualification; see `record-meta` function.
     [predicate constructor ordered-accessors ns])
@@ -84,12 +84,19 @@
                     (str "[[" (ns-name *ns*) "/" name "]]"))
         ?docref (str "See " (reference ?constructor) ".")
 
-        record-meta (->UnresolvedRecordMeta
-                     ?predicate ?constructor
+        ;; we need to internalize symbols to ns resolve them
+        _ (intern *ns* ?predicate)
+        _ (intern *ns* ?constructor)
+
+        record-meta (->RecordMeta
+                     (resolve ?predicate) (resolve ?constructor)
                      (mapv (fn [constr]
-                             (second (first (filter #(= (first %) constr) ?field-triples))))
+                             (let [accessor (second (first (filter #(= (first %) constr) ?field-triples)))]
+                               (intern *ns* accessor)
+                               (resolve accessor)))
                            ?constructor-args)
                      *ns*)]
+
     (let [?field-names-set (set ?field-names)]
       (doseq [?constructor-arg ?constructor-args]
         (when-not (contains? ?field-names-set ?constructor-arg)
@@ -150,31 +157,11 @@
                  ?field-triples)))))
 
 
-(define-record-type RecordMeta
-  (make-record-meta predicate constructor ordered-accessors) record-meta?
-  [predicate record-meta-predicate
-   constructor record-meta-constructor
-   ordered-accessors record-meta-ordered-accessors])
-
-
-(defn- resolve-meta [meta]
-  ;; When passed an UnresolvedRecordMeta it constructs a RecordMeta record
-  ;; with resolved value.
-  ;; else returns nil.
-  (when (instance? UnresolvedRecordMeta meta)
-   (let [ns (:ns meta)]
-     (make-record-meta
-      (ns-resolve ns (:predicate meta))
-      (ns-resolve ns (:constructor meta))
-      (map #(ns-resolve ns %) (:ordered-accessors meta))))))
-
-
 (defn predicate->record-meta [predicate]
   ;; Expects a namespace resolved predicate
   ;; if the predicate meta contains UnresolvedRecordMeta it returns a RecordMeta
   ;; record with resolved values. Else nil.
-  (resolve-meta (:meta (meta predicate))))
+  (:meta (meta predicate)))
 
 (defn record-type-predicate? [foo]
-  (record-meta? (predicate->record-meta foo)))
-
+  (instance? RecordMeta (predicate->record-meta foo)))

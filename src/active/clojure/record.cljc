@@ -3,11 +3,17 @@
   (:clj
    [(:require
      [active.clojure.lens :as lens]
+     [active.clojure.condition :as c]
      [active.clojure.macro :refer [if-cljs]])]
    :cljs
    [(:require
      [active.clojure.lens :as lens]
+     [active.clojure.condition :as c])
     (:require-macros [active.clojure.macro :refer [if-cljs]])]))
+
+(defn throw-illegal-argument-exception
+  [msg]
+  (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -53,13 +59,13 @@
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
   (when-not (and (list? ?constructor-call)
                  (not (empty? ?constructor-call)))
-    (throw (IllegalArgumentException. (str "constructor call must be a list in " *ns* " " (meta &form)))))
+    (throw (throw-illegal-argument-exception (str "constructor call must be a list in " *ns* " " (meta &form)))))
   (when-not (vector? ?field-specs)
-    (throw (IllegalArgumentException. (str "field specs must be a vector in " *ns* " " (meta &form)))))
+    (throw (throw-illegal-argument-exception (str "field specs must be a vector in " *ns* " " (meta &form)))))
   (when-not (even? (count (remove seq? ?field-specs)))
-    (throw (IllegalArgumentException. (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
+    (throw (throw-illegal-argument-exception (str "odd number of elements in field specs in " *ns* " " (meta &form)))))
   (when-not (every? true? (map #(= 3 (count %1)) (filter seq? ?field-specs)))
-    (throw (IllegalArgumentException. (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form)))))
+    (throw (throw-illegal-argument-exception (str "wrong number of elements in field specs with lens in " *ns* " " (meta &form)))))
 
   (let [?field-triples (loop [specs (seq ?field-specs)
                               triples '()]
@@ -72,20 +78,20 @@
                               (do
                                 (when-not (and (= 3 (count spec))
                                                (every? symbol spec))
-                                  (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form))))
+                                  (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form))))
                                 (recur (rest specs) (list* spec triples)))
 
                               (symbol? spec)
                               (do
                                 (when (empty? (rest specs))
-                                  (throw (IllegalArgumentException. (str "incomplete field spec for " spec " in " *ns* " " (meta &form)))))
+                                  (throw (throw-illegal-argument-exception (str "incomplete field spec for " spec " in " *ns* " " (meta &form)))))
                                 (when-not (symbol? (fnext specs))
-                                  (throw (IllegalArgumentException. (str "invalid accessor " (fnext specs) " for " spec " in " *ns* " " (meta &form)))))
+                                  (throw (throw-illegal-argument-exception (str "invalid accessor " (fnext specs) " for " spec " in " *ns* " " (meta &form)))))
                                 (recur (nnext specs)
                                        (list* [spec (fnext specs) nil] triples)))
 
                               :else
-                              (throw (IllegalArgumentException. (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
+                              (throw (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
 
         ?constructor (first ?constructor-call)
         ?constructor-args (rest ?constructor-call)
@@ -120,7 +126,7 @@
     (let [?field-names-set (set ?field-names)]
       (doseq [?constructor-arg ?constructor-args]
         (when-not (contains? ?field-names-set ?constructor-arg)
-          (throw (IllegalArgumentException. (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
+          (throw (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
 
     `(do
        (defrecord ~?type

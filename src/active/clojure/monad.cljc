@@ -2,7 +2,7 @@
   "Monad related functionality, particularly free monads."
   #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
                             [active.clojure.monad :refer (monadic)]))
-  (:require #?(:clj [active.clojure.record :refer :all])
+  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             #?(:cljs active.clojure.record)
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])

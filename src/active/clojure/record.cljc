@@ -1,5 +1,13 @@
 (ns active.clojure.record
-  (:require [active.clojure.lens :as lens]))
+  #?@
+  (:clj
+   [(:require
+     [active.clojure.lens :as lens]
+     [active.clojure.macro :refer [if-cljs]])]
+   :cljs
+   [(:require
+     [active.clojure.lens :as lens]
+    (:require-macros [active.clojure.macro :refer [if-cljs]])]))
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -13,8 +21,31 @@
 (defrecord RecordMeta
     ;; unresolved store for record related symbols. May not leak outside this
     ;; namespace. Contains ns to allow post-macro qualification; see `record-meta` function.
-    [predicate constructor ordered-accessors ns])
+    [predicate constructor ordered-accessors])
 
+(defmacro resolve*
+  [& args]
+  `(if-cljs nil (resolve ~@args)))
+
+(defmacro intern*
+  [& args]
+  `(if-cljs nil (intern ~@args)))
+
+(defmacro make-record-meta
+  [?predicate ?constructor ?constructor-args ?field-triples]
+  #?(:cljs nil) ;; we don't return meta in cljs
+  #?(:clj
+  (do
+    ;; we need to internalize symbols to ns resolve them
+    (intern* *ns* ?predicate)
+    (intern* *ns* ?constructor)
+    (->RecordMeta
+     (resolve* ?predicate) (resolve* ?constructor)
+     (mapv (fn [constr]
+             (let [accessor (second (first (filter #(= (first %) constr) ?field-triples)))]
+               (intern* *ns* accessor)
+               (resolve* accessor)))
+           ?constructor-args)))))
 
 #?(:clj
 (defmacro define-record-type
@@ -84,18 +115,7 @@
                     (str "[[" (ns-name *ns*) "/" name "]]"))
         ?docref (str "See " (reference ?constructor) ".")
 
-        ;; we need to internalize symbols to ns resolve them
-        _ (intern *ns* ?predicate)
-        _ (intern *ns* ?constructor)
-
-        record-meta (->RecordMeta
-                     (resolve ?predicate) (resolve ?constructor)
-                     (mapv (fn [constr]
-                             (let [accessor (second (first (filter #(= (first %) constr) ?field-triples)))]
-                               (intern *ns* accessor)
-                               (resolve accessor)))
-                           ?constructor-args)
-                     *ns*)]
+        record-meta `(make-record-meta ~?predicate ~?constructor ~?constructor-args ~?field-triples)]
 
     (let [?field-names-set (set ?field-names)]
       (doseq [?constructor-arg ?constructor-args]

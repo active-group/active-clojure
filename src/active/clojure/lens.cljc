@@ -1,57 +1,39 @@
 (ns active.clojure.lens)
 
-(defprotocol Lens
-  "Protocol for types that can be used as a lens, defined by a
-   function to yank some value out of a given data value, and a function
-   to shove an updated value back in."
-  (-yank [lens data])
-  (-shove [lens data v]))
-
 ;; TODO document lens laws
 
 (defn yank
   "Yank a value from the given data value, as defined by the given
    lens."
   [data lens]
-  (if (satisfies? Lens lens)
-    (-yank lens data)
-    (lens data)))
+  (lens data))
 
 (defn shove
   "Shove a new value v into the given data value, as defined by the
    given lens, and return the updated data structure."
   [data lens v]
-  (if (satisfies? Lens lens)
-    (-shove lens data v)
+  (if (keyword? lens)
+    (assoc data lens v)
     (lens data v)))
-
-;; Keywords are lenses over a map (or object), focusing on the value associated with that keyword.
-(extend-type #?(:clj clojure.lang.Keyword) #?(:cljs cljs.core.Keyword)
-  Lens
-  (-yank [kw data] (kw data))
-  (-shove [kw data v] (assoc data kw v)))
 
 (defrecord ExplicitLens
     ^{:private true}
   [yanker shover args]
-  Lens
-  (-yank [lens data] (apply yanker data args))
-  (-shove [lens data v] (apply shover data v args))
   #?@(:clj [clojure.lang.IFn
-            (invoke [this data] (-yank this data))
-            (invoke [this data v] (-shove this data v))
+            (invoke [this data] (apply yanker data args))
+            (invoke [this data v] (apply shover data v args))
             (applyTo [this args]
                      (let [args (object-array args)]
                        (case (count args)
-                         1 (-yank this (aget args 0))
-                         2 (-shove this (aget args 0) (aget args 1))
+                         1 (yanker (aget args 0))
+                         2 (shover (aget args 0) (aget args 1))
                          (throw #?(:clj (java.lang.IllegalArgumentException. (str "invalid number of arguments (" (count args) ") to lens")))
                                 #?(:cljs (str "invalid number of arguments (" (count args) ") to lens"))))))]
       :cljs [IFn
-             (-invoke [this data] (-yank this data))
-             (-invoke [this data v] (-shove this data v))]))
+             (-invoke [this data] (apply yanker data args))
+             (-invoke [this data v] (apply shover data v args))]))
 
-(defn lens-with-record
+(defn lens
   "Returns a new lens defined by the given yanker function, which
   takes a data structure and must return the focused value, and the
   given shover function which takes a data structure and the new value
@@ -59,14 +41,6 @@
   and shove functions."
   [yank shove & args]
   (ExplicitLens. yank shove args))
-
-(defn lens
-  [yank shove & args]
-  (fn
-    ([data]
-     (apply yank data args))
-    ([data v]
-     (apply shove data v args))))
 
 (defn- xmap-yank [data f g & args]
   (apply f data args))
@@ -85,7 +59,7 @@
   "Returns a \"view lens\", that transforms a whole data structure
    to something else (f) and back (g)."
   [f g & args]
-  (apply lens-with-record xmap-yank xmap-shove f g args))
+  (apply lens xmap-yank xmap-shove f g args))
 
 (def
   ^{:doc "Identity lens, that just show a data structure as it is.
@@ -100,7 +74,7 @@
 
 (defn- >>2
   [l1 l2]
-  (lens-with-record comb-yank comb-shove l1 l2))
+  (lens comb-yank comb-shove l1 l2))
 
 (defn >>
   "Returns a concatenation of two or more lenses, so that the combination shows the

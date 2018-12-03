@@ -13,13 +13,17 @@
   "Yank a value from the given data value, as defined by the given
    lens."
   [data lens]
-  (-yank lens data))
+  (if (satisfies? Lens lens)
+    (-yank lens data)
+    (lens data)))
 
 (defn shove
   "Shove a new value v into the given data value, as defined by the
    given lens, and return the updated data structure."
   [data lens v]
-  (-shove lens data v))
+  (if (satisfies? Lens lens)
+    (-shove lens data v)
+    (lens data v)))
 
 ;; Keywords are lenses over a map (or object), focusing on the value associated with that keyword.
 (extend-type #?(:clj clojure.lang.Keyword) #?(:cljs cljs.core.Keyword)
@@ -47,7 +51,7 @@
              (-invoke [this data] (-yank this data))
              (-invoke [this data v] (-shove this data v))]))
 
-(defn lens
+(defn lens-with-record
   "Returns a new lens defined by the given yanker function, which
   takes a data structure and must return the focused value, and the
   given shover function which takes a data structure and the new value
@@ -55,6 +59,14 @@
   and shove functions."
   [yank shove & args]
   (ExplicitLens. yank shove args))
+
+(defn lens
+  [yank shove & args]
+  (fn
+    ([data]
+     (apply yank data args))
+    ([data v]
+     (apply shove data v args))))
 
 (defn- xmap-yank [data f g & args]
   (apply f data args))
@@ -73,7 +85,7 @@
   "Returns a \"view lens\", that transforms a whole data structure
    to something else (f) and back (g)."
   [f g & args]
-  (apply lens xmap-yank xmap-shove f g args))
+  (apply lens-with-record xmap-yank xmap-shove f g args))
 
 (def
   ^{:doc "Identity lens, that just show a data structure as it is.
@@ -88,14 +100,13 @@
 
 (defn- >>2
   [l1 l2]
-  (lens comb-yank comb-shove l1 l2))
+  (lens-with-record comb-yank comb-shove l1 l2))
 
 (defn >>
   "Returns a concatenation of two or more lenses, so that the combination shows the
    value of the last one, in a data structure that the first one is put
    over."
   [l1 & lmore]
-  (assert (not-any? #(not (satisfies? Lens %)) (cons l1 lmore)))
   (loop [res l1
          lmore lmore]
     (if (empty? lmore)

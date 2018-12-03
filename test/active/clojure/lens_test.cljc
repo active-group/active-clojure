@@ -255,3 +255,27 @@
          (lens/nel-head [1 2 3 4] 5)))
   (is (= [5 2 3 4]
          (apply lens/nel-head [1 2 3 4] [5]))))
+
+
+(deftest explicit-lens-invocation
+  (testing "can use explicit lens like a function, for yank"
+    (is (= 4
+           ((lens/pos 3) [1 2 3 4]))))
+  (testing "can use explicit lens like a function, for shove"
+    (is (= [1 2 3 5]
+           ((lens/pos 3) [1 2 3 4] 5)))))
+
+(deftest plain-lenses-are-functions
+  (let [plain-lens (lens/lens get #(assoc %1 :foo %2))]
+    (testing "A plain lens doesn't satisfy the Lens protocol,
+and is not a (ExplicitLens) record"
+      (is (= false
+             (satisfies? lens/Lens plain-lens)))
+      (is (= false
+             (record? plain-lens))))
+    (testing "A composition of lenses implements the Lens protocol and
+still produces a (ExplicitLens) record"
+      (is (= true
+             (satisfies? lens/Lens (lens/>> plain-lens plain-lens))))
+      (is (= true
+             (record? (lens/>> plain-lens plain-lens)))))))

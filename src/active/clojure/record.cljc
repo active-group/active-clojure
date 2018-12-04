@@ -228,21 +228,9 @@
 (defn- validate-fields
   ""
   [fields name]
-  (when-not (vector? fields)
-    (throw (AssertionError. "No fields vector given.")))
   (let [specials '#{__meta __hash __hasheq __extmap}]
     (when (some specials fields)
-      (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records.")))))
-  (let [non-syms (remove symbol? fields)]
-    (when (seq non-syms)
-      (throw (clojure.lang.Compiler$CompilerException.
-              *file*
-              (.deref clojure.lang.Compiler/LINE)
-              (.deref clojure.lang.Compiler/COLUMN)
-              (AssertionError.
-               (str "defrecord and deftype fields must be symbols, "
-                    *ns* "." name " had: "
-                    (apply str (interpose ", " non-syms)))))))))
+      (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records."))))))
 
 (defn throw-illegal-argument-exception
   [msg]
@@ -362,23 +350,20 @@
           (throw (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
 
     `(do
-       ~(let [name ?type
-              fields (mapv first ?field-triples)
-              opts+specs ?opt+specs]
-          (validate-fields fields name)
-          (let [gname name
-                [interfaces methods opts] (parse-opts+specs opts+specs)
+       ~(let [fields (mapv first ?field-triples)]
+          (validate-fields fields ?type)
+          (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
                 ns-part (namespace-munge *ns*)
-                classname (symbol (str ns-part "." gname))
+                classname (symbol (str ns-part "." ?type))
                 hinted-fields fields
                 fields (vec (map #(with-meta % nil) fields))]
             `(let []
-               (declare ~(symbol (str  '-> gname)))
-               (declare ~(symbol (str 'map-> gname)))
-               ~(emit-defrecord name gname (vec hinted-fields) (vec interfaces) methods opts)
+               (declare ~(symbol (str  '-> ?type)))
+               (declare ~(symbol (str 'map-> ?type)))
+               ~(emit-defrecord ?type ?type (vec hinted-fields) (vec interfaces) methods opts)
                (import ~classname)
-               ~(build-positional-factory gname classname fields)
-               (defn ~(symbol (str 'map-> gname))
+               ~(build-positional-factory ?type classname fields)
+               (defn ~(symbol (str 'map-> ?type))
                  ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
                  ([m#] (~(symbol (str classname "/create"))
                         (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))

@@ -15,6 +15,13 @@
   [msg]
   (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
 
+
+(defn report-lens-deprecation [type]
+  (println (str "active.clojure.record WARNING for record-type `" type
+                "`: the explicit definition of lenses is deprecated in favor of regular "
+                "accessors already being lenses")))
+
+
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
   [type rec]
@@ -158,28 +165,29 @@
                        ?field-triples))))
        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
        ~@(mapcat (fn [[?field ?accessor ?lens]]
-                   (let [?rec (with-meta `rec# {:tag ?type})]
-                     `((def ~(document-with-arglist ?accessor (vector ?type)  (str "Access `" ?field "` field"
-                                                                                   (name-doc ?field)
-                                                                                   " from a [[" ?type "]] record. " ?docref))
-                         (fn [~?rec]
-                           (check-type ~?type ~?rec)
-                           (. ~?rec ~(symbol (str "-" ?field)))))
-                       ~@(if ?lens
-                           (let [?data `data#
-                                 ?v `v#]
-                             `((def ~(document ?lens (str "Lens for the `" ?field "` field"
-                                                          (name-doc ?field)
-                                                          " from a [[" ?type "]] record." ?docref))
-                                 (lens/lens ~?accessor
-                                            (fn [~?data ~?v]
-                                              (~?constructor ~@(map
-                                                                (fn [[?shove-field ?shove-accessor]]
-                                                                  (if (= ?field ?shove-field)
-                                                                    ?v
-                                                                    `(~?shove-accessor ~?data)))
-                                                                ?field-triples)))))))
-                           '()))))
+                   (let [?rec (with-meta `rec# {:tag ?type})
+                         ?data `data#
+                         ?v `v#]
+                     `((def ~(document-with-arglist
+                              ?accessor
+                              (vector ?type)
+                              (str "Lens for the `" ?field "` field"
+                                   (name-doc ?field)
+                                   " from a [[" ?type "]] record. " ?docref))
+                         (lens/lens (fn [~?rec]
+                                      (check-type ~?type ~?rec)
+                                      (. ~?rec ~(symbol (str "-" ?field))))
+                                    (fn [~?data ~?v]
+                                      (~?constructor ~@(map
+                                                        (fn [[?shove-field ?shove-accessor]]
+                                                          (if (= ?field ?shove-field)
+                                                            ?v
+                                                            `(~?shove-accessor ~?data)))
+                                                        ?field-triples)))))
+                       ~(when ?lens
+                          (report-lens-deprecation ?type)
+                          `(def ~?lens ~?accessor))
+                       )))
                  ?field-triples)))))
 
 

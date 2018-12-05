@@ -274,6 +274,109 @@
                (resolve* accessor)))
            ?constructor-args)))))
 
+(defn- document
+  [n doc]
+  (vary-meta n
+             (fn [m]
+               (if (contains? m :doc)
+                 m
+                 (assoc m :doc doc)))))
+
+(defn- document-with-arglist
+  [n arglist doc]
+  (vary-meta n
+             (fn [m]
+               (let [m (if (contains? m :doc)
+                         m
+                         (assoc m :doc doc))]
+                 (if (contains? m :arglists)
+                   m
+                   (assoc m :arglists `'(~arglist)))))))
+
+(defn- name-doc
+  [field]
+  (if-let [doc (:doc (meta field))]
+    (str " (" doc ")")
+    ""))
+
+(defn- reference
+  [name]
+  (str "[[" (ns-name *ns*) "/" name "]]"))
+
+(defn emit-java-record-definition
+  [?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
+  (let [?docref (str "See " (reference ?constructor) ".")
+        record-meta `(make-record-meta ~?predicate ~?constructor ~?constructor-args ~?field-triples)
+        ?constructor-args-set (set ?constructor-args)]
+    `(do
+       ~(let [fields (mapv first ?field-triples)]
+          (validate-fields fields ?type)
+          (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
+                ns-part (namespace-munge *ns*)
+                classname (symbol (str ns-part "." ?type))
+                hinted-fields fields
+                fields (vec (map #(with-meta % nil) fields))]
+            `(let []
+               (declare ~(symbol (str  '-> ?type)))
+               (declare ~(symbol (str 'map-> ?type)))
+               ~(emit-defrecord ?type ?type (vec hinted-fields) (vec interfaces) methods opts)
+               (import ~classname)
+               ~(build-positional-factory ?type classname fields)
+               (defn ~(symbol (str 'map-> ?type))
+                 ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
+                 ([m#] (~(symbol (str classname "/create"))
+                        (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
+               ~classname)))
+
+       (def ~(vary-meta (document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
+                        assoc :meta record-meta)
+         (fn [x#]
+           (instance? ~?type x#)))
+       (def ~(document-with-arglist ?constructor
+                                    (vec ?constructor-args)
+                                    (str "Construct a `" ?type "`"
+                                         (name-doc ?type)
+                                         " record.\n"
+                                         (apply str
+                                                (map (fn [[?field ?accessor ?lens]]
+                                                       (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
+                                                            (if ?lens
+                                                              (str ", lens " (reference ?lens))
+                                                              "")))
+                                                     ?field-triples))))
+         (fn [~@?constructor-args]
+           (new ~?type
+                ~@(map (fn [[?field _]]
+                         (if (contains? ?constructor-args-set ?field)
+                           `~?field
+                           `nil))
+                       ?field-triples))))
+       (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
+       ~@(mapcat (fn [[?field ?accessor ?lens]]
+                   (let [?rec (with-meta `rec# {:tag ?type})]
+                     `((def ~(document-with-arglist ?accessor (vector ?type)  (str "Access `" ?field "` field"
+                                                                                   (name-doc ?field)
+                                                                                   " from a [[" ?type "]] record. " ?docref))
+                         (fn [~?rec]
+                           (check-type ~?type ~?rec)
+                           (. ~?rec ~(symbol (str "-" ?field)))))
+                       ~@(if ?lens
+                           (let [?data `data#
+                                 ?v `v#]
+                             `((def ~(document ?lens (str "Lens for the `" ?field "` field"
+                                                          (name-doc ?field)
+                                                          " from a [[" ?type "]] record." ?docref))
+                                 (lens/lens ~?accessor
+                                            (fn [~?data ~?v]
+                                              (~?constructor ~@(map
+                                                                (fn [[?shove-field ?shove-accessor]]
+                                                                  (if (= ?field ?shove-field)
+                                                                    ?v
+                                                                    `(~?shove-accessor ~?data)))
+                                                                ?field-triples)))))))
+                           '()))))
+                 ?field-triples))))
+
 #?(:clj
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
@@ -316,108 +419,9 @@
 
         ?constructor (first ?constructor-call)
         ?constructor-args (rest ?constructor-call)
-        ?constructor-args-set (set ?constructor-args)
-        document (fn [n doc]
-                   (vary-meta n
-                              (fn [m]
-                                (if (contains? m :doc)
-                                  m
-                                  (assoc m :doc doc)))))
-        document-with-arglist (fn [n arglist doc]
-                                (vary-meta n
-                                           (fn [m]
-                                             (let [m (if (contains? m :doc)
-                                                       m
-                                                       (assoc m :doc doc))]
-                                               (if (contains? m :arglists)
-                                                 m
-                                                 (assoc m :arglists `'(~arglist)))))))
-        name-doc (fn [field]
-                    (if-let [doc (:doc (meta field))]
-                      (str " (" doc ")")
-                      ""))
-
-        ?field-names (map first ?field-triples)
-        reference (fn [name]
-                    (str "[[" (ns-name *ns*) "/" name "]]"))
-        ?docref (str "See " (reference ?constructor) ".")
-
-        record-meta `(make-record-meta ~?predicate ~?constructor ~?constructor-args ~?field-triples)]
-
-    (let [?field-names-set (set ?field-names)]
-      (doseq [?constructor-arg ?constructor-args]
-        (when-not (contains? ?field-names-set ?constructor-arg)
-          (throw (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta &form)))))))
-
-    `(do
-       ~(let [fields (mapv first ?field-triples)]
-          (validate-fields fields ?type)
-          (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
-                ns-part (namespace-munge *ns*)
-                classname (symbol (str ns-part "." ?type))
-                hinted-fields fields
-                fields (vec (map #(with-meta % nil) fields))]
-            `(let []
-               (declare ~(symbol (str  '-> ?type)))
-               (declare ~(symbol (str 'map-> ?type)))
-               ~(emit-defrecord ?type ?type (vec hinted-fields) (vec interfaces) methods opts)
-               (import ~classname)
-               ~(build-positional-factory ?type classname fields)
-               (defn ~(symbol (str 'map-> ?type))
-                 ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
-                 ([m#] (~(symbol (str classname "/create"))
-                        (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
-               ~classname)))
-
-       (def ~(vary-meta (document-with-arglist ?predicate '[thing] (str "Is object a `" ?type "` record? " ?docref))
-                        assoc :meta record-meta)
-         (fn [x#]
-           (instance? ~?type x#)))
-       (def ~(document-with-arglist ?constructor
-                                 (vec ?constructor-args)
-                                 (str "Construct a `" ?type "`"
-                                      (name-doc ?type)
-                                      " record.\n"
-                                      (apply str
-                                             (map (fn [[?field ?accessor ?lens]]
-                                                    (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
-                                                         (if ?lens
-                                                           (str ", lens " (reference ?lens))
-                                                           "")))
-                                                  ?field-triples))))
-         (fn [~@?constructor-args]
-           (new ~?type
-                ~@(map (fn [[?field _]]
-                         (if (contains? ?constructor-args-set ?field)
-                           `~?field
-                           `nil))
-                       ?field-triples))))
-       (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
-       ~@(mapcat (fn [[?field ?accessor ?lens]]
-                   (let [?rec (with-meta `rec# {:tag ?type})]
-                     `((def ~(document-with-arglist ?accessor (vector ?type)  (str "Access `" ?field "` field"
-                                                                                   (name-doc ?field)
-                                                                                   " from a [[" ?type "]] record. " ?docref))
-                         (fn [~?rec]
-                           (check-type ~?type ~?rec)
-                           (. ~?rec ~(symbol (str "-" ?field)))))
-                       ~@(if ?lens
-                           (let [?data `data#
-                                 ?v `v#]
-                             `((def ~(document ?lens (str "Lens for the `" ?field "` field"
-                                                          (name-doc ?field)
-                                                          " from a [[" ?type "]] record." ?docref))
-                                 (lens/lens ~?accessor
-                                            (fn [~?data ~?v]
-                                              (~?constructor ~@(map
-                                                                (fn [[?shove-field ?shove-accessor]]
-                                                                  (if (= ?field ?shove-field)
-                                                                    ?v
-                                                                    `(~?shove-accessor ~?data)))
-                                                                ?field-triples)))))))
-                           '()))))
-                 ?field-triples)))))
-
+        ?field-names (map first ?field-triples)]
+    (emit-java-record-definition ?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
+)
 
 (defn predicate->record-meta [predicate]
   ;; Expects a namespace resolved predicate

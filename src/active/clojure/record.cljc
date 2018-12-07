@@ -64,8 +64,9 @@
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
-  (when-not (and (list? ?constructor-call)
-                 (not (empty? ?constructor-call)))
+  (when-not (or (and (list? ?constructor-call)
+                     (not (empty? ?constructor-call)))
+                (symbol? ?constructor-call))
     (throw (throw-illegal-argument-exception (str "constructor call must be a list in " *ns* " " (meta &form)))))
   (when-not (vector? ?field-specs)
     (throw (throw-illegal-argument-exception (str "field specs must be a vector in " *ns* " " (meta &form)))))
@@ -100,8 +101,13 @@
                               :else
                               (throw (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
 
-        ?constructor (first ?constructor-call)
-        ?constructor-args (rest ?constructor-call)
+        [?constructor & ?constructor-args] (cond
+                                             (list? ?constructor-call)
+                                             ?constructor-call
+
+                                             (symbol? ?constructor-call)
+                                             (concat [?constructor-call]
+                                                     (map first ?field-triples)))
         ?constructor-args-set (set ?constructor-args)
         document (fn [n doc]
                    (vary-meta n

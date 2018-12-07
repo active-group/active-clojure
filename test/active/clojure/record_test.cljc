@@ -32,6 +32,24 @@
   (is (thrown? Throwable
                (kar (FakePare. 1 2)))))
 
+
+;; Omit constructor args
+
+(define-record-type Schmare
+  schmons
+  schmare?
+  [a schmar
+   b schmdr])
+
+(deftest simple-omit
+  (let [r (schmons 1 2)]
+    (is (schmare? r))
+    (is (= 1 (schmar r)))
+    (is (= 2 (schmdr r)))))
+
+
+;; Uninstantiated fields
+
 (define-record-type Pu
   (make-pu c a)
   pu?

@@ -169,6 +169,16 @@
                                             "what's your last name?" "Sperber"})
                                           (ex3)))))
 
+(deftest with-handler-state
+  (is (= [nil {::with-handler-state true}]
+         (run-free-reader-state-exception (null-monad-command-config nil nil)
+                                          (monadic
+                                           (with-handler
+                                             (fn [exn]
+                                               (put-state-component! ::with-handler-state true))
+                                             (monadic
+                                              (free-throw 'something))))))))
+
 (deftest test-and-finally
   (is (= [(make-exception-value "It's Mike") {::output ["Hello"]}]
          (run-free-reader-state-exception (run-ask-tell-config
@@ -327,3 +337,26 @@
            (reify-command (reify-as m :blub))))
     (is (= m
            (reify-command m)))))
+
+(deftest metadata-test
+  (let [stmt (monadic
+              [a (return 42)]
+              [b (return 21)]
+              (return 10))]
+    (let [base (meta stmt)]
+      (is (= (set (keys (select-keys base #{:line :column :statement})))
+             #{:line :column :statement}))
+      
+      (is (= (:statement base)
+             '[a (return 42)]))
+      
+      (is (= (select-keys (meta ((:cont stmt) nil)) #{:line :column :statement})
+             {:statement '[b (return 21)]
+              :column (:column base)
+              :line (inc (or (:line base) -1))}))))
+  
+  ;; and we don't need/want metadata on this:
+  (is (= (meta (monadic (return 42)))
+         nil))
+  (is (= (monadic (return 42))
+         (return 42))))

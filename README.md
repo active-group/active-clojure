@@ -2,6 +2,8 @@
 
 A library with various basic utilities for programming with Clojure.
 
+[![Clojars Project](https://img.shields.io/clojars/v/active-clojure.svg)](https://clojars.org/active-clojure)
+
 ## Usage
 
 ### Records
@@ -123,9 +125,22 @@ tools such as a macro `pret` that prints and returns its argument.
 The `active.clojure.match` namespace provides some syntactic sugar
 for map matching around `core.match`.
 
+### Higher-order Functions
+
+The `active.clojure.functions` namespace provides the same higher order
+functions that `clojure.core` does, but implemented via records and
+`IFn`, so that the returned "functions" are `=` if created with `=` arguments.
+
+These can be very handy for using React-based libraries like [Reacl](https://github.com/active-group/reacl),
+which can optimize work based on the equality of values.
+
+### Monad
+
+An example usage of the `active.clojure.monad` namespace can be found at https://github.com/active-group/active-clojure-monad-example
+
 ## License
 
-Copyright © 2014 Active Group GmbH
+Copyright © 2014-2019 Active Group GmbH
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

@@ -6,6 +6,7 @@
             #?(:cljs active.clojure.record)
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])
+            #?(:cljs active.clojure.record) ;; for check-type in define-record-type
             [active.clojure.condition :as c]))
 
 (define-record-type ^:no-doc Return
@@ -35,16 +36,12 @@
                              mv)))
 
   (cond
-   ;; normalize nested binds, keeping original meta (source, line)
-   (free-bind? mv) (with-meta
-                      (Bind. (free-bind-monad mv)
-                          (fn [x]
-                            (let [next ((free-bind-cont mv) x)] ; yields a monad
-                              (free-bind next f))))
-                      (meta mv))
+    (free-bind? mv) (Bind. (free-bind-monad mv)
+                           (fn [x]
+                             (let [next ((free-bind-cont mv) x)] ; yields a monad
+                               (free-bind next f))))
 
-   :else (with-meta (make-free-bind mv f)
-           (meta mv))))
+    :else (make-free-bind mv f)))
 
 (defn throw-illegal-argument-exception
   [msg]
@@ -67,56 +64,46 @@
                (let [s (str \"Hello, \" first \" \" last)])
                (tell s))"
   [& ?stmts]
-  `(monadic-1 ~(meta &form) ~@?stmts)))
+  (if (empty? ?stmts)
+    (throw-illegal-argument-exception (str "there must be at least one statement in " *ns* " " (meta &form)))
+    (let [?stmt (first ?stmts)]
+      (cond
+        ;; monadic binding:
+        (vector? ?stmt)
+        `(monadic-binds ~?stmt (monadic ~@(rest ?stmts)))
+
+        ;; non-monadic binding:
+        (and (list? ?stmt)
+             (= 'let (first ?stmt)))
+        `(let ~(second ?stmt) (monadic ~@(rest ?stmts)))
+
+        ;; anything else in the middle
+        (not-empty (rest ?stmts))
+        `(monadic-bind _# ~?stmt (monadic ~@(rest ?stmts)))
+
+        ;; anything else in the end:
+        :else
+        ?stmt)))))
 
 #?(:clj
-(defmacro monadic-1
-  [?meta & ?stmts]
-  (if (empty? ?stmts)
-    (throw-illegal-argument-exception (str "there must be at least one statement in " *ns* " " ?meta))
-    (let [?stmt (first ?stmts)
-          check-bindings (fn [bindings]
-                           (when-not (vector? bindings)
-                             (throw-illegal-argument-exception (str "bindings must be an vector in "
-                                                                    *ns* " " ?meta)))
-                           (when (empty? bindings)
-                             (throw-illegal-argument-exception  (str "bindings must be non-empty in "
-                                                                     *ns* " " ?meta)))
-                           (when-not (even? (count bindings))
-                             (throw-illegal-argument-exception (str "bindings must be even-sized vector in "
-                                                                    *ns* " " ?meta))))]
+   (defmacro ^:no-doc monadic-bind [?pat ?rhs ?cont]
+     (let [mdata (assoc (meta ?rhs) :statement `(quote ~[?pat ?rhs]))]
+       `(with-meta (free-bind ~?rhs
+                           (fn [~?pat]
+                             ~?cont))
+          ~mdata))))
 
-      (cond
-       (vector? ?stmt)
-       (do
-         (check-bindings ?stmt)
-         (letfn [(recurse [?pairs]
-                   (let [[?pat ?rhs] (first ?pairs)
-                         ?rest (rest ?pairs)]
-                     `(with-meta (free-bind ~?rhs
-                                            (fn [~?pat]
-                                              ~(if (empty? ?rest)
-                                                 `(monadic-1 ~?meta ~@(rest ?stmts))
-                                                 (recurse ?rest))))
-                        '~(assoc ?meta :statement [?pat ?rhs]))))]
-           (recurse (partition 2 ?stmt))))
+#?(:clj
+   (defmacro ^:no-doc monadic-binds [?bindings ?cont]
+     (when-not (even? (count ?bindings))
+       (throw-illegal-argument-exception (str "bindings must be even-sized vector in "
+                                              *ns* " " (meta &form))))
+     (if (empty? ?bindings)
+       ?cont
+       `(monadic-bind ~(first ?bindings) ~(second ?bindings)
+                      (monadic-binds ~(rest (rest ?bindings))
+                                     ~?cont)))))
 
-       (and (list? ?stmt)
-            (= 'let (first ?stmt)))
-       (do (when-not (= 2 (count ?stmt))
-             (throw-illegal-argument-exception  (str "let statement must have exactly one subform in "
-                                                     *ns* " " ?meta)))
-           (check-bindings (second ?stmt))
-           `(let ~(second ?stmt)
-              (monadic-1 ~?meta ~@(rest ?stmts))))
-
-       (empty? (rest ?stmts))
-       `(vary-meta ~(first ?stmts)
-          ~'assoc :statement '~(first ?stmts))
-
-       :else
-       `(with-meta (free-bind ~?stmt (fn [_#] (monadic-1 ~?meta ~@(rest ?stmts))))
-          '~(assoc ?meta :statement ?stmt)))))))
 
 (defn sequ
   "Evaluate each action in the sequence from left to right, and collect the results."

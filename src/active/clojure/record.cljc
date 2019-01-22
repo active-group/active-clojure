@@ -49,7 +49,7 @@
 (defn- parse-opts+specs [opts+specs]
   (let [[opts specs] (parse-opts opts+specs)
         impls (parse-impls specs)
-        interfaces (-> (map #(if (var? (resolve %)) 
+        interfaces (-> (map #(if (var? (resolve %))
                                (:on (deref (resolve %)))
                                %)
                             (keys impls))
@@ -80,7 +80,7 @@
           (recur (.assoc this (.getKey pair) (.getValue pair)) (rest o)))
         this))))
 
-(defn- emit-defrecord 
+(defn- emit-defrecord
   "Do not use this directly - use defrecord"
   {:added "1.2"}
   [tagname cname fields interfaces methods opts]
@@ -98,11 +98,11 @@
     (when (some #{:volatile-mutable :unsynchronized-mutable} (mapcat (comp keys meta) hinted-fields))
       (throw (IllegalArgumentException. ":volatile-mutable or :unsynchronized-mutable not supported for record fields")))
     (let [gs (gensym)]
-    (letfn 
+    (letfn
      [(irecord [[i m]]
         [(conj i 'clojure.lang.IRecord)
          m])
-      (eqhash [[i m]] 
+      (eqhash [[i m]]
         [(conj i 'clojure.lang.IHashEq)
          (conj m
                `(hasheq [this#] (let [hq# ~'__hasheq]
@@ -118,22 +118,22 @@
                                         h#)
                                       hash#)))
                `(equals [this# ~gs] (clojure.lang.APersistentMap/mapEquals this# ~gs)))])
-      (iobj [[i m]] 
+      (iobj [[i m]]
             [(conj i 'clojure.lang.IObj)
              (conj m `(meta [this#] ~'__meta)
                    `(withMeta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields))))])
-      (ilookup [[i m]] 
+      (ilookup [[i m]]
          [(conj i 'clojure.lang.ILookup 'clojure.lang.IKeywordLookup)
           (conj m `(valAt [this# k#] (.valAt this# k# nil))
-                `(valAt [this# k# else#] 
-                   (case k# ~@(mapcat (fn [fld] [(keyword fld) fld]) 
+                `(valAt [this# k# else#]
+                   (case k# ~@(mapcat (fn [fld] [(keyword fld) fld])
                                        base-fields)
                          (get ~'__extmap k# else#)))
                 `(getLookupThunk [this# k#]
-                   (let [~'gclass (class this#)]              
+                   (let [~'gclass (class this#)]
                      (case k#
-                           ~@(let [hinted-target (with-meta 'gtarget {:tag tagname})] 
-                               (mapcat 
+                           ~@(let [hinted-target (with-meta 'gtarget {:tag tagname})]
+                               (mapcat
                                 (fn [fld]
                                   [(keyword fld)
                                    `(reify clojure.lang.ILookupThunk
@@ -143,14 +143,14 @@
                                                   ~'thunk)))])
                                 base-fields))
                            nil))))])
-      (imap [[i m]] 
+      (imap [[i m]]
             [(conj i 'clojure.lang.IPersistentMap)
-             (conj m 
+             (conj m
                    `(count [this#] (+ ~(count base-fields) (count ~'__extmap)))
                    `(empty [this#] (throw (UnsupportedOperationException. (str "Can't create empty: " ~(str classname)))))
                    `(cons [this# e#] ((var imap-cons) this# e#))
-                   `(equiv [this# ~gs] 
-                        (boolean 
+                   `(equiv [this# ~gs]
+                        (boolean
                          (or (identical? this# ~gs)
                              (when (identical? (class this#) (class ~gs))
                                (let [~gs ~(with-meta gs {:tag tagname})]
@@ -235,6 +235,13 @@
 (defn throw-illegal-argument-exception
   [msg]
   (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
+
+
+(defn report-lens-deprecation [type]
+  (println (str "active.clojure.record WARNING for record-type `" type
+                "`: the explicit definition of lenses is deprecated in favor of regular "
+                "accessors already being lenses")))
+
 
 ;; Only needed in ClojureScript, does nothing in Clojure
 (defn check-type
@@ -353,36 +360,38 @@
                        ?field-triples))))
        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
        ~@(mapcat (fn [[?field ?accessor ?lens]]
-                   (let [?rec (with-meta `rec# {:tag ?type})]
-                     `((def ~(document-with-arglist ?accessor (vector ?type)  (str "Access `" ?field "` field"
-                                                                                   (name-doc ?field)
-                                                                                   " from a [[" ?type "]] record. " ?docref))
-                         (fn [~?rec]
-                           (check-type ~?type ~?rec)
-                           (. ~?rec ~(symbol (str "-" ?field)))))
-                       ~@(if ?lens
-                           (let [?data `data#
-                                 ?v `v#]
-                             `((def ~(document ?lens (str "Lens for the `" ?field "` field"
-                                                          (name-doc ?field)
-                                                          " from a [[" ?type "]] record." ?docref))
-                                 (lens/lens ~?accessor
-                                            (fn [~?data ~?v]
-                                              (~?constructor ~@(map
-                                                                (fn [[?shove-field ?shove-accessor]]
-                                                                  (if (= ?field ?shove-field)
-                                                                    ?v
-                                                                    `(~?shove-accessor ~?data)))
-                                                                ?field-triples)))))))
-                           '()))))
+                   (let [?rec (with-meta `rec# {:tag ?type})
+                         ?data `data#
+                         ?v `v#]
+                     `((def ~(document-with-arglist
+                              ?accessor
+                              (vector ?type)
+                              (str "Lens for the `" ?field "` field"
+                                   (name-doc ?field)
+                                   " from a [[" ?type "]] record. " ?docref))
+                         (lens/lens (fn [~?rec]
+                                      (check-type ~?type ~?rec)
+                                      (. ~?rec ~(symbol (str "-" ?field))))
+                                    (fn [~?data ~?v]
+                                      (~?constructor ~@(map
+                                                        (fn [[?shove-field ?shove-accessor]]
+                                                          (if (= ?field ?shove-field)
+                                                            ?v
+                                                            `(~?shove-accessor ~?data)))
+                                                        ?field-triples)))))
+                       ~(when ?lens
+                          (report-lens-deprecation ?type)
+                          `(def ~?lens ~?accessor))
+                       )))
                  ?field-triples))))
 
 #?(:clj
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
   [?type ?constructor-call ?predicate ?field-specs & ?opt+specs]
-  (when-not (and (list? ?constructor-call)
-                 (not (empty? ?constructor-call)))
+  (when-not (or (and (list? ?constructor-call)
+                     (not (empty? ?constructor-call)))
+                (symbol? ?constructor-call))
     (throw (throw-illegal-argument-exception (str "constructor call must be a list in " *ns* " " (meta &form)))))
   (when-not (vector? ?field-specs)
     (throw (throw-illegal-argument-exception (str "field specs must be a vector in " *ns* " " (meta &form)))))
@@ -396,7 +405,6 @@
                          (if (empty? specs)
                            (reverse triples)
                            (let [spec (first specs)]
-
                              (cond
                               (list? spec)
                               (do
@@ -417,8 +425,13 @@
                               :else
                               (throw (throw-illegal-argument-exception (str "invalid field spec " spec " in " *ns* " " (meta &form))))))))
 
-        ?constructor (first ?constructor-call)
-        ?constructor-args (rest ?constructor-call)
+        [?constructor & ?constructor-args] (cond
+                                             (list? ?constructor-call)
+                                             ?constructor-call
+
+                                             (symbol? ?constructor-call)
+                                             (concat [?constructor-call]
+                                                     (map first ?field-triples)))
         ?field-names (map first ?field-triples)]
     (emit-java-record-definition ?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
 )

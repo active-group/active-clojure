@@ -219,6 +219,17 @@
 
 
 (deftest diff
+  (is (empty?
+       (c/diff-configurations
+        schema3
+        (c/make-configuration
+         schema3
+         []
+         {:inherits {:foo 5}})
+        (c/make-configuration
+         schema3
+         []
+         {:inherits {:foo 5}}))))
   (is (= '([[:inherits :foo] 5 0] [[:outer :inherits :foo] 5 0])
          (c/diff-configurations
           schema3
@@ -290,3 +301,78 @@
             {:strings [{} {} {}]})))
     (is (= ["foo" "bar" "baz"]
            (c/access config string-setting strings-section)))))
+
+(deftest sequence-diff
+  (is (= '([[:strings 1 :string] "bar" "fix"])
+         (c/diff-configurations
+          strings-schema
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}
+             {:string "baz"}]})
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "fix"}
+             {:string "baz"}]})))))
+
+(def map-of-range-schema
+  (c/schema "map-of-range-diff-example"
+            (c/setting :mp
+                       "map example"
+                       (c/map-of-range c/string-range c/string-range))))
+
+(def optional-map-of-range-schema
+  (c/schema "map-of-range-diff-example"
+            (c/setting :mp
+                       "map example"
+                       (c/optional-range (c/map-of-range c/string-range c/string-range)))))
+
+(deftest map-of-range-diff
+  (is (= (set
+          '([[:mp "1"] "one" nil]
+            [[:mp "2"] "two" "fortytwo"]
+            [[:mp "23"] nil "twentythree"]))
+         (set
+          (c/diff-configurations
+           map-of-range-schema
+           (c/make-configuration
+            map-of-range-schema
+            []
+            {:mp
+             {"1" "one"
+              "2" "two"
+              "3" "three"}})
+           (c/make-configuration
+            map-of-range-schema
+            []
+            {:mp
+             {"23" "twentythree"
+              "2" "fortytwo"
+              "3" "three"}})))))
+  (is (= (set
+          '([[:mp "1"] "one" nil]
+            [[:mp "2"] "two" "fortytwo"]
+            [[:mp "23"] nil "twentythree"]))
+         (set
+          (c/diff-configurations
+           map-of-range-schema
+           (c/make-configuration
+            optional-map-of-range-schema
+            []
+            {:mp
+             {"1" "one"
+              "2" "two"
+              "3" "three"}})
+           (c/make-configuration
+            optional-map-of-range-schema
+            []
+            {:mp
+             {"23" "twentythree"
+              "2" "fortytwo"
+              "3" "three"}}))))))

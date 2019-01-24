@@ -2,11 +2,13 @@
   (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
+            [active.clojure.record-data-test :as r-data]
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
-            #?(:cljs [cljs.test]))
+            #?(:cljs [cljs.test])
+            [clojure.spec.alpha :as spec])
   #?(:cljs
      (:require-macros [cljs.test
                        :refer (is deftest run-tests testing)]
@@ -124,17 +126,63 @@
   [^{:spec int?} int int-string-int
    ^{:spec string?} string int-string-string])
 
-(deftest record-with-specs
-  ;; Needs to be called, so that spec errors are given:
+(define-record-type EvenAny
+  (make-even-any even any)
+  even-any?
+  [^{:spec (and #(int? %) #(even? %))} even even-any-even
+   any even-any-any])
+
+(define-record-type Container
+  (make-container value)
+  container?
+  [^{:spec ::IntString} value container-value])
+
+(defn includes?
+  [e & subs]
+  (every? #(clojure.string/includes? (.getMessage e) %)
+          subs))
+
+(deftest constructor-spec-test
+  ;; Needs to be called, so that function spec errors are given:
   (spec-test/instrument)
   (try (make-int-string 2.2 "a")
        (catch Exception e
-         (is (= "Call to #'active.clojure.record-test/make-int-string did not conform to spec:
-In: [0] val: 2.2 fails at: [:args :int] predicate: int?\n"
-                (.getMessage e)))))
+         (is (includes? e ":int" "int?"))))
   (try (make-int-string 3 3)
        (catch Exception e
-         (is (= "Call to #'active.clojure.record-test/make-int-string did not conform to spec:
-In: [1] val: 3 fails at: [:args :string] predicate: string?\n"
-                (.getMessage e)))))
-)
+         (is (includes? e ":string" "string?"))))
+  (try (make-even-any 3 :anything)
+       (catch Exception e
+         (is (includes? e ":even"))))
+  (testing "spec'd record as field"
+    (try (make-container 5)
+         (catch Exception e
+           (is (includes? e ":value" "IntString")))))
+  (spec-test/unstrument))
+
+(deftest record-spec-test
+  (is (spec/valid? ::IntString (make-int-string 3 "H")))
+  (is (not (spec/valid? ::IntString 3)))
+  (is (not (spec/valid? ::IntString (make-pu 3 "H"))))
+  (testing "spec'd record as field"
+    (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
+    (is (not (spec/valid? ::Container (make-container 5))))))
+
+
+(deftest test-specs-from-separate-namespace-test
+  (testing "constructor spec tests"
+    (spec-test/instrument)
+    (try (r-data/make-int-int 2.2 3)
+         (catch Exception e
+           (is (includes? e ":fst" "int?"))))
+    (try (r-data/make-int-int 4 2.5)
+         (catch Exception e
+           (is (includes? e ":snd" "int?"))))
+    (try (r-data/make-container 5)
+         (catch Exception e
+           (is (includes? e ":value" "IntInt"))))
+    (spec-test/unstrument))
+  (testing "record-spec-test"
+    (is (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 4)))
+    (is (not (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 "h"))))
+    (is (not (spec/valid? ::r-data/Container (r-data/make-container 5))))))

@@ -310,7 +310,8 @@
 
 (defn- name-spec
   [field]
-  (:spec (meta field)))
+  (or (:spec (meta field))
+      any?))
 
 (defn- reference
   [name]
@@ -401,14 +402,21 @@
                        )))
                  ?field-triples)
        ;;; Specs
-       ~(let [specs (mapcat (fn [constructor-arg]
-                              (let [field (first (filter #(= constructor-arg %)
-                                                         (map first ?field-triples)))]
-                                [(keyword constructor-arg) (or (name-spec field) any?)]))
-                            ?constructor-args)]
-          ;; Spec for constructor function
+       ;; Spec for a record type
+       (spec/def ~(ns-keyword ?type)
+           (spec/and ~?predicate
+                     ~@(map (fn [[?field ?accessor _]]
+                              `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
+                            ?field-triples)))
+       ;; Spec for constructor function
+       ~(let [c-specs (mapcat (fn [constructor-arg]
+                                (let [field (first (filter #(= constructor-arg %)
+                                                           (map first ?field-triples)))]
+                                  [(keyword constructor-arg) (name-spec field)]))
+                              ?constructor-args)]
           `(spec/fdef ~?constructor
-             :args (spec/cat ~@specs))))))
+             :args (spec/cat ~@c-specs)
+             :ret ~(ns-keyword ?type))))))
 
 #?(:clj
 (defmacro define-record-type

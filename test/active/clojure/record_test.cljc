@@ -1,6 +1,7 @@
 (ns active.clojure.record-test
   (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             [active.clojure.lens :as lens]
+            [clojure.spec.test.alpha :as spec-test]
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
@@ -114,3 +115,26 @@
   (lens-laws-hold quadruple-three (quadruple 'a 'b 'c 'd) 12 78)
   (is (= (quadruple 4 8 15 16)
          (lens/shove (quadruple 108 8 15 16) quadruple-one 4))))
+
+
+;;; Test Records with Specs
+(define-record-type IntString
+  (make-int-string int string)
+  int-string?
+  [^{:spec int?} int int-string-int
+   ^{:spec string?} string int-string-string])
+
+(deftest record-with-specs
+  ;; Needs to be called, so that spec errors are given:
+  (spec-test/instrument)
+  (try (make-int-string 2.2 "a")
+       (catch Exception e
+         (is (= "Call to #'active.clojure.record-test/make-int-string did not conform to spec:
+In: [0] val: 2.2 fails at: [:args :int] predicate: int?\n"
+                (.getMessage e)))))
+  (try (make-int-string 3 3)
+       (catch Exception e
+         (is (= "Call to #'active.clojure.record-test/make-int-string did not conform to spec:
+In: [1] val: 3 fails at: [:args :string] predicate: string?\n"
+                (.getMessage e)))))
+)

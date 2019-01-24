@@ -4,7 +4,8 @@
    [(:require
      [active.clojure.lens :as lens]
      [active.clojure.condition :as c]
-     [active.clojure.macro :refer [if-cljs]])
+     [active.clojure.macro :refer [if-cljs]]
+     [clojure.spec.alpha :as spec])
     (:import clojure.lang.IPersistentMap)
     (:import clojure.lang.RT)
     (:import java.lang.IllegalArgumentException)
@@ -12,7 +13,8 @@
    :cljs
    [(:require
      [active.clojure.lens :as lens]
-     [active.clojure.condition :as c])
+     [active.clojure.condition :as c]
+     [cljs.spec.alpha :as s :include-macros true])
     (:require-macros [active.clojure.macro :refer [if-cljs]])]))
 
 (defn ^{:private true}
@@ -306,9 +308,23 @@
     (str " (" doc ")")
     ""))
 
+(defn- name-spec
+  [field]
+  (:spec (meta field)))
+
 (defn- reference
   [name]
   (str "[[" (ns-name *ns*) "/" name "]]"))
+
+(defn ns-keyword
+  "Takes a symbol or string `the-name-sym` and returns a namespaced keyword
+  based on that symbol.
+
+  Example: `(ns-keyword 'foo) => :calling.name.space/foo`"
+  [the-name-sym]
+  (if the-name-sym
+    (keyword (str (ns-name *ns*)) (str the-name-sym))
+    (c/assertion-violation `ns-keyword "argument must not be nil" the-name-sym)))
 
 (defn emit-java-record-definition
   [?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
@@ -383,7 +399,16 @@
                           (report-lens-deprecation ?type)
                           `(def ~?lens ~?accessor))
                        )))
-                 ?field-triples))))
+                 ?field-triples)
+       ;;; Specs
+       ~(let [specs (mapcat (fn [constructor-arg]
+                              (let [field (first (filter #(= constructor-arg %)
+                                                         (map first ?field-triples)))]
+                                [(keyword constructor-arg) (or (name-spec field) any?)]))
+                            ?constructor-args)]
+          ;; Spec for constructor function
+          `(spec/fdef ~?constructor
+             :args (spec/cat ~@specs))))))
 
 #?(:clj
 (defmacro define-record-type
@@ -431,8 +456,7 @@
 
                                              (symbol? ?constructor-call)
                                              (concat [?constructor-call]
-                                                     (map first ?field-triples)))
-        ?field-names (map first ?field-triples)]
+                                                     (map first ?field-triples)))]
     (emit-java-record-definition ?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
 )
 

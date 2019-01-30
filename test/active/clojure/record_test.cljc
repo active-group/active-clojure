@@ -186,3 +186,18 @@
     (is (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 4)))
     (is (not (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 "h"))))
     (is (not (spec/valid? ::r-data/Container (r-data/make-container 5))))))
+
+;;; Providing own `clojure.lang.IHashEq` implementation
+(define-record-type FirstImportant
+  (make-first-important a b)
+  s?
+  [a first-important-a
+   b first-important-b]
+  clojure.lang.IHashEq
+  (hasheq [this] 3)
+  (hashCode [this] 3)
+  (equals [this other] (= (first-important-a this) (first-important-a other))))
+
+(deftest providing-own-ihasheq-implementation-test
+  (is (.equals (make-first-important 1 1) (make-first-important 1 0)))
+  (is (not (.equals (make-first-important 1 1) (make-first-important 0 1)))))

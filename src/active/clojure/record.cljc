@@ -190,8 +190,11 @@
                        `(keySet [this#] (set (keys this#)))
                        `(values [this#] (vals this#))
                        `(entrySet [this#] (set this#)))])
-      ]
-     (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap ijavamap)]
+      (maybe-add-eqhash [[i m]]
+        (if (some #{'clojure.lang.IHashEq} i)
+          [i m]
+          (eqhash [i m])))]
+     (let [[i m] (-> [interfaces methods] irecord maybe-add-eqhash iobj ilookup imap ijavamap)]
        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
           ~(conj hinted-fields '__meta '__extmap
                  '^int ^:unsynchronized-mutable __hash
@@ -333,6 +336,7 @@
         record-meta `(make-record-meta ~?predicate ~?constructor ~?constructor-args ~?field-triples)
         ?constructor-args-set (set ?constructor-args)]
     `(do
+       (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
        ~(let [fields (mapv first ?field-triples)]
           (validate-fields fields ?type)
           (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
@@ -375,7 +379,6 @@
                            `~?field
                            `nil))
                        ?field-triples))))
-       (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
        ~@(mapcat (fn [[?field ?accessor ?lens]]
                    (let [?rec (with-meta `rec# {:tag ?type})
                          ?data `data#

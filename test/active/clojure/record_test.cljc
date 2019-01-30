@@ -138,7 +138,7 @@
   [^{:spec ::IntString} value container-value])
 
 (defn includes?
-  [e & subs]
+  [^Exception e & subs]
   (every? #(clojure.string/includes? (.getMessage e) %)
           subs))
 
@@ -198,6 +198,9 @@
   (hashCode [this] 3)
   (equals [this other] (= (first-important-a this) (first-important-a other))))
 
+(defn equals [^FirstImportant a ^FirstImportant b]
+  (.equals a b))
+
 (deftest providing-own-ihasheq-implementation-test
-  (is (.equals (make-first-important 1 1) (make-first-important 1 0)))
-  (is (not (.equals (make-first-important 1 1) (make-first-important 0 1)))))
+  (is (equals (make-first-important 1 1) (make-first-important 1 0)))
+  (is (not (equals (make-first-important 1 1) (make-first-important 0 1)))))

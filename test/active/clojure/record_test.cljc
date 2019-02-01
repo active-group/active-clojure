@@ -204,3 +204,15 @@
 (deftest providing-own-ihasheq-implementation-test
   (is (equals (make-first-important 1 1) (make-first-important 1 0)))
   (is (not (equals (make-first-important 1 1) (make-first-important 0 1)))))
+
+;;; Providing an options map should still work
+(define-record-type RecordWithOptions
+  {:bla 3}
+  (make-record-with-options value)
+  record-with-options?
+  [value record-with-options-value])
+
+(deftest providing-options-map-test
+  (let [rwo (make-record-with-options 5)]
+    (is (record-with-options? rwo))
+    (is (= 5 (record-with-options-value rwo)))))

@@ -121,18 +121,21 @@
 
 ;;; Test Records with Specs
 (define-record-type IntString
+  {:spec ::IntString}
   (make-int-string int string)
   int-string?
   [^{:spec int?} int int-string-int
    ^{:spec string?} string int-string-string])
 
 (define-record-type EvenAny
+  {:spec ::EvenAny}
   (make-even-any even any)
   even-any?
   [^{:spec (and #(int? %) #(even? %))} even even-any-even
    any even-any-any])
 
 (define-record-type Container
+  {:spec ::Container}
   (make-container value)
   container?
   [^{:spec ::IntString} value container-value])
@@ -186,6 +189,19 @@
     (is (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 4)))
     (is (not (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 "h"))))
     (is (not (spec/valid? ::r-data/Container (r-data/make-container 5))))))
+
+;; Record with other spec name
+(define-record-type RWOSN
+  {:spec ::MySpecName}
+  (make-rwosn value)
+  rwosn?
+  [^{:spec int?} value rwosn-value])
+
+(deftest record-with-other-spec-name-test
+  (testing "record-spec-test"
+    (spec-test/unstrument)
+    (is (spec/valid? ::MySpecName (make-rwosn 5)))
+    (is (not (spec/valid? ::MySpecName (make-rwosn "H"))))))
 
 ;;; Providing own `clojure.lang.IHashEq` implementation
 (define-record-type FirstImportant

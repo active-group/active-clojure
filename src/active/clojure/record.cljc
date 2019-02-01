@@ -331,7 +331,7 @@
     (c/assertion-violation `ns-keyword "argument must not be nil" the-name-sym)))
 
 (defn emit-java-record-definition
-  [?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
+  [?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
   (let [?docref (str "See " (reference ?constructor) ".")
         record-meta `(make-record-meta ~?predicate ~?constructor ~?constructor-args ~?field-triples)
         ?constructor-args-set (set ?constructor-args)]
@@ -405,21 +405,23 @@
                        )))
                  ?field-triples)
        ;;; Specs
-       ;; Spec for a record type
-       (spec/def ~(ns-keyword ?type)
-           (spec/and ~?predicate
-                     ~@(map (fn [[?field ?accessor _]]
-                              `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
-                            ?field-triples)))
-       ;; Spec for constructor function
-       ~(let [c-specs (mapcat (fn [constructor-arg]
-                                (let [field (first (filter #(= constructor-arg %)
-                                                           (map first ?field-triples)))]
-                                  [(keyword constructor-arg) (name-spec field)]))
-                              ?constructor-args)]
-          `(spec/fdef ~?constructor
-             :args (spec/cat ~@c-specs)
-             :ret ~(ns-keyword ?type))))))
+       ~(when-let [spec-name (:spec ?options)]
+          `(do
+             ;; Spec for a record type
+             (spec/def ~spec-name
+                (spec/and ~?predicate
+                          ~@(map (fn [[?field ?accessor _]]
+                                   `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
+                                 ?field-triples)))
+             ;; Spec for constructor function
+             ~(let [c-specs (mapcat (fn [constructor-arg]
+                                      (let [field (first (filter #(= constructor-arg %)
+                                                                 (map first ?field-triples)))]
+                                        [(keyword constructor-arg) (name-spec field)]))
+                                    ?constructor-args)]
+                `(spec/fdef ~?constructor
+                   :args (spec/cat ~@c-specs)
+                   :ret ~spec-name)))))))
 
 #?(:clj
 (defmacro define-record-type
@@ -473,7 +475,7 @@
                                                (symbol? ?constructor-call)
                                                (concat [?constructor-call]
                                                        (map first ?field-triples)))]
-      (emit-java-record-definition ?type ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
+      (emit-java-record-definition ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
   ))
 
 (defn predicate->record-meta [predicate]

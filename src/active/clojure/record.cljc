@@ -17,6 +17,11 @@
      [cljs.spec.alpha :as s :include-macros true])
     (:require-macros [active.clojure.macro :refer [if-cljs]])]))
 
+;;;; Nongenerative stuff
+;;; Maps from type-uuid to define-record-type-form
+(defonce global-record-type-registry (atom {}))
+
+;;;; Clojure defrecord interns
 (defn ^{:private true}
   maybe-destructured
   [params body]
@@ -426,12 +431,12 @@
 #?(:clj
 (defmacro define-record-type
   "Attach doc properties to the type and the field names to get reasonable docstrings."
-  [?type ?second & params]
+  [?type ?second & ?params]
   (let [?options          (when (map? ?second) ?second)
-        ?constructor-call (if ?options (first params) ?second)
-        ?predicate        (if ?options (second params) (first params))
-        ?field-specs      (if ?options (nth params 2) (second params))
-        ?opt+specs        (if ?options (drop 3 params) (drop 2 params))]
+        ?constructor-call (if ?options (first ?params) ?second)
+        ?predicate        (if ?options (second ?params) (first ?params))
+        ?field-specs      (if ?options (nth ?params 2) (second ?params))
+        ?opt+specs        (if ?options (drop 3 ?params) (drop 2 ?params))]
     (when-not (or (and (list? ?constructor-call)
                        (not (empty? ?constructor-call)))
                   (symbol? ?constructor-call))
@@ -475,7 +480,20 @@
                                                (symbol? ?constructor-call)
                                                (concat [?constructor-call]
                                                        (map first ?field-triples)))]
-      (emit-java-record-definition ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
+
+      ;;; Check nongenerative option
+      (if-let [non-g-id (:nongenerative ?options)]
+        ;; nongenerative
+        (if-let [{:keys [ns form]} (get @global-record-type-registry non-g-id)]
+          (when-not (and (= ns *ns*)
+                         (= form &form))
+            (throw (Exception. "This record type definition already exists with different arguments.")))
+          (do
+            (swap! global-record-type-registry
+                   (fn [old-reg] (assoc old-reg non-g-id {:ns *ns* :form &form})))
+            (emit-java-record-definition ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
+        ;; generative, create new type.
+        (emit-java-record-definition ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs))))
   ))
 
 (defn predicate->record-meta [predicate]

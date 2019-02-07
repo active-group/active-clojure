@@ -232,3 +232,48 @@
   (let [rwo (make-record-with-options 5)]
     (is (record-with-options? rwo))
     (is (= 5 (record-with-options-value rwo)))))
+
+;;;; Nongenerative Records tests
+
+;;; Generative option, one should be allowed to define two types with
+;;; different arguments but same type name
+(define-record-type GenerativeRecord
+  (make-generative-record field)
+  generative-recod?
+  [field generative-record-field])
+
+(define-record-type GenerativeRecord
+  (make-generative-record)
+  generative-recod?
+  [])
+
+;;; Nongenerative
+(define-record-type NonGenerativeRecord
+  {:nongenerative "NonGenerativeRecord"}
+  (make-non-generative-record field)
+  non-generative-recod?
+  [field non-generative-record-field])
+
+;; Helper macro that allows to test a macro.
+(defmacro throws-exception?
+  [form]
+  (try
+    (eval form)
+    (catch Exception e
+      (= "This record type definition already exists with different arguments."
+         (.getMessage e)))))
+
+(deftest nongenerative-record-test
+  ;; Other implementation should throw an error
+  (is (throws-exception?
+       (define-record-type NonGenerativeRecord
+         {:nongenerative "NonGenerativeRecord"}
+         (make-non-generative-record)
+         non-generative-recod?
+         [])))
+  ;; The exact same definition should work
+  (is (nil? (define-record-type NonGenerativeRecord
+              {:nongenerative "NonGenerativeRecord"}
+              (make-non-generative-record field)
+              non-generative-recod?
+              [field non-generative-record-field]))))

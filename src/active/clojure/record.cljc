@@ -21,6 +21,11 @@
 ;;; Maps from type-uuid to define-record-type-form
 (defonce global-record-type-registry (atom {}))
 
+(defn remove-record-type
+  [non-generative-id]
+  (swap! global-record-type-registry
+         (fn [old-reg] (dissoc old-reg non-generative-id))))
+
 ;;;; Clojure defrecord interns
 (defn ^{:private true}
   maybe-destructured

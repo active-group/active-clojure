@@ -3,6 +3,7 @@
             [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
             [active.clojure.record-data-test :as r-data]
+            [active.clojure.record-nongenerative-test]
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
@@ -239,19 +240,19 @@
 ;;; different arguments but same type name
 (define-record-type GenerativeRecord
   (make-generative-record field)
-  generative-recod?
+  generative-record?
   [field generative-record-field])
 
 (define-record-type GenerativeRecord
   (make-generative-record)
-  generative-recod?
+  generative-record?
   [])
 
 ;;; Nongenerative
 (define-record-type NonGenerativeRecord
   {:nongenerative "NonGenerativeRecord"}
   (make-non-generative-record field)
-  non-generative-recod?
+  non-generative-record?
   [field non-generative-record-field])
 
 ;; Helper macro that allows to test a macro.
@@ -269,11 +270,30 @@
        (define-record-type NonGenerativeRecord
          {:nongenerative "NonGenerativeRecord"}
          (make-non-generative-record)
-         non-generative-recod?
+         non-generative-record?
          [])))
-  ;; The exact same definition should work
+  ;; The exact same definition should not throw an exception
   (is (nil? (define-record-type NonGenerativeRecord
               {:nongenerative "NonGenerativeRecord"}
               (make-non-generative-record field)
-              non-generative-recod?
-              [field non-generative-record-field]))))
+              non-generative-record?
+              [field non-generative-record-field])))
+
+  ;; same record-type-definition of other namespace should fail
+  (is (throws-exception?
+       (define-record-type NonGROtherNS
+         {:nongenerative "NonGROtherNS"}
+         (make-ngrons field)
+         ngrons?
+         [field ngrons-field]))))
+
+;;; Test automatic generation of nongenerative id
+(define-record-type NonGenerativeRecordAuto
+  {:nongenerative true}
+  (make-non-generative-record-auto a)
+  non-generative-record-auto?
+  [a non-generative-record-auto-a])
+
+(deftest nongenerative-record-auto-id-test
+  (is (contains? @active.clojure.record/global-record-type-registry
+                 "active.clojure.record-test/NonGenerativeRecordAuto")))

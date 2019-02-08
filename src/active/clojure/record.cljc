@@ -493,7 +493,7 @@
           (when-not (and (= ns *ns*)
                          (= form &form))
             (throw (Exception. "This record type definition already exists with different arguments.")))
-          (do
+          (let [non-g-id (if (= true non-g-id) (str *ns* "/" ?type) non-g-id)] ; default non-g-id when key is `true`
             (swap! global-record-type-registry
                    (fn [old-reg] (assoc old-reg non-g-id {:ns *ns* :form &form})))
             (emit-java-record-definition ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))

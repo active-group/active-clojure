@@ -8,7 +8,8 @@
             [active.clojure.record-test]
             [active.clojure.record-spec-test]
             [active.clojure.match-test]
-            [active.clojure.config-test]))
+            [active.clojure.config-test]
+            [active.clojure.function-test]))
 
 (doo-tests 'active.clojure.condition-test
            'active.clojure.debug-test
@@ -18,4 +19,5 @@
            'active.clojure.record-test
            'active.clojure.record-spec-test
            'active.clojure.match-test
-           'active.clojure.config-test)
+           'active.clojure.config-test
+           'active.clojure.function-test)

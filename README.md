@@ -123,6 +123,15 @@ tools such as a macro `pret` that prints and returns its argument.
 The `active.clojure.match` namespace provides some syntactic sugar
 for map matching around `core.match`.
 
+### Higher-order Functions
+
+The `active.clojure.function` namespace provides the same higher order
+functions that `clojure.core` does, but implemented via records and
+`IFn`, so that the returned "functions" are `=` if created with `=` arguments.
+
+These can be very handy for using React-based libraries like [Reacl](https://github.com/active-group/reacl),
+which can optimize work based on the equality of values.
+
 ## License
 
 Copyright © 2014 Active Group GmbH

@@ -297,3 +297,21 @@
 (deftest nongenerative-record-auto-id-test
   (is (contains? @active.clojure.record/global-record-type-registry
                  "active.clojure.record-test/NonGenerativeRecordAuto")))
+
+
+;;; Test record type without arrow constructor (ie ->TypeName)
+(define-record-type RecordWithoutArrowConstructor
+  {:no-arrow-constructor? true}
+  (make-rwac a)
+  rwac?
+  [a rwac-a])
+
+(define-record-type RecordWithArrowConstructor
+  (make-rac a)
+  rac?
+  [a rac-a])
+
+(deftest record-without-arrow-constructor-test
+  (is (thrown? Exception (->RecordWithoutArrowConstructor 5)))
+  (is (->RecordWithArrowConstructor 5)))
+

@@ -1,8 +1,11 @@
 (ns active.clojure.mock-monad
   "Mock monadic programs"
-  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]))
+  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
+                            [active.clojure.macro :refer [if-cljs]]
+                            [cljs.test :refer [is]]))
   (:require #?(:clj [active.clojure.record :refer :all])
             #?(:cljs active.clojure.record)
+            #?(:clj [active.clojure.macro :refer [if-cljs]])
             [active.clojure.monad :as monad]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))
@@ -41,6 +44,7 @@
    {::mocks mocks}))
 
 ;; clojure-check assertions as a monadic command:
+;; NOTE Don't use this in CLJS
 (defmacro m-is [& forms]
   `(monad/return (is ~@forms)))
 
@@ -48,15 +52,22 @@
   (monad/monadic
    [mocks (monad/get-state-component ::mocks)]
    (let [rmocks (map monad/reify-command mocks)])
-   (m-is (empty? rmocks) "Did not see expected mocked commands.")
-   (monad/return nil)))
+   (if-cljs
+    ;; We must be careful here to call the function version in CLJS
+    ;; (otherwise, it expands to clojure.test/is and not cljs.test/is)
+     (monad/return (is (empty? rmocks) "Did not see expected mocked commands."))
+     (m-is (empty? rmocks) "Did not see expected mocked commands."))
+    (monad/return nil)))
 
 (defn mock-effect
   "If `(= m-expected m)` returns true for a command `m`, then execute `m-replacement` instead."
   [m-expected m-replacement]
   (mock (fn [m]
-          (is (= (monad/reify-command m-expected)
-                 (monad/reify-command m))))
+          (if-cljs
+           (cljs.test/is (= (monad/reify-command m-expected)
+                            (monad/reify-command m)))
+           (clojure.test/is (= (monad/reify-command m-expected)
+                               (monad/reify-command m)))))
         (constantly m-replacement)))
 
 (defn mock-result
@@ -68,20 +79,36 @@
   ^{:doc "Replace the next (unhandled) command by `(return nil)`, no matter what it is."}
   (mock (constantly nil) (constantly (monad/return nil))))
 
+;; FIXME This should be renamed to `mock-run-monad`
+(defn mock-execute-monad
+  ([mocks m]
+   (mock-execute-monad (monad/null-monad-command-config {} {}) mocks m))
+  ([command-config mocks m]
+   (try (monad/run-free-reader-state-exception
+         (monad/combine-monad-command-configs command-config
+                                              (mock-commands mocks))
+         (monad/monadic
+          [res m]
+          ;; check that mock stack is empty at 'end'
+          check-mocks-empty
+          (monad/return res)))
+        #?(:clj (catch Exception e
+                  (println "e =" e))
+           :cljs (catch js/Error e
+                   (println "e =" e))))))
+
+;; FIXME This should be renamed to `mock-execute-monad`
 (defn mock-run-monad
   "Run m under the given monad command configs, and the given mocked commands, returning the result of m.
    `mocks` should be a sequence, whose values can be created by the
   `mock`, `mock-result` or `mock-effect` and other functions above, and are
   expected to appear in that order while executing `m`."
   ([command-config mocks m]
-   (first (monad/execute-free-reader-state-exception
-           (monad/combine-monad-command-configs command-config
-                                                (mock-commands mocks))
-           (monad/monadic
-            [res m]
-            ;; check that mock stack is empty at 'end'
-            check-mocks-empty
-            (monad/return res)))))
+   (try (first (mock-execute-monad command-config mocks m))
+        #?(:clj (catch Exception e
+                  (println "e =" e))
+           :cljs (catch js/Error e
+                   (println "e =" e)))))
   ([mocks m]
    (mock-run-monad (monad/null-monad-command-config {} {}) mocks m)))
 
@@ -104,3 +131,10 @@
                                 (monad/return [r st2])))]
            (reset! state st2)
            [r st2])))))
+
+(defn is-mocked-state
+  "Takes an `expectation` and the `monad-command-config-state` after running a mock.
+  Applies `is` to the `=` of both, dissocing the ::mocks from the returned state."
+  [expectation mock-result-state]
+  (#?(:clj clojure.test/is :cljs cljs.test/is)
+   (= expectation (dissoc mock-result-state ::mocks))))

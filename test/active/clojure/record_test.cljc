@@ -6,10 +6,10 @@
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
             #?(:cljs [cljs.test]))
-  #?(:cljs 
-  (:require-macros [cljs.test
-                    :refer (is deftest run-tests testing)]
-                   [active.clojure.record :refer (define-record-type)])))
+  #?(:cljs
+     (:require-macros [cljs.test
+                       :refer (is deftest run-tests testing)]
+                      [active.clojure.record :refer (define-record-type)])))
 
 #?(:cljs
 (enable-console-print!))
@@ -31,6 +31,24 @@
 (deftest unique
   (is (thrown? Throwable
                (kar (FakePare. 1 2)))))
+
+
+;; Omit constructor args
+
+(define-record-type Schmare
+  schmons
+  schmare?
+  [a schmar
+   b schmdr])
+
+(deftest simple-omit
+  (let [r (schmons 1 2)]
+    (is (schmare? r))
+    (is (= 1 (schmar r)))
+    (is (= 2 (schmdr r)))))
+
+
+;; Uninstantiated fields
 
 (define-record-type Pu
   (make-pu c a)
@@ -72,27 +90,27 @@
 (define-record-type ^{:doc "Lens example"} LensPare
   (lens-kons a b)
   lens-pare?
-  [(^{:doc "a field"} a lens-kar lens-kar-lens)
-   (^{:doc "b field"} b lens-kdr lens-kdr-lens)])
+  [^{:doc "a field"} a lens-kar
+   ^{:doc "b field"} b lens-kdr])
 
 (deftest pare-lens
-  (lens-laws-hold lens-kar-lens (lens-kons 1 2) 23 42)
-  (lens-laws-hold lens-kdr-lens (lens-kons 1 2) 23 42)
+  (lens-laws-hold lens-kar (lens-kons 1 2) 23 42)
+  (lens-laws-hold lens-kdr (lens-kons 1 2) 23 42)
   (is (= (lens-kons "a" 42)
-         (lens/shove (lens-kons 23 42) lens-kar-lens "a")))
+         (lens/shove (lens-kons 23 42) lens-kar "a")))
   (is (= (lens-kons 23 "b")
-         (lens/shove (lens-kons 23 42) lens-kdr-lens "b"))))
+         (lens/shove (lens-kons 23 42) lens-kdr "b"))))
 
 (define-record-type Quadruple
   (quadruple a b c d)
   quadruple?
-  [(a quadruple-one quadruple-one-lens)
+  [a quadruple-one
    b quadruple-two
-   (c quadruple-three quadruple-three-lens)
+   c quadruple-three
    d quadruple-four])
 
 (deftest quadruple-lens
-  (lens-laws-hold quadruple-one-lens (quadruple 'a 'b 'c 'd) 12 78)
-  (lens-laws-hold quadruple-three-lens (quadruple 'a 'b 'c 'd) 12 78)
+  (lens-laws-hold quadruple-one (quadruple 'a 'b 'c 'd) 12 78)
+  (lens-laws-hold quadruple-three (quadruple 'a 'b 'c 'd) 12 78)
   (is (= (quadruple 4 8 15 16)
-         (lens/shove (quadruple 108 8 15 16) quadruple-one-lens 4))))
+         (lens/shove (quadruple 108 8 15 16) quadruple-one 4))))

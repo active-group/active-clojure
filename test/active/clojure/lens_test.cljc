@@ -248,10 +248,21 @@
          (lens/shove 'baz lens/id 'bar))))
 
 
-(deftest fct
-  (is (= 1
-         (lens/nel-head [1 2 3 4])))
-  (is (= [5 2 3 4]
-         (lens/nel-head [1 2 3 4] 5)))
-  (is (= [5 2 3 4]
-         (apply lens/nel-head [1 2 3 4] [5]))))
+(deftest explicit-lens-invocation
+  (testing "can use explicit lens like a function, for yank"
+    (is (= 1
+           (lens/nel-head [1 2 3 4])))
+    (is (= 4
+           ((lens/pos 3) [1 2 3 4]))))
+  (testing "can use explicit lens like a function, for shove"
+    (is (= [5 2 3 4]
+           (lens/nel-head [1 2 3 4] 5)))
+    (is (= [1 2 3 5]
+           ((lens/pos 3) [1 2 3 4] 5))))
+  (testing "can apply explicit lens"
+    (is (= [5 2 3 4]
+           (apply lens/nel-head [1 2 3 4] [5])))))
+
+(deftest lens-composition-equality
+  (is (= (lens/>> (lens/pos 3) lens/nel-head)
+         (lens/>> (lens/pos 3) lens/nel-head))))

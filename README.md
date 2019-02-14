@@ -12,7 +12,7 @@ The `active.clojure.record` namespace implements a
 
 ### Records (Spec)
 
-The `active.clojure.record` namespace implements a
+The `active.clojure.record-spec` namespace implements a
 `define-record-type` form similar to Scheme's [SRFI
 9](http://srfi.schemers.org/srfi-9/) (similar to `active.clojure.record`).
 
@@ -38,11 +38,13 @@ Example:
 ```
 
 This defines the following Specs (aside from what the regular 
-`active.cloujre.record`s already define):
+`active.clojure.record`s already define):
 
-* `::card` a Spec which conforms values that are instances of a card (see 
+* `::card`, a Spec which conforms values that are instances of a card (see 
   example below).
-* Specs for accessors.
+* Specs `::card-number` and `::card-color` for accessors. Note that these names
+  are **not** based on the given accessor names but rather a concatenation of
+  the record type and field names.
 * Spec for the constructor function.
 
 ```clojure
@@ -118,7 +120,7 @@ tools such as a macro `pret` that prints and returns its argument.
 
 ### Pattern Matching
 
-The `active.clojure.match` namespaces provides some syntactic sugar
+The `active.clojure.match` namespace provides some syntactic sugar
 for map matching around `core.match`.
 
 ## License

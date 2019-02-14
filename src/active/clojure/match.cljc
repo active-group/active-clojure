@@ -1,5 +1,5 @@
-(ns ^{:doc "Syntactic sugar for map matching around `core.match`."}
-  active.clojure.match
+(ns active.clojure.match
+  "Syntactic sugar for map matching around `core.match`."
   (:require #?(:clj [clojure.core.match :as match])
             #?(:clj [clojure.core.match.regex]))
   #?(:cljs
@@ -165,7 +165,7 @@
 #?(:clj
 (defmacro defpattern
   "Bind a match pattern to a name.
-  
+
   The syntax is `(defpattern <name> <pattern>)` where `<pattern>` is a
   pattern for `map-matcher`, where this binding is supposed
   to be used with."

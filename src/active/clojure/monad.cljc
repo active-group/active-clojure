@@ -1,8 +1,8 @@
-(ns ^{:doc "Monad related functionality, particularly free monads."}
-  active.clojure.monad
+(ns active.clojure.monad
+  "Monad related functionality, particularly free monads."
   #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
                             [active.clojure.monad :refer (monadic)]))
-  (:require #?(:clj [active.clojure.record :refer :all])
+  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             #?(:cljs active.clojure.record)
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])
@@ -31,7 +31,7 @@
                              (str "unknown monad command in bind, line " line ", column " column)
                              mv
                              statement)
-      (c/assertion-violation `free-bind 
+      (c/assertion-violation `free-bind
                              "unknown monad command in bind"
                              mv)))
 
@@ -46,6 +46,10 @@
 
    :else (with-meta (make-free-bind mv f)
            (meta mv))))
+
+(defn throw-illegal-argument-exception
+  [msg]
+  (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
 
 #?(:clj
 (defmacro monadic
@@ -70,19 +74,18 @@
 (defmacro monadic-1
   [?meta & ?stmts]
   (if (empty? ?stmts)
-    (throw (IllegalArgumentException. (str "there must be at least one statement in " *ns* " " ?meta)))
-
+    (throw-illegal-argument-exception (str "there must be at least one statement in " *ns* " " ?meta))
     (let [?stmt (first ?stmts)
           check-bindings (fn [bindings]
                            (when-not (vector? bindings)
-                             (throw (IllegalArgumentException. (str "bindings must be an vector in "
-                                                                    *ns* " " ?meta))))
+                             (throw-illegal-argument-exception (str "bindings must be an vector in "
+                                                                    *ns* " " ?meta)))
                            (when (empty? bindings)
-                             (throw (IllegalArgumentException. (str "bindings must be non-empty in "
-                                                                    *ns* " " ?meta))))
+                             (throw-illegal-argument-exception  (str "bindings must be non-empty in "
+                                                                     *ns* " " ?meta)))
                            (when-not (even? (count bindings))
-                             (throw (IllegalArgumentException. (str "bindings must be even-sized vector in "
-                                                                    *ns* " " ?meta)))))]
+                             (throw-illegal-argument-exception (str "bindings must be even-sized vector in "
+                                                                    *ns* " " ?meta))))]
 
       (cond
        (vector? ?stmt)
@@ -102,8 +105,8 @@
        (and (list? ?stmt)
             (= 'let (first ?stmt)))
        (do (when-not (= 2 (count ?stmt))
-             (throw (IllegalArgumentException. (str "let statement must have exactly one subform in "
-                                                    *ns* " " ?meta))))
+             (throw-illegal-argument-exception  (str "let statement must have exactly one subform in "
+                                                     *ns* " " ?meta)))
            (check-bindings (second ?stmt))
            `(let ~(second ?stmt)
               (monadic-1 ~?meta ~@(rest ?stmts))))
@@ -390,7 +393,7 @@
       (run env state m))))
 
 (defn execute-free-reader-state-exception
-  "Run monadic computation in a reader-state-exception monad, turning exceptions 
+  "Run monadic computation in a reader-state-exception monad, turning exceptions
   into Clojure exceptions.
 
   - `command-config` is the configuration object for running commands

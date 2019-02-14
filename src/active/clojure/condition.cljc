@@ -1,4 +1,5 @@
-(ns ^{:doc "Conditions, protocol for communicating the causes of exceptions.
+(ns active.clojure.condition
+  "Conditions, protocol for communicating the causes of exceptions.
 
   This provides infrastructure for building *condition* objects.
   A condition object provides information about the cause of an exception.
@@ -12,9 +13,8 @@
 
   Condition objects are represented as specially marked `ex-info` objects.
 
-  One notable difference to the R6RS design is that there is no user-facing type for 
-  'simple conditions', nor are they regular records."}
-  active.clojure.condition
+  One notable difference to the R6RS design is that there is no user-facing type for
+  'simple conditions', nor are they regular records."
   (:refer-clojure :exclude (assert))
   #?(:clj (:require [clojure.core :as core] ; get assert back
                     [clojure.stacktrace :as stack]
@@ -66,7 +66,7 @@
     (print-condition exc w)
     (.write w (str "clojure.lang.ExceptionInfo: " (.getMessage exc) " " (str (ex-data exc)))))))
 
-(defn ^:private ex-info-msg 
+(defn ^:private ex-info-msg
   [namespace]
   (str "This is a " namespace " active.clojure.condition."))
 
@@ -376,7 +376,7 @@
 
   For internal use."
   [?base ?who ?message ?irritants]
-  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (instance? Throwable thing#))) ~?irritants)
+  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (if-cljs (instance? js/Error thing#) (instance? Throwable thing#)))) ~?irritants)
          irritants# (get g# false)
          conditions# (get g# true)
          who# ~?who]
@@ -387,7 +387,7 @@
                    (and (not-empty irritants#) (make-irritants-condition irritants#))
                    conditions#)))))
 
-(defn error 
+(defn error
   "Throw an exception that signals that an error has occurred.
 
   This function should be called when an error has occurred,
@@ -502,7 +502,7 @@
   "Return a keyword describing the type,
   a symbol or string describing the source of the problem, an error
   message or nil, and a sequence of other objects describing the
-  problem.  
+  problem.
 
   Valid type symbols include: `:error`, `:assertion-violation`,
   `:violation`, `:serious`."
@@ -625,4 +625,3 @@
         (print spaces)
         (pr irritant))
       (print "\n")))))
-

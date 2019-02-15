@@ -298,7 +298,6 @@
   (is (contains? @active.clojure.record/global-record-type-registry
                  "active.clojure.record-test/NonGenerativeRecordAuto")))
 
-
 ;;; Test record type without arrow constructor (ie ->TypeName)
 (define-record-type RecordWithoutArrowConstructor
   {:no-arrow-constructor? true}
@@ -315,3 +314,14 @@
   (is (thrown? Exception (->RecordWithoutArrowConstructor 5)))
   (is (->RecordWithArrowConstructor 5)))
 
+;;; Test record type without map protocol
+(define-record-type RecordWithoutMapProtocol
+  {:no-map-protocol? true}
+  (make-rwmp a b)
+  rwim?
+  [a rwmp-a
+   b rwmp-b])
+
+(deftest record-without-map-protocol-test
+  (is (= false
+         (map? (make-rwmp 3 4)))))

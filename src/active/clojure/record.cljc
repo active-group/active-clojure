@@ -203,8 +203,16 @@
       (maybe-add-eqhash [[i m]]
         (if (some #{'clojure.lang.IHashEq} i)
           [i m]
-          (eqhash [i m])))]
-     (let [[i m] (-> [interfaces methods] irecord maybe-add-eqhash iobj ilookup imap ijavamap)]
+          (eqhash [i m])))
+      (maybe-add-imap [[i m]]
+        (if (= true (:no-map-protocol? opts))
+          [i m]
+          (imap [i m])))
+      (maybe-add-ijavamap [[i m]]
+        (if (= true (:no-map-protocol? opts))
+          [i m]
+          (ijavamap [i m])))]
+     (let [[i m] (-> [interfaces methods] irecord maybe-add-eqhash iobj ilookup maybe-add-imap maybe-add-ijavamap)]
        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
           ~(conj hinted-fields '__meta '__extmap
                  '^int ^:unsynchronized-mutable __hash
@@ -350,6 +358,7 @@
        ~(let [fields (mapv first ?field-triples)]
           (validate-fields fields ?type)
           (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
+                opts (merge opts ?options)
                 ns-part (namespace-munge *ns*)
                 classname (symbol (str ns-part "." ?type))
                 hinted-fields fields
@@ -432,7 +441,16 @@
                                     ?constructor-args)]
                 `(spec/fdef ~?constructor
                    :args (spec/cat ~@c-specs)
-                   :ret ~spec-name)))))))
+                   :ret ~spec-name))))
+       ;;; When `no-map-protocol?` option is given, we have to provide a print-method implementation
+       ~(when (:no-map-protocol? ?options)
+          (let [w (vary-meta `w# assoc :tag 'java.io.Writer)
+                v `w#]
+            `(defmethod print-method ~?type [~v ~w]
+               (.write ~w (str ~(str "#" *ns* "." ?type)
+                               (into {} ~(mapv (fn [[?field ?accessor _]]
+                                                 `(vector ~(keyword ?field) (~?accessor ~v)))
+                                               ?field-triples))))))))))
 
 #?(:clj
 (defmacro define-record-type

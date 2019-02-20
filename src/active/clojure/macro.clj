@@ -8,6 +8,8 @@
   [env]
   (boolean (:ns env)))
 
+;;; Note: `if-cljs` can't be called from a macro. Use
+;;; `(if (cljs-env? &env) ... ...)` instead.
 (defmacro if-cljs
   "Return then if we are generating cljs code and else for Clojure code.
    https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"

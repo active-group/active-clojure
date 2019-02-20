@@ -2,8 +2,8 @@
   (:require #?(:clj [active.clojure.record :refer (define-record-type)])
             [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
-            [active.clojure.record-data-test :as r-data]
-            [active.clojure.record-nongenerative-test]
+            #?(:clj [active.clojure.record-data-test :as r-data])
+            #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
@@ -13,7 +13,7 @@
   #?(:cljs
      (:require-macros [cljs.test
                        :refer (is deftest run-tests testing)]
-                      [active.clojure.record :refer (define-record-type)])))
+                      [active.clojure.record :refer [define-record-type]])))
 
 #?(:cljs
 (enable-console-print!))
@@ -121,207 +121,191 @@
 
 
 ;;; Test Records with Specs
-(define-record-type IntString
-  {:spec ::IntString}
-  (make-int-string int string)
-  int-string?
-  [^{:spec int?} int int-string-int
-   ^{:spec string?} string int-string-string])
+#?(:clj (define-record-type IntString
+          {:spec ::IntString}
+          (make-int-string int string)
+          int-string?
+          [^{:spec int?} int int-string-int
+           ^{:spec string?} string int-string-string]))
 
-(define-record-type EvenAny
-  {:spec ::EvenAny}
-  (make-even-any even any)
-  even-any?
-  [^{:spec (and #(int? %) #(even? %))} even even-any-even
-   any even-any-any])
+#?(:clj (define-record-type EvenAny
+          {:spec ::EvenAny}
+          (make-even-any even any)
+          even-any?
+          [^{:spec (and #(int? %) #(even? %))} even even-any-even
+           any even-any-any]))
 
-(define-record-type Container
-  {:spec ::Container}
-  (make-container value)
-  container?
-  [^{:spec ::IntString} value container-value])
+#?(:clj (define-record-type Container
+          {:spec ::Container}
+          (make-container value)
+          container?
+          [^{:spec ::IntString} value container-value]))
 
-(defn includes?
-  [^Exception e & subs]
-  (every? #(clojure.string/includes? (.getMessage e) %)
-          subs))
+#?(:clj (defn includes?
+          [^Exception e & subs]
+          (every? #(clojure.string/includes? (.getMessage e) %)
+                  subs)))
 
-(deftest constructor-spec-test
-  ;; Needs to be called, so that function spec errors are given:
-  (spec-test/instrument)
-  (try (make-int-string 2.2 "a")
-       (catch Exception e
-         (is (includes? e ":int" "int?"))))
-  (try (make-int-string 3 3)
-       (catch Exception e
-         (is (includes? e ":string" "string?"))))
-  (try (make-even-any 3 :anything)
-       (catch Exception e
-         (is (includes? e ":even"))))
-  (testing "spec'd record as field"
-    (try (make-container 5)
-         (catch Exception e
-           (is (includes? e ":value" "IntString")))))
-  (spec-test/unstrument))
+#?(:clj (deftest constructor-spec-test
+          ;; Needs to be called, so that function spec errors are given:
+          (spec-test/instrument)
+          (try (make-int-string 2.2 "a")
+               (catch Exception e
+                 (is (includes? e ":int" "int?"))))
+          (try (make-int-string 3 3)
+               (catch Exception e
+                 (is (includes? e ":string" "string?"))))
+          (try (make-even-any 3 :anything)
+               (catch Exception e
+                 (is (includes? e ":even"))))
+          (testing "spec'd record as field"
+            (try (make-container 5)
+                 (catch Exception e
+                   (is (includes? e ":value" "IntString")))))
+          (spec-test/unstrument)))
 
-(deftest record-spec-test
-  (is (spec/valid? ::IntString (make-int-string 3 "H")))
-  (is (not (spec/valid? ::IntString 3)))
-  (is (not (spec/valid? ::IntString (make-pu 3 "H"))))
-  (testing "spec'd record as field"
-    (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
-    (is (not (spec/valid? ::Container (make-container 5))))))
+#?(:clj (deftest record-spec-test
+          (is (spec/valid? ::IntString (make-int-string 3 "H")))
+          (is (not (spec/valid? ::IntString 3)))
+          (is (not (spec/valid? ::IntString (make-pu 3 "H"))))
+          (testing "spec'd record as field"
+            (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
+            (is (not (spec/valid? ::Container (make-container 5)))))))
 
 
-(deftest test-specs-from-separate-namespace-test
-  (testing "constructor spec tests"
-    (spec-test/instrument)
-    (try (r-data/make-int-int 2.2 3)
-         (catch Exception e
-           (is (includes? e ":fst" "int?"))))
-    (try (r-data/make-int-int 4 2.5)
-         (catch Exception e
-           (is (includes? e ":snd" "int?"))))
-    (try (r-data/make-container 5)
-         (catch Exception e
-           (is (includes? e ":value" "IntInt"))))
-    (spec-test/unstrument))
-  (testing "record-spec-test"
-    (is (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 4)))
-    (is (not (spec/valid? ::r-data/IntInt (r-data/make-int-int 3 "h"))))
-    (is (not (spec/valid? ::r-data/Container (r-data/make-container 5))))))
+
 
 ;; Record with other spec name
-(define-record-type RWOSN
-  {:spec ::MySpecName}
-  (make-rwosn value)
-  rwosn?
-  [^{:spec int?} value rwosn-value])
+#?(:clj (define-record-type RWOSN
+          {:spec ::MySpecName}
+          (make-rwosn value)
+          rwosn?
+          [^{:spec int?} value rwosn-value]))
 
-(deftest record-with-other-spec-name-test
-  (testing "record-spec-test"
-    (spec-test/unstrument)
-    (is (spec/valid? ::MySpecName (make-rwosn 5)))
-    (is (not (spec/valid? ::MySpecName (make-rwosn "H"))))))
+#?(:clj (deftest record-with-other-spec-name-test
+          (testing "record-spec-test"
+            (spec-test/unstrument)
+            (is (spec/valid? ::MySpecName (make-rwosn 5)))
+            (is (not (spec/valid? ::MySpecName (make-rwosn "H")))))))
 
 ;;; Providing own `clojure.lang.IHashEq` implementation
-(define-record-type FirstImportant
-  (make-first-important a b)
-  s?
-  [a first-important-a
-   b first-important-b]
-  clojure.lang.IHashEq
-  (hasheq [this] 3)
-  (hashCode [this] 3)
-  (equals [this other] (= (first-important-a this) (first-important-a other))))
+#?(:clj (define-record-type FirstImportant
+          (make-first-important a b)
+          s?
+          [a first-important-a
+           b first-important-b]
+          clojure.lang.IHashEq
+          (hasheq [this] 3)
+          (hashCode [this] 3)
+          (equals [this other] (= (first-important-a this) (first-important-a other)))))
 
-(defn equals [^FirstImportant a ^FirstImportant b]
-  (.equals a b))
+#?(:clj (defn equals [^FirstImportant a ^FirstImportant b]
+          (.equals a b)))
 
-(deftest providing-own-ihasheq-implementation-test
-  (is (equals (make-first-important 1 1) (make-first-important 1 0)))
-  (is (not (equals (make-first-important 1 1) (make-first-important 0 1)))))
+#?(:clj (deftest providing-own-ihasheq-implementation-test
+          (is (equals (make-first-important 1 1) (make-first-important 1 0)))
+          (is (not (equals (make-first-important 1 1) (make-first-important 0 1))))))
 
 ;;; Providing an options map should still work
-(define-record-type RecordWithOptions
-  {:bla 3}
-  (make-record-with-options value)
-  record-with-options?
-  [value record-with-options-value])
+#?(:clj (define-record-type RecordWithOptions
+          {:bla 3}
+          (make-record-with-options value)
+          record-with-options?
+          [value record-with-options-value]))
 
-(deftest providing-options-map-test
-  (let [rwo (make-record-with-options 5)]
-    (is (record-with-options? rwo))
-    (is (= 5 (record-with-options-value rwo)))))
+#?(:clj (deftest providing-options-map-test
+          (let [rwo (make-record-with-options 5)]
+            (is (record-with-options? rwo))
+            (is (= 5 (record-with-options-value rwo))))))
 
 ;;;; Nongenerative Records tests
 
 ;;; Generative option, one should be allowed to define two types with
 ;;; different arguments but same type name
-(define-record-type GenerativeRecord
-  (make-generative-record field)
-  generative-record?
-  [field generative-record-field])
+#?(:clj (define-record-type GenerativeRecord
+          (make-generative-record field)
+          generative-record?
+          [field generative-record-field]))
 
-(define-record-type GenerativeRecord
-  (make-generative-record)
-  generative-record?
-  [])
+#?(:clj (define-record-type GenerativeRecord
+          (make-generative-record)
+          generative-record?
+          []))
 
 ;;; Nongenerative
-(define-record-type NonGenerativeRecord
-  {:nongenerative "NonGenerativeRecord"}
-  (make-non-generative-record field)
-  non-generative-record?
-  [field non-generative-record-field])
+#?(:clj (define-record-type NonGenerativeRecord
+          {:nongenerative "NonGenerativeRecord"}
+          (make-non-generative-record field)
+          non-generative-record?
+          [field non-generative-record-field]))
 
 ;; Helper macro that allows to test a macro.
-(defmacro throws-exception?
-  [form]
-  (try
-    (eval form)
-    (catch Exception e
-      (= "This record type definition already exists with different arguments."
-         (.getMessage e)))))
+#?(:clj (defmacro throws-exception?
+          [form]
+          (try
+            (eval form)
+            (catch Exception e
+              (= "This record type definition already exists with different arguments."
+                 (.getMessage e))))))
 
-(deftest nongenerative-record-test
-  ;; Other implementation should throw an error
-  (is (throws-exception?
-       (define-record-type NonGenerativeRecord
-         {:nongenerative "NonGenerativeRecord"}
-         (make-non-generative-record)
-         non-generative-record?
-         [])))
-  ;; The exact same definition should not throw an exception
-  (is (nil? (define-record-type NonGenerativeRecord
-              {:nongenerative "NonGenerativeRecord"}
-              (make-non-generative-record field)
-              non-generative-record?
-              [field non-generative-record-field])))
+#?(:clj (deftest nongenerative-record-test
+          ;; Other implementation should throw an error
+          (is (throws-exception?
+               (define-record-type NonGenerativeRecord
+                 {:nongenerative "NonGenerativeRecord"}
+                 (make-non-generative-record)
+                 non-generative-record?
+                 [])))
+          ;; The exact same definition should not throw an exception
+          (is (nil? (define-record-type NonGenerativeRecord
+                      {:nongenerative "NonGenerativeRecord"}
+                      (make-non-generative-record field)
+                      non-generative-record?
+                      [field non-generative-record-field])))
 
-  ;; same record-type-definition of other namespace should fail
-  (is (throws-exception?
-       (define-record-type NonGROtherNS
-         {:nongenerative "NonGROtherNS"}
-         (make-ngrons field)
-         ngrons?
-         [field ngrons-field]))))
+          ;; same record-type-definition of other namespace should fail
+          (is (throws-exception?
+               (define-record-type NonGROtherNS
+                 {:nongenerative "NonGROtherNS"}
+                 (make-ngrons field)
+                 ngrons?
+                 [field ngrons-field])))))
 
 ;;; Test automatic generation of nongenerative id
-(define-record-type NonGenerativeRecordAuto
-  {:nongenerative true}
-  (make-non-generative-record-auto a)
-  non-generative-record-auto?
-  [a non-generative-record-auto-a])
+#?(:clj (define-record-type NonGenerativeRecordAuto
+          {:nongenerative true}
+          (make-non-generative-record-auto a)
+          non-generative-record-auto?
+          [a non-generative-record-auto-a]))
 
-(deftest nongenerative-record-auto-id-test
-  (is (contains? @active.clojure.record/global-record-type-registry
-                 "active.clojure.record-test/NonGenerativeRecordAuto")))
+#?(:clj (deftest nongenerative-record-auto-id-test
+          (is (contains? @active.clojure.record/global-record-type-registry
+                         "active.clojure.record-test/NonGenerativeRecordAuto"))))
 
 ;;; Test record type without arrow constructor (ie ->TypeName)
-(define-record-type RecordWithoutArrowConstructor
-  {:no-arrow-constructor? true}
-  (make-rwac a)
-  rwac?
-  [a rwac-a])
+#?(:clj (define-record-type RecordWithoutArrowConstructor
+          {:no-arrow-constructor? true}
+          (make-rwac a)
+          rwac?
+          [a rwac-a]))
 
-(define-record-type RecordWithArrowConstructor
-  (make-rac a)
-  rac?
-  [a rac-a])
+#?(:clj (define-record-type RecordWithArrowConstructor
+          (make-rac a)
+          rac?
+          [a rac-a]))
 
-(deftest record-without-arrow-constructor-test
-  (is (thrown? Exception (->RecordWithoutArrowConstructor 5)))
-  (is (->RecordWithArrowConstructor 5)))
+#?(:clj (deftest record-without-arrow-constructor-test
+          (is (thrown? Exception (->RecordWithoutArrowConstructor 5)))
+          (is (->RecordWithArrowConstructor 5))))
 
 ;;; Test record type without map protocol
-(define-record-type RecordWithoutMapProtocol
-  {:no-map-protocol? true}
-  (make-rwmp a b)
-  rwim?
-  [a rwmp-a
-   b rwmp-b])
+#?(:clj (define-record-type RecordWithoutMapProtocol
+          {:no-map-protocol? true}
+          (make-rwmp a b)
+          rwim?
+          [a rwmp-a
+           b rwmp-b]))
 
-(deftest record-without-map-protocol-test
-  (is (= false
-         (map? (make-rwmp 3 4)))))
+#?(:clj (deftest record-without-map-protocol-test
+          (is (= false
+                 (map? (make-rwmp 3 4))))))

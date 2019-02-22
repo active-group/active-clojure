@@ -11,8 +11,7 @@
             #?(:cljs [cljs.test])
             [clojure.spec.alpha :as spec])
   #?(:cljs
-     (:require-macros [cljs.test
-                       :refer (is deftest run-tests testing)]
+     (:require-macros [cljs.test :refer (is deftest run-tests testing)]
                       [active.clojure.record :refer [define-record-type]])))
 
 #?(:cljs
@@ -172,9 +171,6 @@
             (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
             (is (not (spec/valid? ::Container (make-container 5)))))))
 
-
-
-
 ;; Record with other spec name
 #?(:clj (define-record-type RWOSN
           {:spec ::MySpecName}
@@ -207,16 +203,16 @@
           (is (not (equals (make-first-important 1 1) (make-first-important 0 1))))))
 
 ;;; Providing an options map should still work
-#?(:clj (define-record-type RecordWithOptions
-          {:bla 3}
-          (make-record-with-options value)
-          record-with-options?
-          [value record-with-options-value]))
+(define-record-type RecordWithOptions
+   {:bla 3}
+   (make-record-with-options value)
+   record-with-options?
+   [value record-with-options-value])
 
-#?(:clj (deftest providing-options-map-test
-          (let [rwo (make-record-with-options 5)]
-            (is (record-with-options? rwo))
-            (is (= 5 (record-with-options-value rwo))))))
+(deftest providing-options-map-test
+   (let [rwo (make-record-with-options 5)]
+     (is (record-with-options? rwo))
+     (is (= 5 (record-with-options-value rwo)))))
 
 ;;;; Nongenerative Records tests
 

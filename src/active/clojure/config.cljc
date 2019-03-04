@@ -29,15 +29,15 @@ Each profile has the same format as the top-level configuration itself
    (:clj
     [(:require
       [active.clojure.condition :as c]
-      [active.clojure.record :refer :all]
+      [active.clojure.clj.record :refer :all]
       [clojure.set :as set])
      (:import java.net.URL)]
     :cljs
     [(:require [active.clojure.condition :as c]
                [clojure.set :as set]
-               active.clojure.record)
+               active.clojure.cljs.record)
      (:require-macros
-      [active.clojure.record :refer [define-record-type]])]))
+      [active.clojure.cljs.record :refer [define-record-type]])]))
 
 ;; TODO
 ;; - provide better support for reaching inside of collection ranges

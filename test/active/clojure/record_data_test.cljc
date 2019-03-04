@@ -1,5 +1,5 @@
 (ns active.clojure.record-data-test
-  (:require [active.clojure.record :refer (define-record-type)]))
+  (:require [active.clojure.clj.record :refer (define-record-type)]))
 
 (define-record-type IntInt
   {:spec ::IntInt}

@@ -1,26 +1,13 @@
-(ns active.clojure.record
+(ns active.clojure.cljs.record
   #?@
   (:clj
    [(:require
-     [active.clojure.lens :as lens]
      [active.clojure.condition :as c]
-     [active.clojure.macro :refer [if-cljs cljs-env?]]
-     [clojure.spec.alpha :as spec]
-     [active.clojure.record-clj-internals :refer [emit-java-record-definition]]
-     [active.clojure.record-cljs-internals :refer [emit-javascript-record-definition]]
-     )
-    (:import clojure.lang.IPersistentMap)
-    (:import clojure.lang.RT)
-    (:import java.lang.IllegalArgumentException)
-    ]
+     [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]])]
    :cljs
    [(:require
-     [active.clojure.lens :as lens]
      [active.clojure.condition :as c]
-
-     [active.clojure.record-cljs-internals :refer [emit-javascript-record-definition]]
-     [cljs.spec.alpha :as s :include-macros true])
-    (:require-macros [active.clojure.macro :refer [if-cljs]])]))
+     [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]])]))
 
 
 ;;;; Nongenerative stuff
@@ -40,7 +27,8 @@
 
 (defn emit-record-definition
   [env type options constructor constructor-args predicate field-triples opt+specs]
-  (if (cljs-env? env)
+  (emit-javascript-record-definition env type options constructor constructor-args predicate field-triples opt+specs)
+  #_(if (cljs-env? env)
     (emit-javascript-record-definition env type options constructor constructor-args predicate field-triples opt+specs)
     (emit-java-record-definition type options constructor constructor-args predicate field-triples opt+specs)))
 

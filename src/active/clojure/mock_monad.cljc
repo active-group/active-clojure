@@ -1,14 +1,12 @@
 (ns active.clojure.mock-monad
   "Mock monadic programs"
-  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
-                            [active.clojure.macro :refer [if-cljs]]
-                            [cljs.test :refer [is]]))
-  (:require #?(:clj [active.clojure.record :refer :all])
-            #?(:cljs active.clojure.record)
+  (:require [active.clojure.monad :as monad]
+            #?(:clj [active.clojure.clj.record :refer :all])
             #?(:clj [active.clojure.macro :refer [if-cljs]])
-            [active.clojure.monad :as monad]
             #?(:clj [clojure.test :refer :all])
-            #?(:cljs [cljs.test])))
+            #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
+            #?(:cljs [active.clojure.macro :refer-macros [if-cljs]])
+            #?(:cljs [cljs.test :refer-macros [is]])))
 
 (define-record-type Mock
   ^{:doc "Run `(check! m)` a command `m`, then execute `(replace m)` instead.

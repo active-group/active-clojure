@@ -1,16 +1,12 @@
-(ns active.clojure.record-cljs-internals
-  (:require #?(:clj [active.clojure.lens :as lens])
-            [active.clojure.macro :refer [if-cljs]])
-  #?(:cljs (:require-macros [active.clojure.macro :refer [if-cljs]])))
+(ns active.clojure.cljs.record-cljs-internals
+  (:require [active.clojure.lens :as lens]))
 
 
 
 (defn- validate-fields
   [case name fields]
   (when-not (vector? fields)
-    (throw
-     #?(:clj (AssertionError. (str case " " name ", no fields vector given."))
-        :cljs (js/Error. (str case " " name ", no fields vector given."))))))
+    #?(:cljs (throw (js/Error. (str case " " name ", no fields vector given."))))))
 
 (defn- document-with-arglist
   [n arglist doc]
@@ -74,34 +70,30 @@
         (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
                    merge annots)))
 
-(if-cljs
- (defn dt->et
-   ([type specs fields]
-    (dt->et type specs fields false))
-   ([type specs fields inline]
-    (let [annots {:cljs.analyzer/type type
-                  :cljs.analyzer/protocol-impl true
-                  :cljs.analyzer/protocol-inline inline}]
-      ;; loop
-      (loop [ret [] specs specs]
-        (if (seq specs)
-          ;; let
-          (let [p     (first specs)
-                ret   (-> (conj ret p)
-                          (into (reduce (partial annotate-specs annots) []
-                                        (group-by first (take-while seq? (next specs))))))
-                specs (drop-while seq? (next specs))]
-            (recur ret specs))
-          ret)))))
- (defn dt->et [& args]))
+(defn dt->et
+  ([type specs fields]
+   (dt->et type specs fields false))
+  ([type specs fields inline]
+   (let [annots {:cljs.analyzer/type type
+                 :cljs.analyzer/protocol-impl true
+                 :cljs.analyzer/protocol-inline inline}]
+     ;; loop
+     (loop [ret [] specs specs]
+       (if (seq specs)
+         ;; let
+         (let [p     (first specs)
+               ret   (-> (conj ret p)
+                         (into (reduce (partial annotate-specs annots) []
+                                       (group-by first (take-while seq? (next specs))))))
+               specs (drop-while seq? (next specs))]
+           (recur ret specs))
+         ret)))))
 
-(if-cljs
- (defn- collect-protocols [impls env]
-   (->> impls
-        (filter symbol?)
-        (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
-        (into #{})))
- (defn- collect-protocols [& args]))
+(defn- collect-protocols [impls env]
+  (->> impls
+       (filter symbol?)
+       (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
+       (into #{})))
 
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
@@ -129,12 +121,11 @@
       (quot c 32)
       (inc (quot c 32)))))
 
-(if-cljs
- (defn- resolve-var [env sym]
-   (let [ret (:name (cljs.analyzer/resolve-var env sym))]
-     (assert ret (str "Can't resolve: " sym))
-     ret))
- (defn- resolve-var [& args]))
+(defn- resolve-var [env sym]
+  (let [ret (:name (cljs.analyzer/resolve-var env sym))]
+    (assert ret (str "Can't resolve: " sym))
+    ret))
+
 
 (defn- ->impl-map [impls]
   (loop [ret {} s impls]
@@ -168,130 +159,106 @@
 (defn- to-property [sym]
   (symbol (str "-" sym)))
 
-(if-cljs
- (defn- emit-defrecord
-   "Do not use this directly - use defrecord"
-   [env tagname rname fields impls]
-   (let [hinted-fields fields
-         fields (vec (map #(with-meta % nil) fields))
-         base-fields fields
-         pr-open (str "#" #?(:clj  (.getNamespace rname)
-                             :cljs (namespace rname))
-                      "." #?(:clj  (.getName rname)
-                             :cljs (name rname))
-                      "{")
-         fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
-     (let [gs (gensym)
-           ksym (gensym "k")
-           impls (concat
-                  impls
-                  ['IRecord
-                   'ICloneable
-                   `(~'-clone [this#] (new ~tagname ~@fields))
-                   'IHash
-                   `(~'-hash [this#]
-                     (caching-hash this#
-                                   (fn [coll#]
-                                     (bit-xor
-                                      ~(hash (-> rname cljs.compiler/munge str))
-                                      (hash-unordered-coll coll#)))
-                                   ~'__hash))
-                   'IEquiv
-                   (let [this (gensym 'this) other (gensym 'other)]
-                     `(~'-equiv [~this ~other]
-                       (and (some? ~other)
-                            (identical? (.-constructor ~this)
-                                        (.-constructor ~other))
-                            ~@(map (fn [field]
-                                     `(= (.. ~this ~(to-property field))
-                                         (.. ~(with-meta other {:tag tagname}) ~(to-property field))))
-                                   base-fields)
-                            (= (.-__extmap ~this)
-                               (.-__extmap ~(with-meta other {:tag tagname}))))))
-                   'IMeta
-                   `(~'-meta [this#] ~'__meta)
-                   'IWithMeta
-                   `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))
-                   'ILookup
-                   `(~'-lookup [this# k#] (-lookup this# k# nil))
-                   `(~'-lookup [this# ~ksym else#]
-                     (case ~ksym
-                       ~@(mapcat (fn [f] [(keyword f) f]) base-fields)
-                       (cljs.get ~'__extmap ~ksym else#)))
-                   'ICounted
-                   `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
-                   'ICollection
-                   `(~'-conj [this# entry#]
-                     (if (vector? entry#)
-                       (-assoc this# (-nth entry# 0) (-nth entry# 1))
-                       (reduce -conj
-                               this#
-                               entry#)))
-                   'IAssociative
-                   `(~'-assoc [this# k# ~gs]
-                     (condp keyword-identical? k#
-                       ~@(mapcat (fn [fld]
-                                   [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
-                                 base-fields)
-                       (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
-                   'IMap
-                   `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
-                                            (dissoc (-with-meta (into {} this#) ~'__meta) k#)
-                                            (new ~tagname ~@(remove #{'__extmap '__hash} fields)
-                                                 (not-empty (dissoc ~'__extmap k#))
-                                                 nil)))
-                   'ISeqable
-                   `(~'-seq [this#] (seq (concat [~@(map #(list 'cljs.MapEntry. (keyword %) % nil) base-fields)]
-                                                 ~'__extmap)))
+(defn- emit-defrecord
+  "Do not use this directly - use defrecord"
+  [env tagname rname fields impls]
+  (let [hinted-fields fields
+        fields (vec (map #(with-meta % nil) fields))
+        base-fields fields
+        pr-open (str "#" #?(:clj  (.getNamespace rname)
+                            :cljs (namespace rname))
+                     "." #?(:clj  (.getName rname)
+                            :cljs (name rname))
+                     "{")
+        fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
+    (let [gs (gensym)
+          ksym (gensym "k")
+          impls (concat
+                 impls
+                 ['IRecord
+                  'ICloneable
+                  `(~'-clone [this#] (new ~tagname ~@fields))
+                  'IHash
+                  `(~'-hash [this#]
+                    (caching-hash this#
+                                  (fn [coll#]
+                                    (bit-xor
+                                     ~(hash (-> rname cljs.compiler/munge str))
+                                     (hash-unordered-coll coll#)))
+                                  ~'__hash))
+                  'IEquiv
+                  (let [this (gensym 'this) other (gensym 'other)]
+                    `(~'-equiv [~this ~other]
+                      (and (some? ~other)
+                           (identical? (.-constructor ~this)
+                                       (.-constructor ~other))
+                           ~@(map (fn [field]
+                                    `(= (.. ~this ~(to-property field))
+                                        (.. ~(with-meta other {:tag tagname}) ~(to-property field))))
+                                  base-fields)
+                           (= (.-__extmap ~this)
+                              (.-__extmap ~(with-meta other {:tag tagname}))))))
+                  'IMeta
+                  `(~'-meta [this#] ~'__meta)
+                  'IWithMeta
+                  `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))
+                  'ILookup
+                  `(~'-lookup [this# k#] (-lookup this# k# nil))
+                  `(~'-lookup [this# ~ksym else#]
+                    (case ~ksym
+                      ~@(mapcat (fn [f] [(keyword f) f]) base-fields)
+                      (cljs.get ~'__extmap ~ksym else#)))
+                  'ICounted
+                  `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
+                  'ICollection
+                  `(~'-conj [this# entry#]
+                    (if (vector? entry#)
+                      (-assoc this# (-nth entry# 0) (-nth entry# 1))
+                      (reduce -conj
+                              this#
+                              entry#)))
+                  'IAssociative
+                  `(~'-assoc [this# k# ~gs]
+                    (condp keyword-identical? k#
+                      ~@(mapcat (fn [fld]
+                                  [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
+                                base-fields)
+                      (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
+                  'IMap
+                  `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                           (dissoc (-with-meta (into {} this#) ~'__meta) k#)
+                                           (new ~tagname ~@(remove #{'__extmap '__hash} fields)
+                                                (not-empty (dissoc ~'__extmap k#))
+                                                nil)))
+                  'ISeqable
+                  `(~'-seq [this#] (seq (concat [~@(map #(list 'cljs.MapEntry. (keyword %) % nil) base-fields)]
+                                                ~'__extmap)))
 
-                   'IIterable
-                   `(~'-iterator [~gs]
-                     (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)] (if ~'__extmap
-                                                                                             (-iterator ~'__extmap)
-                                                                                             (nil-iter))))
+                  'IIterable
+                  `(~'-iterator [~gs]
+                    (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)] (if ~'__extmap
+                                                                                            (-iterator ~'__extmap)
+                                                                                            (nil-iter))))
 
-                   'IPrintWithWriter
-                   `(~'-pr-writer [this# writer# opts#]
-                     (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# (~'js* "cljs.core.pr_writer") "" " " "" opts# keyval#))]
-                       (pr-sequential-writer
-                        writer# pr-pair# ~pr-open ", " "}" opts#
-                        (concat [~@(map #(list `vector (keyword %) %) base-fields)]
-                                ~'__extmap))))
-                   'IKVReduce
-                   `(~'-kv-reduce [this# f# init#]
-                     (reduce (fn [ret# [k# v#]] (f# ret# k# v#)) init# this#))
-                   ])
-           [fpps pmasks] (prepare-protocol-masks env impls)
-           protocols (collect-protocols impls env)
-           tagname (vary-meta tagname assoc
-                              :protocols protocols
-                              :skip-protocol-flag fpps)]
-       `(do
-          (~'defrecord* ~tagname ~hinted-fields ~pmasks
-           (extend-type ~tagname ~@(dt->et tagname impls fields true)))))))
- (defn- emit-defrecord [& args]))
-
-
-#_(if-cljs
- (defmacro defrec
-   [rsym fields & impls]
-   (println rsym fields impls)
-   (validate-fields "defrecord" rsym fields)
-   (let [rsym (vary-meta rsym assoc :internal-ctor true)
-         r    (vary-meta
-               (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))
-               assoc :internal-ctor true)]
-     `(let []
-        ~(emit-defrecord &env rsym r fields impls)
-        (set! (.-getBasis ~r) (fn [] '[~@fields]))
-        (set! (.-cljs$lang$type ~r) true)
-        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (cljs.list ~(str r))))
-        (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (-write writer# ~(str r))))
-        ~(build-positional-factory rsym r fields)
-        ~(build-map-factory rsym r fields)
-        ~r)))
- (defn defrec [& args]))
-;;;;
+                  'IPrintWithWriter
+                  `(~'-pr-writer [this# writer# opts#]
+                    (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# (~'js* "cljs.core.pr_writer") "" " " "" opts# keyval#))]
+                      (pr-sequential-writer
+                       writer# pr-pair# ~pr-open ", " "}" opts#
+                       (concat [~@(map #(list `vector (keyword %) %) base-fields)]
+                               ~'__extmap))))
+                  'IKVReduce
+                  `(~'-kv-reduce [this# f# init#]
+                    (reduce (fn [ret# [k# v#]] (f# ret# k# v#)) init# this#))
+                  ])
+          [fpps pmasks] (prepare-protocol-masks env impls)
+          protocols (collect-protocols impls env)
+          tagname (vary-meta tagname assoc
+                             :protocols protocols
+                             :skip-protocol-flag fpps)]
+      `(do
+         (~'defrecord* ~tagname ~hinted-fields ~pmasks
+          (extend-type ~tagname ~@(dt->et tagname impls fields true)))))))
 
 
 (defn emit-javascript-record-definition

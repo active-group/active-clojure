@@ -1,7 +1,7 @@
 (ns active.clojure.record-test
-  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
-            [active.clojure.lens :as lens]
+  (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
+            #?(:clj [active.clojure.clj.record :refer (define-record-type)])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [clojure.test :refer :all])
@@ -12,7 +12,7 @@
             [clojure.spec.alpha :as spec])
   #?(:cljs
      (:require-macros [cljs.test :refer (is deftest run-tests testing)]
-                      [active.clojure.record :refer [define-record-type]])))
+                      [active.clojure.cljs.record :refer [define-record-type]])))
 
 #?(:cljs
 (enable-console-print!))
@@ -275,7 +275,7 @@
           [a non-generative-record-auto-a]))
 
 #?(:clj (deftest nongenerative-record-auto-id-test
-          (is (contains? @active.clojure.record/global-record-type-registry
+          (is (contains? @active.clojure.clj.record/global-record-type-registry
                          "active.clojure.record-test/NonGenerativeRecordAuto"))))
 
 ;;; Test record type without arrow constructor (ie ->TypeName)

@@ -1,13 +1,9 @@
 (ns active.clojure.monad
   "Monad related functionality, particularly free monads."
-  #?(:cljs (:require-macros [active.clojure.record :refer (define-record-type)]
-                            [active.clojure.monad :refer (monadic)]))
-  (:require #?(:clj [active.clojure.record :refer (define-record-type)])
-            #?(:cljs active.clojure.record)
-            #?(:clj [clojure.core :as core])
-            #?(:cljs [cljs.core :as core])
-            #?(:cljs active.clojure.record) ;; for check-type in define-record-type
-            [active.clojure.condition :as c]))
+  (:require [active.clojure.condition :as c]
+            #?(:clj [active.clojure.clj.record :refer [define-record-type]])
+            #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]]))
+  #?(:cljs (:require-macros [active.clojure.monad :refer [monadic]])))
 
 (define-record-type ^:no-doc Return
   (free-return val)
@@ -297,11 +293,11 @@
                      state)
         unknown-command (fn [bind m]
                           (if-let [{line :line column :column statement :statement} (meta bind)]
-                            (c/assertion-violation `run-free-reader-state-exception 
+                            (c/assertion-violation `run-free-reader-state-exception
                                                    (str "unknown monad command in bind, line " line ", column " column)
                                                    bind m
                                                    statement)
-                            (c/assertion-violation `run-free-reader-state-exception 
+                            (c/assertion-violation `run-free-reader-state-exception
                                                    "unknown monad command in bind"
                                                    bind m)))]
     (letfn [(run [env state m]

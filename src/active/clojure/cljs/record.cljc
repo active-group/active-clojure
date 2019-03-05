@@ -25,14 +25,8 @@
   [msg]
   (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg))
 
-(defn emit-record-definition
-  [env type options constructor constructor-args predicate field-triples opt+specs]
-  (emit-javascript-record-definition env type options constructor constructor-args predicate field-triples opt+specs)
-  #_(if (cljs-env? env)
-    (emit-javascript-record-definition env type options constructor constructor-args predicate field-triples opt+specs)
-    (emit-java-record-definition type options constructor constructor-args predicate field-triples opt+specs)))
 
-;;;; record type definition
+;;;; Record type definition
 #?(:clj
    (defmacro define-record-type
      "Attach doc properties to the type and the field names to get reasonable docstrings."
@@ -94,9 +88,9 @@
              (let [non-g-id (if (= true non-g-id) (str *ns* "/" ?type) non-g-id)] ; default non-g-id when key is `true`
                (swap! global-record-type-registry
                       (fn [old-reg] (assoc old-reg non-g-id {:ns *ns* :form &form})))
-               (emit-record-definition &env ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
+               (emit-javascript-record-definition &env ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs)))
            ;; generative, create new type.
-           (emit-record-definition &env ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs))))
+           (emit-javascript-record-definition &env ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs))))
      ))
 
 ;; (defn predicate->record-meta [predicate]

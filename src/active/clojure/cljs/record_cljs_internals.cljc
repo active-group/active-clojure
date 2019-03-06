@@ -2,7 +2,8 @@
   (:require [active.clojure.lens :as lens]
             [cljs.compiler :as comp]
             #?(:cljs [cljs.core :as core])
-            #?(:cljs [cljs.analyzer :as ana]))
+            #?(:cljs [cljs.analyzer :as ana])
+            #?(:cljs [cljs.spec.alpha :as spec]))
   #?(:cljs (:require-macros [cljs.core :as core])))
 
 #?(:clj (alias 'core 'clojure.core))
@@ -249,7 +250,7 @@
 (defn- name-spec
   [field]
   (or (:spec (meta field))
-      any?))
+      'cljs.core/any?))
 
 (defn- reference
   [name]
@@ -332,4 +333,22 @@
                           (report-lens-deprecation ?type)
                           `(def ~?lens ~?accessor))
                        )))
-                 ?field-triples))))
+                 ?field-triples)
+       ;; Specs
+       ~(when-let [spec-name (:spec ?options)]
+          `(do
+             ;; Spec for a record type
+             (spec/def ~spec-name
+               (spec/and ~?predicate
+                         ~@(map (fn [[?field ?accessor _]]
+                                  `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
+                                ?field-triples)))
+             ;; Spec for constructor function
+             ~(let [c-specs (mapcat (fn [constructor-arg]
+                                      (let [field (first (filter #(= constructor-arg %)
+                                                                 (map first ?field-triples)))]
+                                        [(keyword constructor-arg) (name-spec field)]))
+                                    ?constructor-args)]
+                `(spec/fdef ~?constructor
+                   :args (spec/cat ~@c-specs)
+                   :ret ~spec-name)))))))

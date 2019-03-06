@@ -1,6 +1,7 @@
 (ns active.clojure.record-test
   (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
+            #?(:clj [clojure.spec.alpha :as spec])
             #?(:clj [active.clojure.clj.record :refer (define-record-type)])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
@@ -9,7 +10,7 @@
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
             #?(:cljs [cljs.test])
-            [clojure.spec.alpha :as spec])
+            #?(:cljs [cljs.spec.alpha :as spec]))
   #?(:cljs
      (:require-macros [cljs.test :refer (is deftest run-tests testing)]
                       [active.clojure.cljs.record :refer [define-record-type]])))
@@ -120,69 +121,71 @@
 
 
 ;;; Test Records with Specs
-#?(:clj (define-record-type IntString
-          {:spec ::IntString}
-          (make-int-string int string)
-          int-string?
-          [^{:spec int?} int int-string-int
-           ^{:spec string?} string int-string-string]))
+(define-record-type IntString
+  {:spec ::IntString}
+  (make-int-string i s)
+  int-string?
+  [^{:spec int?} i int-string-int
+   ^{:spec string?} s int-string-string])
 
-#?(:clj (define-record-type EvenAny
-          {:spec ::EvenAny}
-          (make-even-any even any)
-          even-any?
-          [^{:spec (and #(int? %) #(even? %))} even even-any-even
-           any even-any-any]))
+(define-record-type EvenAny
+   {:spec ::EvenAny}
+   (make-even-any even any)
+   even-any?
+   [^{:spec (and #(int? %) #(even? %))} even even-any-even
+    any even-any-any])
 
-#?(:clj (define-record-type Container
-          {:spec ::Container}
-          (make-container value)
-          container?
-          [^{:spec ::IntString} value container-value]))
+(define-record-type Container
+   {:spec ::Container}
+   (make-container value)
+   container?
+   [^{:spec ::IntString} value container-value])
 
-#?(:clj (defn includes?
-          [^Exception e & subs]
-          (every? #(clojure.string/includes? (.getMessage e) %)
-                  subs)))
+(defn includes?
+   [^Exception e & subs]
+  #?(:clj (every? #(clojure.string/includes? (.getMessage e) %)
+                  subs)
+     :cljs (every? #(clojure.string/includes? (.toString e) %)
+                   subs)))
 
-#?(:clj (deftest constructor-spec-test
-          ;; Needs to be called, so that function spec errors are given:
-          (spec-test/instrument)
-          (try (make-int-string 2.2 "a")
-               (catch Exception e
-                 (is (includes? e ":int" "int?"))))
-          (try (make-int-string 3 3)
-               (catch Exception e
-                 (is (includes? e ":string" "string?"))))
-          (try (make-even-any 3 :anything)
-               (catch Exception e
-                 (is (includes? e ":even"))))
-          (testing "spec'd record as field"
-            (try (make-container 5)
-                 (catch Exception e
-                   (is (includes? e ":value" "IntString")))))
-          (spec-test/unstrument)))
+(deftest constructor-spec-test
+  ;; Needs to be called, so that function spec errors are given:
+  (spec-test/instrument)
+  (try (make-int-string 2.2 "a")
+       (catch #?(:clj Exception :cljs js/Error) e
+         (is (includes? e "2.2" "int?"))))
+  (try (make-int-string 3 3)
+       (catch #?(:clj Exception :cljs js/Error) e
+         (is (includes? e "3" "string?"))))
+  (try (make-even-any 3 :anything)
+       (catch #?(:clj Exception :cljs js/Error) e
+         (is (includes? e ":even"))))
+  (testing "spec'd record as field"
+    (try (make-container 5)
+         (catch #?(:clj Exception :cljs js/Error) e
+           (is (includes? e "5" "IntString")))))
+  (spec-test/unstrument))
 
-#?(:clj (deftest record-spec-test
-          (is (spec/valid? ::IntString (make-int-string 3 "H")))
-          (is (not (spec/valid? ::IntString 3)))
-          (is (not (spec/valid? ::IntString (make-pu 3 "H"))))
-          (testing "spec'd record as field"
-            (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
-            (is (not (spec/valid? ::Container (make-container 5)))))))
+(deftest record-spec-test
+   (is (spec/valid? ::IntString (make-int-string 3 "H")))
+   (is (not (spec/valid? ::IntString 3)))
+   (is (not (spec/valid? ::IntString (make-pu 3 "H"))))
+   (testing "spec'd record as field"
+     (is (spec/valid? ::Container (make-container (make-int-string 3 "H"))))
+     (is (not (spec/valid? ::Container (make-container 5))))))
 
 ;; Record with other spec name
-#?(:clj (define-record-type RWOSN
-          {:spec ::MySpecName}
-          (make-rwosn value)
-          rwosn?
-          [^{:spec int?} value rwosn-value]))
+(define-record-type RWOSN
+  {:spec ::MySpecName}
+  (make-rwosn value)
+  rwosn?
+  [^{:spec int?} value rwosn-value])
 
-#?(:clj (deftest record-with-other-spec-name-test
-          (testing "record-spec-test"
-            (spec-test/unstrument)
-            (is (spec/valid? ::MySpecName (make-rwosn 5)))
-            (is (not (spec/valid? ::MySpecName (make-rwosn "H")))))))
+(deftest record-with-other-spec-name-test
+  (testing "record-spec-test"
+    (spec-test/unstrument)
+    (is (spec/valid? ::MySpecName (make-rwosn 5)))
+    (is (not (spec/valid? ::MySpecName (make-rwosn "H"))))))
 
 ;;; Providing own `clojure.lang.IHashEq` implementation
 #?(:clj (define-record-type FirstImportant

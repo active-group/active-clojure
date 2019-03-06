@@ -66,7 +66,7 @@
 (defn- name-spec
   [field]
   (or (:spec (meta field))
-      any?))
+      'any?))
 
 (defn- reference
   [name]
@@ -312,6 +312,9 @@
      (when (some specials fields)
        (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records."))))))
 
+;;;; END OF Clojure defrecord interns
+
+
 (defn emit-java-record-definition
    [?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
    (let [?docref (str "See " (reference ?constructor) ".")
@@ -415,5 +418,3 @@
                                 (into {} ~(mapv (fn [[?field ?accessor _]]
                                                   `(vector ~(keyword ?field) (~?accessor ~v)))
                                                 ?field-triples))))))))))
-
-;;;; END OF Clojure defrecord interns

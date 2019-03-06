@@ -282,7 +282,8 @@
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))
        (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (cljs.core/-write writer# ~(str r))))
-       ~(build-positional-factory rsym r fields)
+       (when-not (:no-arrow-constructor? ~?options)
+         ~(build-positional-factory rsym r fields))
        ~(build-map-factory rsym r fields)
        ~r
 

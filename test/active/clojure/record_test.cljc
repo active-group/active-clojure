@@ -291,20 +291,21 @@
      :cljs (is (is-in-registry?))))
 
 ;;; Test record type without arrow constructor (ie ->TypeName)
-#?(:clj (define-record-type RecordWithoutArrowConstructor
-          {:no-arrow-constructor? true}
-          (make-rwac a)
-          rwac?
-          [a rwac-a]))
+(define-record-type RecordWithoutArrowConstructor
+   {:no-arrow-constructor? true}
+   (make-rwac a)
+   rwac?
+   [a rwac-a])
 
-#?(:clj (define-record-type RecordWithArrowConstructor
-          (make-rac a)
-          rac?
-          [a rac-a]))
+(define-record-type RecordWithArrowConstructor
+   (make-rac a)
+   rac?
+   [a rac-a])
 
-#?(:clj (deftest record-without-arrow-constructor-test
-          (is (thrown? Exception (->RecordWithoutArrowConstructor 5)))
-          (is (->RecordWithArrowConstructor 5))))
+(deftest record-without-arrow-constructor-test
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (->RecordWithoutArrowConstructor 5)))
+  (is (->RecordWithArrowConstructor 5)))
 
 ;;; Test record type without map protocol
 #?(:clj (define-record-type RecordWithoutMapProtocol

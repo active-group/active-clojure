@@ -323,13 +323,17 @@
   (is (->RecordWithArrowConstructor 5)))
 
 ;;; Test record type without map protocol
-#?(:clj (define-record-type RecordWithoutMapProtocol
-          {:no-map-protocol? true}
-          (make-rwmp a b)
-          rwim?
-          [a rwmp-a
-           b rwmp-b]))
+(define-record-type RecordWithoutMapProtocol
+   {:no-map-protocol? true}
+   (make-rwmp a b)
+   rwim?
+   [a rwmp-a
+    b rwmp-b])
 
-#?(:clj (deftest record-without-map-protocol-test
-          (is (= false
-                 (map? (make-rwmp 3 4))))))
+(deftest record-without-map-protocol-test
+   (is (= false
+          (map? (make-rwmp 3 4))))
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (assoc (make-rwmp 3 4) :c 4)))
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (dissoc (make-rwmp 3 4) :a))))

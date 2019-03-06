@@ -130,7 +130,7 @@
 
 (core/defn- emit-defrecord
   "Do not use this directly - use defrecord"
-  [env tagname rname fields impls]
+  [options env tagname rname fields impls]
   (core/let [hinted-fields fields
              fields (vec (map #(with-meta % nil) fields))
              base-fields fields
@@ -157,7 +157,20 @@
                                          base-fields)
                                   (= (.-__extmap ~this)
                                      (.-__extmap ~other)))))])
-
+                      (when-not (:no-map-protocol? options)
+                        ['IAssociative
+                         `(~'-assoc [this# k# ~gs]
+                           (condp cljs.core/keyword-identical? k#
+                             ~@(mapcat (core/fn [fld]
+                                         [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
+                                       base-fields)
+                             (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
+                         'IMap
+                         `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                                  (dissoc (cljs.core/-with-meta (into {} this#) ~'__meta) k#)
+                                                  (new ~tagname ~@(remove #{'__extmap '__hash} fields)
+                                                       (not-empty (dissoc ~'__extmap k#))
+                                                       nil)))])
                       ['IRecord
                        'ICloneable
                        `(~'-clone [this#] (new ~tagname ~@fields))
@@ -188,19 +201,6 @@
                            (reduce cljs.core/-conj
                                    this#
                                    entry#)))
-                       'IAssociative
-                       `(~'-assoc [this# k# ~gs]
-                         (condp cljs.core/keyword-identical? k#
-                           ~@(mapcat (core/fn [fld]
-                                       [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
-                                     base-fields)
-                           (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
-                       'IMap
-                       `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
-                                                (dissoc (cljs.core/-with-meta (into {} this#) ~'__meta) k#)
-                                                (new ~tagname ~@(remove #{'__extmap '__hash} fields)
-                                                     (not-empty (dissoc ~'__extmap k#))
-                                                     nil)))
                        'ISeqable
                        `(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
                                                      ~'__extmap)))
@@ -279,7 +279,7 @@
        ;; direct use of `defrecord` - to be replaced in the future
        ;; (defrecord ~?type ~fields ~@?opt+specs)
 
-       ~(emit-defrecord env rsym r fields ?opt+specs)
+       ~(emit-defrecord ?options env rsym r fields ?opt+specs)
        (set! (.-getBasis ~r) (fn [] '[~@fields]))
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))

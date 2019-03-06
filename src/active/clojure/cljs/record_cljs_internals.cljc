@@ -144,6 +144,20 @@
                ksym (gensym "k")
                impls (concat
                       impls
+                      (when-not (some #{'IEquiv} impls)
+                        ['IEquiv
+                         (core/let [this (gensym 'this) other (gensym 'other)]
+                           `(~'-equiv [~this ~other]
+                             (and (some? ~other)
+                                  (identical? (.-constructor ~this)
+                                              (.-constructor ~other))
+                                  ~@(map (core/fn [field]
+                                           `(= (.. ~this ~(to-property field))
+                                               (.. ~other ~(to-property field))))
+                                         base-fields)
+                                  (= (.-__extmap ~this)
+                                     (.-__extmap ~other)))))])
+
                       ['IRecord
                        'ICloneable
                        `(~'-clone [this#] (new ~tagname ~@fields))
@@ -155,18 +169,6 @@
                                                     ~(hash (core/-> rname comp/munge core/str))
                                                     (hash-unordered-coll coll#)))
                                                  ~'__hash))
-                       'IEquiv
-                       (core/let [this (gensym 'this) other (gensym 'other)]
-                         `(~'-equiv [~this ~other]
-                           (and (some? ~other)
-                                (identical? (.-constructor ~this)
-                                            (.-constructor ~other))
-                                ~@(map (core/fn [field]
-                                         `(= (.. ~this ~(to-property field))
-                                             (.. ~other ~(to-property field))))
-                                       base-fields)
-                                (= (.-__extmap ~this)
-                                   (.-__extmap ~other)))))
                        'IMeta
                        `(~'-meta [this#] ~'__meta)
                        'IWithMeta

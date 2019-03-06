@@ -9,7 +9,7 @@
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
-            #?(:cljs [active.clojure.cljs.record :refer [define-record-type]])
+            #?(:cljs [active.clojure.cljs.record])
             #?(:cljs [active.clojure.record-nongenerative-test])
             #?(:cljs [cljs.test])
             #?(:cljs [cljs.spec.alpha :as spec]))
@@ -190,23 +190,38 @@
     (is (spec/valid? ::MySpecName (make-rwosn 5)))
     (is (not (spec/valid? ::MySpecName (make-rwosn "H"))))))
 
-;;; Providing own `clojure.lang.IHashEq` implementation
-#?(:clj (define-record-type FirstImportant
-          (make-first-important a b)
-          s?
-          [a first-important-a
-           b first-important-b]
-          clojure.lang.IHashEq
-          (hasheq [this] 3)
-          (hashCode [this] 3)
-          (equals [this other] (= (first-important-a this) (first-important-a other)))))
+;;; Providing own `clojure.lang.IHashEq` implementation (CLJ)
+;;; Providing own `IEquiv` implementation (CLJS)
+(define-record-type FirstImportant
+   (make-first-important a b)
+   s?
+   [a first-important-a
+    b first-important-b]
+  #?@(:clj
+      [clojure.lang.IHashEq
+       (hasheq [this] 3)
+       (hashCode [this] 3)
+       (equals [this other] (= (first-important-a this) (first-important-a other)))]
+      :cljs
+      [IEquiv
+       (-equiv [this other] (= (first-important-a this) (first-important-a other)))]))
 
 #?(:clj (defn equals [^FirstImportant a ^FirstImportant b]
           (.equals a b)))
 
-#?(:clj (deftest providing-own-ihasheq-implementation-test
-          (is (equals (make-first-important 1 1) (make-first-important 1 0)))
-          (is (not (equals (make-first-important 1 1) (make-first-important 0 1))))))
+(deftest providing-own-equality-implementation-test
+  #?(:clj
+     (is (equals (make-first-important 1 1) (make-first-important 1 1)))
+     :cljs
+     (is (= (make-first-important 1 1) (make-first-important 1 1))))
+  #?(:clj
+     (is (equals (make-first-important 1 1) (make-first-important 1 0)))
+     :cljs
+     (is (= (make-first-important 1 1) (make-first-important 1 0))))
+  #?(:clj
+     (is (not (equals (make-first-important 1 1) (make-first-important 0 1))))
+     :cljs
+     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))))
 
 ;;; Providing an options map should still work
 (define-record-type RecordWithOptions

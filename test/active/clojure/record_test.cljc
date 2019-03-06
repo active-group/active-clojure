@@ -2,18 +2,21 @@
   (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
             #?(:clj [clojure.spec.alpha :as spec])
-            #?(:clj [active.clojure.clj.record :refer (define-record-type)])
+            #?(:clj [active.clojure.clj.record :refer [define-record-type]])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
             #?(:cljs [active.clojure.condition :refer (Throwable)])
+            #?(:cljs [active.clojure.cljs.record :refer [define-record-type]])
+            #?(:cljs [active.clojure.record-nongenerative-test])
             #?(:cljs [cljs.test])
             #?(:cljs [cljs.spec.alpha :as spec]))
   #?(:cljs
      (:require-macros [cljs.test :refer (is deftest run-tests testing)]
-                      [active.clojure.cljs.record :refer [define-record-type]])))
+                      [active.clojure.cljs.record :refer [define-record-type]]
+                      [active.clojure.record-test :refer [throws-exception? is-in-registry?]])))
 
 #?(:cljs
 (enable-console-print!))
@@ -221,22 +224,22 @@
 
 ;;; Generative option, one should be allowed to define two types with
 ;;; different arguments but same type name
-#?(:clj (define-record-type GenerativeRecord
-          (make-generative-record field)
-          generative-record?
-          [field generative-record-field]))
+(define-record-type GenerativeRecord
+   (make-generative-record field)
+   generative-record?
+   [field generative-record-field])
 
-#?(:clj (define-record-type GenerativeRecord
-          (make-generative-record)
-          generative-record?
-          []))
+(define-record-type GenerativeRecord
+   (make-generative-record)
+   generative-record?
+   [])
 
 ;;; Nongenerative
-#?(:clj (define-record-type NonGenerativeRecord
-          {:nongenerative "NonGenerativeRecord"}
-          (make-non-generative-record field)
-          non-generative-record?
-          [field non-generative-record-field]))
+(define-record-type NonGenerativeRecord
+   {:nongenerative "NonGenerativeRecord"}
+   (make-non-generative-record field)
+   non-generative-record?
+   [field non-generative-record-field])
 
 ;; Helper macro that allows to test a macro.
 #?(:clj (defmacro throws-exception?
@@ -247,39 +250,45 @@
               (= "This record type definition already exists with different arguments."
                  (.getMessage e))))))
 
-#?(:clj (deftest nongenerative-record-test
-          ;; Other implementation should throw an error
-          (is (throws-exception?
-               (define-record-type NonGenerativeRecord
-                 {:nongenerative "NonGenerativeRecord"}
-                 (make-non-generative-record)
-                 non-generative-record?
-                 [])))
-          ;; The exact same definition should not throw an exception
-          (is (nil? (define-record-type NonGenerativeRecord
-                      {:nongenerative "NonGenerativeRecord"}
-                      (make-non-generative-record field)
-                      non-generative-record?
-                      [field non-generative-record-field])))
+(deftest nongenerative-record-test
+   ;; Other implementation should throw an error
+   (is (throws-exception?
+        (define-record-type NonGenerativeRecord
+          {:nongenerative "NonGenerativeRecord"}
+          (make-non-generative-record)
+          non-generative-record?
+          [])))
+   ;; The exact same definition should not throw an exception
+   (is (nil? (define-record-type NonGenerativeRecord
+               {:nongenerative "NonGenerativeRecord"}
+               (make-non-generative-record field)
+               non-generative-record?
+               [field non-generative-record-field])))
 
-          ;; same record-type-definition of other namespace should fail
-          (is (throws-exception?
-               (define-record-type NonGROtherNS
-                 {:nongenerative "NonGROtherNS"}
-                 (make-ngrons field)
-                 ngrons?
-                 [field ngrons-field])))))
+   ;; same record-type-definition of other namespace should fail
+   (is (throws-exception?
+        (define-record-type NonGROtherNS
+          {:nongenerative "NonGROtherNS"}
+          (make-ngrons field)
+          ngrons?
+          [field ngrons-field]))))
 
 ;;; Test automatic generation of nongenerative id
-#?(:clj (define-record-type NonGenerativeRecordAuto
-          {:nongenerative true}
-          (make-non-generative-record-auto a)
-          non-generative-record-auto?
-          [a non-generative-record-auto-a]))
+(define-record-type NonGenerativeRecordAuto
+   {:nongenerative true}
+   (make-non-generative-record-auto a)
+   non-generative-record-auto?
+   [a non-generative-record-auto-a])
 
-#?(:clj (deftest nongenerative-record-auto-id-test
-          (is (contains? @active.clojure.clj.record/global-record-type-registry
-                         "active.clojure.record-test/NonGenerativeRecordAuto"))))
+;;; Testing auto-id needs a macro in CLJS case to access the registry
+(defmacro is-in-registry? []
+  (contains? @active.clojure.clj.record/global-record-type-registry
+             "active.clojure.record-test/NonGenerativeRecordAuto"))
+
+(deftest nongenerative-record-auto-id-test
+  #?(:clj (is (contains? @active.clojure.clj.record/global-record-type-registry
+                         "active.clojure.record-test/NonGenerativeRecordAuto"))
+     :cljs (is (is-in-registry?))))
 
 ;;; Test record type without arrow constructor (ie ->TypeName)
 #?(:clj (define-record-type RecordWithoutArrowConstructor

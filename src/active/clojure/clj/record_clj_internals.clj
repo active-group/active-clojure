@@ -6,7 +6,6 @@
            clojure.lang.RT
            java.lang.IllegalArgumentException))
 
-;;;; Helper functions
 (defn report-lens-deprecation [type]
   (println (str "active.clojure.record WARNING for record-type `" type
                 "`: the explicit definition of lenses is deprecated in favor of regular "
@@ -82,8 +81,6 @@
     (keyword (str (ns-name *ns*)) (str the-name-sym))
     (c/assertion-violation `ns-keyword "argument must not be nil" the-name-sym)))
 
-
-;;;; Clojure defrecord interns
 (defn ^{:private true}
    maybe-destructured
    [params body]
@@ -116,22 +113,21 @@
        ret)))
 
 (defn- parse-opts+specs [opts+specs]
-   (let [[opts specs] (parse-opts opts+specs)
-         impls (parse-impls specs)
-         interfaces (-> (map #(if (var? (resolve %))
-                                (:on (deref (resolve %)))
-                                %)
-                             (keys impls))
-                        set
-                        (disj 'Object 'java.lang.Object)
-                        vec)
-         methods (map (fn [[name params & body]]
-                        (cons name (maybe-destructured params body)))
-                      (apply concat (vals impls)))]
+  (let [[opts specs] (parse-opts opts+specs)
+        impls (parse-impls specs)
+
+        interfaces+methods
+        (into {} (for [[i methods] impls]
+                   [(if (var? (resolve i))
+                       (:on (deref (resolve i)))
+                       i)
+                    (map (fn [[name params & body]]
+                           (cons name (maybe-destructured params body)))
+                         methods)]))]
      (when-let [bad-opts (seq (remove #{:no-print :load-ns} (keys opts)))]
        (let [^String msg (apply print-str "Unsupported option(s) -" bad-opts)]
          (throw (IllegalArgumentException. msg))))
-     [interfaces methods opts]))
+     [interfaces+methods opts]))
 
 (defn- imap-cons
    [^IPersistentMap this o]
@@ -149,14 +145,37 @@
                  (recur (.assoc this (.getKey pair) (.getValue pair)) (rest o)))
                this))))
 
+(defn- override-default-methods
+  [default-interfaces+methods provided-interfaces+methods]
+  (into {}
+        (for [[i ms] default-interfaces+methods]
+          (if-let [new-methods (get provided-interfaces+methods i)]
+            [i
+             ;; Remove methods that are provided and concat the provided ones
+             (concat (remove (fn [[name & rest]]
+                               (some #(= (clojure.core/name name) %)
+                                     (map (comp clojure.core/name first) new-methods)))
+                             ms)
+                     new-methods)]
+            [i ms]))))
+
+(defn- add-provided-interfaces+methods
+  [default-interfaces+methods provided-interfaces+methods]
+  (merge default-interfaces+methods
+         (into {}
+               (remove (fn [[i ms]]
+                         (get default-interfaces+methods i))
+                       provided-interfaces+methods))))
+
 (defn- emit-defrecord
    "Do not use this directly - use defrecord"
    {:added "1.2"}
-   [tagname cname fields interfaces methods opts]
+   [tagname cname fields interfaces+methods opts]
    (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
-         interfaces (vec interfaces)
+         interfaces (vec (keys interfaces+methods))
+         methods (vec (vals interfaces+methods))
          interface-set (set (map resolve interfaces))
-         methodname-set (set (map first methods))
+         methodname-set (set (map first (apply concat methods)))
          hinted-fields fields
          fields (vec (map #(with-meta % nil) fields))
          base-fields fields
@@ -166,117 +185,118 @@
          type-hash (hash classname)]
      (when (some #{:volatile-mutable :unsynchronized-mutable} (mapcat (comp keys meta) hinted-fields))
        (throw (IllegalArgumentException. ":volatile-mutable or :unsynchronized-mutable not supported for record fields")))
-     (let [gs (gensym)]
-       (letfn
-           [(irecord [[i m]]
-              [(conj i 'clojure.lang.IRecord)
-               m])
-            (eqhash [[i m]]
-              [(conj i 'clojure.lang.IHashEq)
-               (conj m
-                     `(hasheq [this#] (let [hq# ~'__hasheq]
-                                        (if (zero? hq#)
-                                          (let [h# (int (bit-xor ~type-hash (clojure.lang.APersistentMap/mapHasheq this#)))]
-                                            (set! ~'__hasheq h#)
-                                            h#)
-                                          hq#)))
-                     `(hashCode [this#] (let [hash# ~'__hash]
-                                          (if (zero? hash#)
-                                            (let [h# (clojure.lang.APersistentMap/mapHash this#)]
-                                              (set! ~'__hash h#)
-                                              h#)
-                                            hash#)))
-                     `(equals [this# ~gs] (clojure.lang.APersistentMap/mapEquals this# ~gs)))])
-            (iobj [[i m]]
-              [(conj i 'clojure.lang.IObj)
-               (conj m `(meta [this#] ~'__meta)
-                     `(withMeta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields))))])
-            (ilookup [[i m]]
-              [(conj i 'clojure.lang.ILookup 'clojure.lang.IKeywordLookup)
-               (conj m `(valAt [this# k#] (.valAt this# k# nil))
-                     `(valAt [this# k# else#]
-                             (case k# ~@(mapcat (fn [fld] [(keyword fld) fld])
-                                                base-fields)
-                                   (get ~'__extmap k# else#)))
-                     `(getLookupThunk [this# k#]
-                                      (let [~'gclass (class this#)]
-                                        (case k#
-                                          ~@(let [hinted-target (with-meta 'gtarget {:tag tagname})]
-                                              (mapcat
-                                               (fn [fld]
-                                                 [(keyword fld)
-                                                  `(reify clojure.lang.ILookupThunk
-                                                     (get [~'thunk ~'gtarget]
-                                                       (if (identical? (class ~'gtarget) ~'gclass)
-                                                         (. ~hinted-target ~(symbol (str "-" fld)))
-                                                         ~'thunk)))])
-                                               base-fields))
-                                          nil))))])
-            (imap [[i m]]
-              [(conj i 'clojure.lang.IPersistentMap)
-               (conj m
-                     `(count [this#] (+ ~(count base-fields) (count ~'__extmap)))
-                     `(empty [this#] (throw (UnsupportedOperationException. (str "Can't create empty: " ~(str classname)))))
-                     `(cons [this# e#] ((var imap-cons) this# e#))
-                     `(equiv [this# ~gs]
-                             (boolean
-                              (or (identical? this# ~gs)
-                                  (when (identical? (class this#) (class ~gs))
-                                    (let [~gs ~(with-meta gs {:tag tagname})]
-                                      (and  ~@(map (fn [fld] `(= ~fld (. ~gs ~(symbol (str "-" fld))))) base-fields)
-                                            (= ~'__extmap (. ~gs ~'__extmap))))))))
-                     `(containsKey [this# k#] (not (identical? this# (.valAt this# k# this#))))
-                     `(entryAt [this# k#] (let [v# (.valAt this# k# this#)]
-                                            (when-not (identical? this# v#)
-                                              (clojure.lang.MapEntry/create k# v#))))
-                     `(seq [this#] (seq (concat [~@(map #(list `clojure.lang.MapEntry/create (keyword %) %) base-fields)]
-                                                ~'__extmap)))
-                     `(iterator [~gs]
-                                (clojure.lang.RecordIterator. ~gs [~@(map keyword base-fields)] (RT/iter ~'__extmap)))
-                     `(assoc [this# k# ~gs]
-                             (condp identical? k#
-                               ~@(mapcat (fn [fld]
-                                           [(keyword fld) (list* `new tagname (replace {fld gs} (remove '#{__hash __hasheq} fields)))])
-                                         base-fields)
-                               (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields) (assoc ~'__extmap k# ~gs))))
-                     `(without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
-                                            (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                            (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields)
-                                                 (not-empty (dissoc ~'__extmap k#))))))])
-            (ijavamap [[i m]]
-              [(conj i 'java.util.Map 'java.io.Serializable)
-               (conj m
-                     `(size [this#] (.count this#))
-                     `(isEmpty [this#] (= 0 (.count this#)))
-                     `(containsValue [this# v#] (boolean (some #{v#} (vals this#))))
-                     `(get [this# k#] (.valAt this# k#))
-                     `(put [this# k# v#] (throw (UnsupportedOperationException.)))
-                     `(remove [this# k#] (throw (UnsupportedOperationException.)))
-                     `(putAll [this# m#] (throw (UnsupportedOperationException.)))
-                     `(clear [this#] (throw (UnsupportedOperationException.)))
-                     `(keySet [this#] (set (keys this#)))
-                     `(values [this#] (vals this#))
-                     `(entrySet [this#] (set this#)))])
-            (maybe-add-eqhash [[i m]]
-              (if (some #{'clojure.lang.IHashEq} i)
-                [i m]
-                (eqhash [i m])))
-            (maybe-add-imap [[i m]]
-              (if (= true (:no-map-protocol? opts))
-                [i m]
-                (imap [i m])))
-            (maybe-add-ijavamap [[i m]]
-              (if (= true (:no-map-protocol? opts))
-                [i m]
-                (ijavamap [i m])))]
-         (let [[i m] (-> [interfaces methods] irecord maybe-add-eqhash iobj ilookup maybe-add-imap maybe-add-ijavamap)]
-           `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
-              ~(conj hinted-fields '__meta '__extmap
-                     '^int ^:unsynchronized-mutable __hash
-                     '^int ^:unsynchronized-mutable __hasheq)
-              :implements ~(vec i)
-              ~@(mapcat identity opts)
-              ~@m))))))
+     (let
+         [gs (gensym)
+
+          default-interfaces+methods
+          {'clojure.lang.IRecord []
+
+           'clojure.lang.IHashEq
+           [`(hasheq [this#]
+                     (let [hq# ~'__hasheq]
+                       (if (zero? hq#)
+                         (let [h# (int (bit-xor ~type-hash (clojure.lang.APersistentMap/mapHasheq this#)))]
+                           (set! ~'__hasheq h#)
+                           h#)
+                         hq#)))
+            `(hashCode [this#]
+                       (let [hash# ~'__hash]
+                         (if (zero? hash#)
+                           (let [h# (clojure.lang.APersistentMap/mapHash this#)]
+                             (set! ~'__hash h#)
+                             h#)
+                           hash#)))
+            `(equals [this# ~gs] (clojure.lang.APersistentMap/mapEquals this# ~gs))]
+
+           'clojure.lang.IObj
+           [`(meta [this#] ~'__meta)
+            `(withMeta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))]
+
+           'clojure.lang.ILookup
+           [`(valAt [this# k#] (.valAt this# k# nil))
+            `(valAt [this# k# else#]
+                    (case k# ~@(mapcat (fn [fld] [(keyword fld) fld])
+                                       base-fields)
+                          (get ~'__extmap k# else#)))
+            `(getLookupThunk [this# k#]
+                             (let [~'gclass (class this#)]
+                               (case k#
+                                 ~@(let [hinted-target (with-meta 'gtarget {:tag tagname})]
+                                     (mapcat
+                                      (fn [fld]
+                                        [(keyword fld)
+                                         `(reify clojure.lang.ILookupThunk
+                                            (get [~'thunk ~'gtarget]
+                                              (if (identical? (class ~'gtarget) ~'gclass)
+                                                (. ~hinted-target ~(symbol (str "-" fld)))
+                                                ~'thunk)))])
+                                      base-fields))
+                                 nil)))]
+
+           'clojure.lang.IKeywordLookup []
+
+           'clojure.lang.IPersistentMap
+           [`(count [this#] (+ ~(count base-fields) (count ~'__extmap)))
+            `(empty [this#] (throw (UnsupportedOperationException. (str "Can't create empty: " ~(str classname)))))
+            `(cons [this# e#] ((var imap-cons) this# e#))
+            `(equiv [this# ~gs]
+                    (boolean
+                     (or (identical? this# ~gs)
+                         (when (identical? (class this#) (class ~gs))
+                           (let [~gs ~(with-meta gs {:tag tagname})]
+                             (and  ~@(map (fn [fld] `(= ~fld (. ~gs ~(symbol (str "-" fld))))) base-fields)
+                                   (= ~'__extmap (. ~gs ~'__extmap))))))))
+            `(containsKey [this# k#] (not (identical? this# (.valAt this# k# this#))))
+            `(entryAt [this# k#] (let [v# (.valAt this# k# this#)]
+                                   (when-not (identical? this# v#)
+                                     (clojure.lang.MapEntry/create k# v#))))
+            `(seq [this#] (seq (concat [~@(map #(list `clojure.lang.MapEntry/create (keyword %) %) base-fields)]
+                                       ~'__extmap)))
+            `(iterator [~gs]
+                       (clojure.lang.RecordIterator. ~gs [~@(map keyword base-fields)] (RT/iter ~'__extmap)))
+            `(assoc [this# k# ~gs]
+                    (condp identical? k#
+                      ~@(mapcat (fn [fld]
+                                  [(keyword fld) (list* `new tagname (replace {fld gs} (remove '#{__hash __hasheq} fields)))])
+                                base-fields)
+                      (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields) (assoc ~'__extmap k# ~gs))))
+            `(without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                   (dissoc (with-meta (into {} this#) ~'__meta) k#)
+                                   (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields)
+                                        (not-empty (dissoc ~'__extmap k#)))))]
+
+           'java.util.Map
+           [`(size [this#] (.count this#))
+            `(isEmpty [this#] (= 0 (.count this#)))
+            `(containsValue [this# v#] (boolean (some #{v#} (vals this#))))
+            `(get [this# k#] (.valAt this# k#))
+            `(put [this# k# v#] (throw (UnsupportedOperationException.)))
+            `(remove [this# k#] (throw (UnsupportedOperationException.)))
+            `(putAll [this# m#] (throw (UnsupportedOperationException.)))
+            `(clear [this#] (throw (UnsupportedOperationException.)))
+            `(keySet [this#] (set (keys this#)))
+            `(values [this#] (vals this#))
+            `(entrySet [this#] (set this#))]
+
+           'java.io.Serializable []
+           }
+
+          new-interfaces+methods
+          (-> (override-default-methods default-interfaces+methods interfaces+methods)
+              (add-provided-interfaces+methods interfaces+methods)
+              ((fn [i+m] (apply dissoc i+m (concat (when (:no-map-protocol? opts)
+                                                     ['java.util.Map 'clojure.lang.IPersistentMap])
+                                                   (:remove-interfaces opts))))))
+
+          interfaces (vec (keys new-interfaces+methods))
+          methods (apply concat (vec (vals new-interfaces+methods)))]
+       `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
+          ~(conj hinted-fields '__meta '__extmap
+                 '^int ^:unsynchronized-mutable __hash
+                 '^int ^:unsynchronized-mutable __hasheq)
+          :implements ~interfaces
+          ~@(mapcat identity opts)
+          ~@methods))))
 
 (defn- build-positional-factory
    "Used to build a positional factory for a given type/record.  Because of the
@@ -312,8 +332,6 @@
      (when (some specials fields)
        (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records."))))))
 
-;;;; END OF Clojure defrecord interns
-
 
 (defn emit-java-record-definition
    [?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
@@ -324,7 +342,7 @@
         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) ?field-triples))
         ~(let [fields (mapv first ?field-triples)]
            (validate-fields fields ?type)
-           (let [[interfaces methods opts] (parse-opts+specs ?opt+specs)
+           (let [[interfaces+methods opts] (parse-opts+specs ?opt+specs)
                  opts (merge opts ?options)
                  ns-part (namespace-munge *ns*)
                  classname (symbol (str ns-part "." ?type))
@@ -333,7 +351,7 @@
              `(let []
                 (declare ~(symbol (str  '-> ?type)))
                 (declare ~(symbol (str 'map-> ?type)))
-                ~(emit-defrecord ?type ?type (vec hinted-fields) (vec interfaces) methods opts)
+                ~(emit-defrecord ?type ?type (vec hinted-fields) interfaces+methods opts)
                 (import ~classname)
                 (when-not (:no-arrow-constructor? ~?options)
                   ~(build-positional-factory ?type classname fields))

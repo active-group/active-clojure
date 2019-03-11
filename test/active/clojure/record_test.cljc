@@ -190,39 +190,6 @@
     (is (spec/valid? ::MySpecName (make-rwosn 5)))
     (is (not (spec/valid? ::MySpecName (make-rwosn "H"))))))
 
-;;; Providing own `clojure.lang.IHashEq` implementation (CLJ)
-;;; Providing own `IEquiv` implementation (CLJS)
-(define-record-type FirstImportant
-   (make-first-important a b)
-   s?
-   [a first-important-a
-    b first-important-b]
-  #?@(:clj
-      [clojure.lang.IHashEq
-       (hasheq [this] 3)
-       (hashCode [this] 3)
-       (equals [this other] (= (first-important-a this) (first-important-a other)))]
-      :cljs
-      [IEquiv
-       (-equiv [this other] (= (first-important-a this) (first-important-a other)))]))
-
-#?(:clj (defn equals [^FirstImportant a ^FirstImportant b]
-          (.equals a b)))
-
-(deftest providing-own-equality-implementation-test
-  #?(:clj
-     (is (equals (make-first-important 1 1) (make-first-important 1 1)))
-     :cljs
-     (is (= (make-first-important 1 1) (make-first-important 1 1))))
-  #?(:clj
-     (is (equals (make-first-important 1 1) (make-first-important 1 0)))
-     :cljs
-     (is (= (make-first-important 1 1) (make-first-important 1 0))))
-  #?(:clj
-     (is (not (equals (make-first-important 1 1) (make-first-important 0 1))))
-     :cljs
-     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))))
-
 ;;; Providing an options map should still work
 (define-record-type RecordWithOptions
    {:bla 3}
@@ -324,16 +291,85 @@
 
 ;;; Test record type without map protocol
 (define-record-type RecordWithoutMapProtocol
-   {:no-map-protocol? true}
-   (make-rwmp a b)
-   rwim?
-   [a rwmp-a
-    b rwmp-b])
+  {:no-map-protocol? true}
+  (make-rwmp a b)
+  rwim?
+  [a rwmp-a
+   b rwmp-b])
 
 (deftest record-without-map-protocol-test
-   (is (= false
-          (map? (make-rwmp 3 4))))
+  (is (= false
+         (map? (make-rwmp 3 4))))
   (is (thrown? #?(:clj Exception :cljs js/Error)
                (assoc (make-rwmp 3 4) :c 4)))
   (is (thrown? #?(:clj Exception :cljs js/Error)
                (dissoc (make-rwmp 3 4) :a))))
+
+
+
+;;;; Providing own `equality` implementation
+;;; (CLJ) In Clojure, our records defaultly implement `IPersistentMap` which is an
+;;; instance of `IPersistentCollection`,
+;;; this entails that equality testing is done by the `equiv` method and not `equals`.
+;;; Therefore you have to provide an implementation of `IPersistentMap` and not
+;;; `clojure.lang.IHashEq`
+;;; ----
+;;; (CLJS) In CLJS you have to provide an `IEquiv` implementation
+(define-record-type FirstImportant
+   (make-first-important a b)
+   s?
+   [a first-important-a
+    b first-important-b]
+  #?@(:clj
+      [clojure.lang.IPersistentMap
+       (equiv [this other] (= (first-important-a this) (first-important-a other)))]
+      :cljs
+      [IEquiv
+       (-equiv [this other] (= (first-important-a this) (first-important-a other)))]))
+
+(deftest providing-own-equality-implementation-test
+  #?(:clj
+     (is (= (make-first-important 1 1) (make-first-important 1 1)))
+     :cljs
+     (is (= (make-first-important 1 1) (make-first-important 1 1))))
+  #?(:clj
+     (is (= (make-first-important 1 1) (make-first-important 1 0)))
+     :cljs
+     (is (= (make-first-important 1 1) (make-first-important 1 0))))
+  #?(:clj
+     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))
+     :cljs
+     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))))
+
+;;; Remove a (default) interface from record
+;;; (This example, yields the same result as providing `:no-map-protocol? true` in the options map)
+(define-record-type RecordWithoutInterfaces
+  {:remove-interfaces [#?(:clj java.util.Map :cljs IMap)
+                       #?(:clj clojure.lang.IPersistentMap :cljs IAssociative)]}
+   (make-rwi a)
+   rwi?
+   [a rwi-a])
+
+(deftest remove-interfaces-test
+   (is (= false
+          (map? (make-rwi 3))))
+   (is (thrown? #?(:clj Exception :cljs js/Error)
+                (assoc (make-rwi 3) :c 4)))
+   (is (thrown? #?(:clj Exception :cljs js/Error)
+                (dissoc (make-rwi 3) :a))))
+
+;;; implement user made protocol
+
+(defprotocol SaySomething
+  (say [this]))
+
+(define-record-type SayIt
+  (make-say-it a)
+  say-it?
+  [a say-it-a]
+  SaySomething
+  (say [this] (str "Hello, my field value is " (say-it-a this))))
+
+(deftest implement-own-protocol-test
+  (is (= "Hello, my field value is 3"
+         (say (make-say-it 3)))))

@@ -1,13 +1,6 @@
 (ns active.clojure.cljs.record
-  #?@
-  (:clj
-   [(:require
-     [active.clojure.condition :as c]
-     [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]])]
-   :cljs
-   [(:require
-     [active.clojure.condition :as c]
-     [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]])]))
+  (:require [active.clojure.condition :as c]
+            [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]]))
 
 
 ;;;; Nongenerative stuff

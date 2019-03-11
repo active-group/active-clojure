@@ -95,7 +95,6 @@
     (core/assert ret (core/str "Can't resolve: " sym))
     ret))
 
-
 (core/defn- ->impl-map [impls]
   (core/loop [ret {} s impls]
     (if (seq s)
@@ -128,6 +127,28 @@
 (core/defn- to-property [sym]
   (symbol (core/str "-" sym)))
 
+(defn- override-default-methods
+  [default-interfaces+methods provided-interfaces+methods]
+  (into {}
+        (for [[i ms] default-interfaces+methods]
+          (if-let [new-methods (get provided-interfaces+methods i)]
+            [i
+             ;; Remove methods that are provided and concat the provided ones
+             (concat (remove (fn [[n & rest]]
+                               (some #(= n %)
+                                     (map first new-methods)))
+                             ms)
+                     new-methods)]
+            [i ms]))))
+
+(defn- add-provided-interfaces+methods
+  [default-interfaces+methods provided-interfaces+methods]
+  (merge default-interfaces+methods
+         (into {}
+               (remove (fn [[i ms]]
+                         (get default-interfaces+methods i))
+                       provided-interfaces+methods))))
+
 (core/defn- emit-defrecord
   "Do not use this directly - use defrecord"
   [options env tagname rname fields impls]
@@ -142,92 +163,113 @@
              fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
     (core/let [gs (gensym)
                ksym (gensym "k")
-               impls (concat
-                      impls
-                      (when-not (some #{'IEquiv} impls)
-                        ['IEquiv
-                         (core/let [this (gensym 'this) other (gensym 'other)]
-                           `(~'-equiv [~this ~other]
-                             (and (some? ~other)
-                                  (identical? (.-constructor ~this)
-                                              (.-constructor ~other))
-                                  ~@(map (core/fn [field]
-                                           `(= (.. ~this ~(to-property field))
-                                               (.. ~other ~(to-property field))))
-                                         base-fields)
-                                  (= (.-__extmap ~this)
-                                     (.-__extmap ~other)))))])
-                      (when-not (:no-map-protocol? options)
-                        ['IAssociative
-                         `(~'-assoc [this# k# ~gs]
-                           (condp cljs.core/keyword-identical? k#
-                             ~@(mapcat (core/fn [fld]
-                                         [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
-                                       base-fields)
-                             (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
-                         'IMap
-                         `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
-                                                  (dissoc (cljs.core/-with-meta (into {} this#) ~'__meta) k#)
-                                                  (new ~tagname ~@(remove #{'__extmap '__hash} fields)
-                                                       (not-empty (dissoc ~'__extmap k#))
-                                                       nil)))])
-                      ['IRecord
-                       'ICloneable
-                       `(~'-clone [this#] (new ~tagname ~@fields))
-                       'IHash
-                       `(~'-hash [this#]
-                         (cljs.core/caching-hash this#
-                                                 (fn [coll#]
-                                                   (bit-xor
-                                                    ~(hash (core/-> rname comp/munge core/str))
-                                                    (hash-unordered-coll coll#)))
-                                                 ~'__hash))
-                       'IMeta
-                       `(~'-meta [this#] ~'__meta)
-                       'IWithMeta
-                       `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))
-                       'ILookup
-                       `(~'-lookup [this# k#] (cljs.core/-lookup this# k# nil))
-                       `(~'-lookup [this# ~ksym else#]
-                         (case ~ksym
-                           ~@(mapcat (core/fn [f] [(keyword f) f]) base-fields)
-                           (cljs.core/get ~'__extmap ~ksym else#)))
-                       'ICounted
-                       `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
-                       'ICollection
-                       `(~'-conj [this# entry#]
-                         (if (vector? entry#)
-                           (cljs.core/-assoc this# (cljs.core/-nth entry# 0) (cljs.core/-nth entry# 1))
-                           (reduce cljs.core/-conj
-                                   this#
-                                   entry#)))
-                       'ISeqable
-                       `(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
-                                                     ~'__extmap)))
+               default-interfaces+methods
+               {'IEquiv
+                [(core/let [this (gensym 'this) other (gensym 'other)]
+                    `(~'-equiv [~this ~other]
+                      (and (some? ~other)
+                           (identical? (.-constructor ~this)
+                                       (.-constructor ~other))
+                           ~@(map (core/fn [field]
+                                    `(= (.. ~this ~(to-property field))
+                                        (.. ~other ~(to-property field))))
+                                  base-fields)
+                           (= (.-__extmap ~this)
+                              (.-__extmap ~other)))))]
 
-                       'IIterable
-                       `(~'-iterator [~gs]
-                         (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)]
-                                      (if ~'__extmap
-                                        (cljs.core/-iterator ~'__extmap)
-                                        (core/nil-iter))))
+                'IAssociative
+                [`(~'-assoc [this# k# ~gs]
+                   (condp cljs.core/keyword-identical? k#
+                     ~@(mapcat (core/fn [fld]
+                                 [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
+                               base-fields)
+                     (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))]
 
-                       'IPrintWithWriter
-                       `(~'-pr-writer [this# writer# opts#]
-                         (let [pr-pair# (fn [keyval#] (cljs.core/pr-sequential-writer writer# cljs.core/pr-writer "" " " "" opts# keyval#))]
-                           (cljs.core/pr-sequential-writer
-                            writer# pr-pair# ~pr-open ", " "}" opts#
-                            (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
-                                    ~'__extmap))))
-                       ])
-               [fpps pmasks] (prepare-protocol-masks env impls)
-               protocols (collect-protocols impls env)
+                'IMap
+                [`(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                          (dissoc (cljs.core/-with-meta (into {} this#) ~'__meta) k#)
+                                          (new ~tagname ~@(remove #{'__extmap '__hash} fields)
+                                               (not-empty (dissoc ~'__extmap k#))
+                                               nil)))]
+
+                'IRecord []
+
+                'ICloneable
+                [`(~'-clone [this#] (new ~tagname ~@fields))]
+
+                'IHash
+                [`(~'-hash [this#]
+                   (cljs.core/caching-hash this#
+                                           (fn [coll#]
+                                             (bit-xor
+                                              ~(hash (core/-> rname comp/munge core/str))
+                                              (hash-unordered-coll coll#)))
+                                           ~'__hash))]
+
+                'IMeta
+                [`(~'-meta [this#] ~'__meta)]
+
+                'IWithMeta
+                [`(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))]
+
+                'ILookup
+                [`(~'-lookup [this# k#] (cljs.core/-lookup this# k# nil))
+                 `(~'-lookup [this# ~ksym else#]
+                   (case ~ksym
+                     ~@(mapcat (core/fn [f] [(keyword f) f]) base-fields)
+                     (cljs.core/get ~'__extmap ~ksym else#)))]
+
+                'ICounted
+                [`(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))]
+
+                'ICollection
+                [`(~'-conj [this# entry#]
+                   (if (vector? entry#)
+                     (cljs.core/-assoc this# (cljs.core/-nth entry# 0) (cljs.core/-nth entry# 1))
+                     (reduce cljs.core/-conj
+                             this#
+                             entry#)))]
+
+                'ISeqable
+                [`(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                                               ~'__extmap)))]
+
+                'IIterable
+                [`(~'-iterator [~gs]
+                   (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)]
+                                (if ~'__extmap
+                                  (cljs.core/-iterator ~'__extmap)
+                                  (core/nil-iter))))]
+
+                'IPrintWithWriter
+                [`(~'-pr-writer [this# writer# opts#]
+                   (let [pr-pair# (fn [keyval#] (cljs.core/pr-sequential-writer writer# cljs.core/pr-writer "" " " "" opts# keyval#))]
+                     (cljs.core/pr-sequential-writer
+                      writer# pr-pair# ~pr-open ", " "}" opts#
+                      (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                              ~'__extmap))))]
+                }
+
+               new-interfaces+methods
+               (-> (override-default-methods default-interfaces+methods impls)
+                   (add-provided-interfaces+methods impls)
+                   ((fn [i+m] (apply dissoc i+m (concat (when (:no-map-protocol? options)
+                                                          ['IMap 'IAssociative])
+                                                        (:remove-interfaces options))))))
+
+               ;; Convert the map structure to conform to 'extend-type's specification
+               new-impls
+               (apply concat (for [[i ms] new-interfaces+methods]
+                               (concat [i] ms)))
+
+               [fpps pmasks] (prepare-protocol-masks env new-impls)
+               protocols (collect-protocols new-impls env)
                tagname (vary-meta tagname assoc
                          :protocols protocols
                          :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks
-           (extend-type ~tagname ~@(dt->et tagname impls fields true)))))))
+           (extend-type ~tagname ~@(dt->et tagname new-impls fields true)))))))
 
 
 ;;;; END CLJS internals
@@ -264,7 +306,6 @@
                 "`: the explicit definition of lenses is deprecated in favor of regular "
                 "accessors already being lenses")))
 
-
 (defn emit-javascript-record-definition
   [env ?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs]
   (let [?docref               (str "See " (reference ?constructor) ".")
@@ -279,7 +320,7 @@
        ;; direct use of `defrecord` - to be replaced in the future
        ;; (defrecord ~?type ~fields ~@?opt+specs)
 
-       ~(emit-defrecord ?options env rsym r fields ?opt+specs)
+       ~(emit-defrecord ?options env rsym r fields (->impl-map ?opt+specs))
        (set! (.-getBasis ~r) (fn [] '[~@fields]))
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))

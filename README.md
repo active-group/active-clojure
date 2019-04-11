@@ -2,6 +2,8 @@
 
 A library with various basic utilities for programming with Clojure.
 
+[![Clojars Project](https://img.shields.io/clojars/v/active-clojure.svg)](https://clojars.org/active-clojure)
+
 ## Usage
 
 ### Records

@@ -284,7 +284,8 @@
           new-interfaces+methods
           (-> (override-default-methods default-interfaces+methods interfaces+methods)
               (add-provided-interfaces+methods interfaces+methods)
-              ((fn [i+m] (apply dissoc i+m (concat (when (:no-map-protocol? opts)
+              ;; Remove not wanted interfaces
+              ((fn [i+m] (apply dissoc i+m (concat (when (= false (:map-protocol? opts))
                                                      ['java.util.Map 'clojure.lang.IPersistentMap])
                                                    (:remove-interfaces opts))))))
 
@@ -353,7 +354,8 @@
                 (declare ~(symbol (str 'map-> ?type)))
                 ~(emit-defrecord ?type ?type (vec hinted-fields) interfaces+methods opts)
                 (import ~classname)
-                (when-not (:no-arrow-constructor? ~?options)
+                ;; Create arrow constructor
+                (when-not (= false (:arrow-constructor? ~?options))
                   ~(build-positional-factory ?type classname fields))
                 (defn ~(symbol (str 'map-> ?type))
                   ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
@@ -427,8 +429,8 @@
                  `(spec/fdef ~?constructor
                     :args (spec/cat ~@c-specs)
                     :ret ~spec-name))))
-        ;; When `no-map-protocol?` option is given, we have to provide a print-method implementation
-        ~(when (:no-map-protocol? ?options)
+        ;; When `map-protocol?` is `false`, we have to provide a print-method implementation
+        ~(when (= false (:map-protocol? ?options))
            (let [w (vary-meta `w# assoc :tag 'java.io.Writer)
                  v `w#]
              `(defmethod print-method ~?type [~v ~w]

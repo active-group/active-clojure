@@ -253,7 +253,8 @@
                new-interfaces+methods
                (-> (override-default-methods default-interfaces+methods impls)
                    (add-provided-interfaces+methods impls)
-                   ((fn [i+m] (apply dissoc i+m (concat (when (:no-map-protocol? options)
+                   ;; Remove not wanted interfaces
+                   ((fn [i+m] (apply dissoc i+m (concat (when (= false (:map-protocol? options))
                                                           ['IMap 'IAssociative])
                                                         (:remove-interfaces options))))))
 
@@ -325,7 +326,8 @@
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))
        (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (cljs.core/-write writer# ~(str r))))
-       (when-not (:no-arrow-constructor? ~?options)
+       ;; Create arrow constructor
+       (when-not (= false (:arrow-constructor? ~?options))
          ~(build-positional-factory rsym r fields))
        ~(build-map-factory rsym r fields)
        ~r

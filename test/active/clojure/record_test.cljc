@@ -274,7 +274,7 @@
 
 ;;; Test record type without arrow constructor (ie ->TypeName)
 (define-record-type RecordWithoutArrowConstructor
-   {:no-arrow-constructor? true}
+   {:arrow-constructor? false}
    (make-rwac a)
    rwac?
    [a rwac-a])
@@ -291,7 +291,7 @@
 
 ;;; Test record type without map protocol
 (define-record-type RecordWithoutMapProtocol
-  {:no-map-protocol? true}
+  {:map-protocol? false}
   (make-rwmp a b)
   rwim?
   [a rwmp-a

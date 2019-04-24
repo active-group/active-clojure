@@ -112,9 +112,11 @@ the record-creation operation is generative, i.e.,
 a new record type is created even if a previous call
 to `define-record-type` was made with the same arguments.
 
-#### No arrow constructor
+#### Arrow constructor
 
-If you provide the key:val pair `:no-arrow-constructor?`:`true`,
+Default is `true`.
+
+If you provide the key:val pair `:arrow-constructor?`:`false`,
 the creation of the arrow-constructor of the `defrecord` call is omitted,
 i.e.
 
@@ -123,12 +125,14 @@ i.e.
 ```
 won't yield a function `->Test`.
 
-#### No map protocol
+#### Map protocol
+
+Default is `true`.
 
 If you don't want your records to implement the Map-protocols (in *Clojure*
 these are `java.util.Map` and `clojure.lang.IPersistentMap`, in *ClojureScript*
 `IMap` and `IAssociative`), you can provide the key:val pair
-`:no-map-protocol?`:`true` to the options map.
+`:map-protocol?`:`false` to the options map.
 
 #### Remove default interfaces/protocols
 

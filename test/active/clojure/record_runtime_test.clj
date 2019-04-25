@@ -1,10 +1,6 @@
 (ns active.clojure.record-runtime-test
-    (:require [active.clojure.record-runtime :as r]
-              #?(:clj [clojure.test :refer :all])
-              #?(:cljs [cljs.test :as t]))
-    #?(:cljs
-       (:require-macros [cljs.test
-                         :refer (is deftest run-tests testing)])))
+  (:require [active.clojure.record-runtime :as r]
+            [clojure.test :refer :all]))
 
 (def rtd0 (r/make-record-type-descriptor `rtd0 nil []))
 (def rtd1 (r/make-record-type-descriptor `rtd1 nil [(r/make-record-field "f1")]))

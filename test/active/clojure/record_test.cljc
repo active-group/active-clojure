@@ -264,11 +264,11 @@
 
 ;;; Testing auto-id needs a macro in CLJS case to access the registry
 (defmacro is-in-registry? []
-  (contains? @active.clojure.clj.record/global-record-type-registry
+  (contains? @active.clojure.record-helper/global-record-type-registry
              "active.clojure.record-test/NonGenerativeRecordAuto"))
 
 (deftest nongenerative-record-auto-id-test
-  #?(:clj (is (contains? @active.clojure.clj.record/global-record-type-registry
+  #?(:clj (is (contains? @active.clojure.record-helper/global-record-type-registry
                          "active.clojure.record-test/NonGenerativeRecordAuto"))
      :cljs (is (is-in-registry?))))
 

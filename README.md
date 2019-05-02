@@ -125,7 +125,7 @@ for map matching around `core.match`.
 
 ## License
 
-Copyright © 2014 Active Group GmbH
+Copyright © 2014-2019 Active Group GmbH
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

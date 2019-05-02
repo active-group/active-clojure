@@ -327,3 +327,26 @@
            (reify-command (reify-as m :blub))))
     (is (= m
            (reify-command m)))))
+
+(deftest metadata-test
+  (let [stmt (monadic
+              [a (return 42)]
+              [b (return 21)]
+              (return 10))]
+    (let [base (meta stmt)]
+      (is (= (set (keys base))
+             #{:line :column :statement}))
+      
+      (is (= (:statement base)
+             '[a (return 42)]))
+      
+      (is (= (meta ((:cont stmt) nil))
+             {:statement '[b (return 21)]
+              :column (:column base)
+              :line (inc (or (:line base) -1))}))))
+  
+  ;; and we don't need/want metadata on this:
+  (is (= (meta (monadic (return 42)))
+         nil))
+  (is (= (monadic (return 42))
+         (return 42))))

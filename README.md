@@ -2,6 +2,8 @@
 
 A library with various basic utilities for programming with Clojure.
 
+[![Clojars Project](https://img.shields.io/clojars/v/active-clojure.svg)](https://clojars.org/active-clojure)
+
 ## Usage
 
 ### Records
@@ -131,6 +133,10 @@ functions that `clojure.core` does, but implemented via records and
 
 These can be very handy for using React-based libraries like [Reacl](https://github.com/active-group/reacl),
 which can optimize work based on the equality of values.
+
+### Monad
+
+An example usage of the `active.clojure.monad` namespace can be found at https://github.com/active-group/active-clojure-monad-example
 
 ## License
 

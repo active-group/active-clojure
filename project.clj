@@ -1,4 +1,4 @@
-(defproject active-clojure "0.27.0-SNAPSHOT"
+(defproject active-clojure "0.28.0-SNAPSHOT"
   :description "Active Clojure: Various Clojure utilities in use at Active Group"
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"

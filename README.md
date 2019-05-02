@@ -165,6 +165,13 @@ You can also override the defaultly implemented interfaces/protocols by the same
 means. You don't have to provide every method of a default interface, those left
 out by you will remain the default ones.
 
+#### Java Class
+
+Default is `true`.
+
+If you provide the key:val pair `:java-class?`:`false`, no java class is created
+for the given type, and instead a `record-type-descriptor` is created.
+
 ### Lenses
 
 The `active.clojure.lens` namespace implements *lenses*.  Lenses

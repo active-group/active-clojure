@@ -1,6 +1,7 @@
 (ns active.clojure.clj.record
   (:require [active.clojure.record-helper :as r-help]
-            [active.clojure.clj.record-clj-internals :refer [emit-java-record-definition]]))
+            [active.clojure.clj.record-clj-internals :refer [emit-java-record-definition
+                                                             emit-own-record-definition]]))
 
 (defmacro define-record-type
   [?type ?second & ?params]
@@ -8,8 +9,11 @@
   ;; (only, when :nongenerative option is truthy)
   (when-let [[type options constructor constructor-args predicate field-triples opt+specs]
              (r-help/prepare-arguments! &form *ns* ?type ?second ?params)]
-    (emit-java-record-definition type options constructor constructor-args
-                                 predicate field-triples opt+specs)))
+    (if (= false (:java-class? options))
+      (emit-own-record-definition type options constructor constructor-args
+                                  predicate field-triples opt+specs)
+      (emit-java-record-definition type options constructor constructor-args
+                                   predicate field-triples opt+specs))))
 
 
 ;; (defn predicate->record-meta [predicate]

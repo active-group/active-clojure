@@ -25,11 +25,11 @@
       ;; FIXME: more expressive exception
       (throw (new Error (str "field " name "not found in rtd " (.-name rtd))))
       (let [^RecordField field (first fields)]
-        (if (identical? (.-name field) name)
+        (if (= (.-name field) name)
           i
           (recur (inc i)
                  (rest fields)))))))
-          
+
 (deftype Record
     [^RecordTypeDescriptor rtd
      ^{:tag "[Ljava.lang.Object;"} slots])
@@ -121,6 +121,14 @@
     (aset slots index v)
     (Record. (.-rtd r) slots)))
 
-;; FIXME: lens
-;; FIXME: serialization   
 
+;; FIXME: lens
+;; FIXME: serialization
+
+(defmacro record-type-rtd
+  [rt]
+  `(~rt :rtd))
+
+(defmacro record-type-meta
+  [rt]
+  `(~rt :meta))

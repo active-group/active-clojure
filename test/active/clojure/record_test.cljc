@@ -5,6 +5,7 @@
             #?(:clj [active.clojure.clj.record :refer [define-record-type]])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
+            #?(:clj [active.clojure.record-runtime :as rrun])
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
@@ -373,3 +374,31 @@
 (deftest implement-own-protocol-test
   (is (= "Hello, my field value is 3"
          (say (make-say-it 3)))))
+
+;;; No java-class option tests
+(define-record-type ICreateNoJavaClass
+  {:java-class? false}
+  (make-icnjc a b)
+  icnjc?
+  [a icnjc-a
+   b icnjc-b])
+(define-record-type ICreateAJavaClass
+  {:java-class? true}
+  (make-icajc a b)
+  icajc?
+  [a icajc-a
+   b icajc-b])
+
+#?(:clj
+   (deftest no-java-class-test
+     (let [without (make-icnjc 5 "foo")
+           with (make-icajc 5 "foo")]
+       (is (not (class? ICreateNoJavaClass)))
+       (is (not (record? without)))
+       (is (not (map? without)))
+       (is (rrun/record? without))
+
+       (is (class? ICreateAJavaClass))
+       (is (record? with))
+       (is (map? with))
+       (is (not (rrun/record? with))))))

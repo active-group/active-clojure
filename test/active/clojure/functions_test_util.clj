@@ -1,4 +1,4 @@
-(ns active.clojure.function-test-util)
+(ns active.clojure.functions-test-util)
 
 (defmacro generate-tests [name repl orig fargs-list rargs-list]
   ;; Note that 'is' must be emitted unhygienic, because we want to pickup cljs.test/is resp. clojure.test/is

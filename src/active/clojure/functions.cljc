@@ -1,4 +1,4 @@
-(ns active.clojure.function
+(ns active.clojure.functions
   "Redefines higher order functions and function combinators from
   clojure.core via applicable records (ifn? but not fn?). The
   advantage is, that those objects compare = if they are created from

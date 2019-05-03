@@ -1,9 +1,9 @@
-(ns active.clojure.function-test
-  (:require [active.clojure.function :as f]
-            #?(:clj [active.clojure.function-test-util :as u])
+(ns active.clojure.functions-test
+  (:require [active.clojure.functions :as f]
+            #?(:clj [active.clojure.functions-test-util :as u])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test :refer-macros [deftest is testing]]))
-  #?(:cljs (:require-macros [active.clojure.function-test-util :as u])))
+  #?(:cljs (:require-macros [active.clojure.functions-test-util :as u])))
 
 (deftest partial-test
   (u/generate-tests "partial" f/partial partial

@@ -334,13 +334,13 @@
               [b (return 21)]
               (return 10))]
     (let [base (meta stmt)]
-      (is (= (set (keys base))
+      (is (= (set (keys (select-keys base #{:line :column :statement})))
              #{:line :column :statement}))
       
       (is (= (:statement base)
              '[a (return 42)]))
       
-      (is (= (meta ((:cont stmt) nil))
+      (is (= (select-keys (meta ((:cont stmt) nil)) #{:line :column :statement})
              {:statement '[b (return 21)]
               :column (:column base)
               :line (inc (or (:line base) -1))}))))

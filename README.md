@@ -139,7 +139,7 @@ these are `java.util.Map` and `clojure.lang.IPersistentMap`, in *ClojureScript*
 There are a number of interfaces, that our records defaultly implement (like
 e.g. aforementioned `java.util.Map`). Providing key:val pair
 `:remove-interfaces`:`[interface1 interface2 ...]` will prevent the
-implemntations of the given interfaces.
+implementations of the given interfaces.
 
 #### Providing own implementations of interfaces and protocols
 
@@ -171,6 +171,11 @@ Default is `true`.
 
 If you provide the key:val pair `:java-class?`:`false`, no java class is created
 for the given type, and instead a `record-type-descriptor` is created.
+
+#### Meta information
+
+If `java-class?` is `false`, you can provide meta information with keyword `:meta`.
+You can use the type's name to retrieve these infos: `(MyRecord :meta)`.
 
 ### Lenses
 

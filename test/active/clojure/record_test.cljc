@@ -375,7 +375,7 @@
   (is (= "Hello, my field value is 3"
          (say (make-say-it 3)))))
 
-;;; No java-class option tests
+;;;; No java-class option tests
 (define-record-type ICreateNoJavaClass
   {:java-class? false}
   (make-icnjc a b)
@@ -402,3 +402,24 @@
        (is (record? with))
        (is (map? with))
        (is (not (rrun/record? with))))))
+
+#?(:clj
+   (deftest rtd-records-functions-test
+     (let [r (make-icnjc 1 2)]
+       (is (icnjc? r))
+       (is (not (icajc? r)))
+       (is (= 1 (icnjc-a r)))
+       (is (= 2 (icnjc-b r))))))
+
+;;; :meta option (works only with :java-class? false)
+(define-record-type MetaInfo
+  {:java-class? false
+   :meta "I am meta information"}
+  meta-info
+  meta-info?
+  [])
+
+#?(:clj
+   (deftest meta-info-test
+     (is (= "I am meta information")
+         (MetaInfo :meta))))

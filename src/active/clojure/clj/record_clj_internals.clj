@@ -504,7 +504,7 @@
         (defn ~type [op#]
           (case op#
             :rtd ~rtd-symbol
-            :meta nil))
+            :meta ~(:meta options)))
 
         ;; Predicate
         (def ~(add-predicate-doc type predicate ?docref)

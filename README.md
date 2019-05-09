@@ -121,7 +121,7 @@ the creation of the arrow-constructor of the `defrecord` call is omitted,
 i.e.
 
 ```clojure
-(define-record-type Test {:no-arrow-constructor? true} (make-test a) ...)
+(define-record-type Test {:arrow-constructor? false} (make-test a) ...)
 ```
 won't yield a function `->Test`.
 
@@ -172,10 +172,22 @@ Default is `true`.
 If you provide the key:val pair `:java-class?`:`false`, no java class is created
 for the given type, and instead a `record-type-descriptor` is created.
 
-#### Meta information
+#### Meta information (CLJ)
 
-If `java-class?` is `false`, you can provide meta information with keyword `:meta`.
-You can use the type's name to retrieve these infos: `(MyRecord :meta)`.
+If `java-class?` is `false`, you can provide meta information with keyword
+`:meta`. You can use the type's name to retrieve these infos: `(MyRecord
+:meta)`.
+
+#### RTD record
+
+If you provide the key:val pair `:rtd-record?`:`true`, an own record
+implementation for ClojureScript is used instead of `defrecord`.
+
+#### Meta information (CLJS)
+
+If `rtd-record?` is `true`, you can provide meta information with keyword
+`:meta`. You can use the type's name to retrieve these infos: `(MyRecord
+:meta)`.
 
 ### Lenses
 

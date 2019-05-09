@@ -497,14 +497,14 @@
         ;; record-type-descriptor
         (def ~(vary-meta rtd-symbol
                          assoc :doc (str "record-type-descriptor for type " type))
-          (rrun/make-record-type-descriptor ~(str type) nil
+          (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
                                             ~(mapv rrun/make-record-field fields)))
 
         ;; type symbol is bound to a function that returns stuff.
         (defn ~type [op#]
           (case op#
             :rtd ~rtd-symbol
-            :meta ~(:meta options)))
+            :meta ~(meta type)))
 
         ;; Predicate
         (def ~(add-predicate-doc type predicate ?docref)

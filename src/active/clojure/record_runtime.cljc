@@ -1,5 +1,7 @@
 (ns active.clojure.record-runtime
-  (:refer-clojure :exclude [record?]))
+  (:refer-clojure :exclude [record?])
+  #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!
+                                                                   record-type-meta record-type-rtd]])))
 
 (defrecord RecordField [name])
 
@@ -86,7 +88,7 @@
          (aset a i (first vs))
          (recur (rest vs) (inc i))))
      (Record. rtd a))))
-   
+
 (defn record?
   [x]
   (instance? Record x))
@@ -112,7 +114,7 @@
   [^RecordTypeDescriptor rtd ^Record r ^long index]
   (record-check-rtd! rtd r)
   (aget ^{:tag "[Ljava.lang.Object;"} (.-slots r) index))
-  
+
 (defn record-update
   [^RecordTypeDescriptor rtd ^Record r ^long index v]
   (record-check-rtd! rtd r)
@@ -121,10 +123,6 @@
     (aset slots index v)
     (Record. (.-rtd r) slots)))
 
-
-;; FIXME: lens
-;; FIXME: serialization
-
 (defmacro record-type-rtd
   [rt]
   `(~rt :rtd))
@@ -132,3 +130,6 @@
 (defmacro record-type-meta
   [rt]
   `(~rt :meta))
+
+;; FIXME: lens
+;; FIXME: serialization

@@ -13,7 +13,8 @@
             #?(:cljs [active.clojure.cljs.record])
             #?(:cljs [active.clojure.record-nongenerative-test])
             #?(:cljs [cljs.test])
-            #?(:cljs [cljs.spec.alpha :as spec]))
+            #?(:cljs [cljs.spec.alpha :as spec])
+            #?(:cljs [active.clojure.record-runtime :as rrun]))
   #?(:cljs
      (:require-macros [cljs.test :refer (is deftest run-tests testing)]
                       [active.clojure.cljs.record :refer [define-record-type]]
@@ -264,9 +265,9 @@
    [a non-generative-record-auto-a])
 
 ;;; Testing auto-id needs a macro in CLJS case to access the registry
-(defmacro is-in-registry? []
-  (contains? @active.clojure.record-helper/global-record-type-registry
-             "active.clojure.record-test/NonGenerativeRecordAuto"))
+#?(:clj (defmacro is-in-registry? []
+          (contains? @active.clojure.record-helper/global-record-type-registry
+                     "active.clojure.record-test/NonGenerativeRecordAuto")))
 
 (deftest nongenerative-record-auto-id-test
   #?(:clj (is (contains? @active.clojure.record-helper/global-record-type-registry
@@ -412,14 +413,64 @@
        (is (= 2 (icnjc-b r))))))
 
 ;;; :meta option (works only with :java-class? false)
-(define-record-type MetaInfo
-  {:java-class? false
-   :meta "I am meta information"}
+(define-record-type ^{:foo "I am meta information"} MetaInfo
+  {:java-class? false}
   meta-info
   meta-info?
   [])
 
 #?(:clj
    (deftest meta-info-test
-     (is (= "I am meta information")
-         (MetaInfo :meta))))
+     (is (= "I am meta information"
+            (:foo (MetaInfo :meta))))))
+
+
+;;;; rtd-records
+#?(:cljs
+   (define-record-type ICreateRtd
+     {:rtd-record? true}
+     (make-icrtd a b)
+     icrtd?
+     [a icrtd-a
+      b icrtd-b]))
+#?(:cljs
+   (define-record-type ICreateNoRtd
+     {:rtd-record? false}
+     (make-icnrtd a b)
+     icnrtd?
+     [a icnrtd-a
+      b icnrtd-b]))
+
+
+#?(:cljs
+   (deftest rtd-record-test
+     (let [without (make-icnrtd 5 "foo")
+           with (make-icrtd 5 "foo")]
+       (is (record? without))
+       (is (map? without))
+       (is (not (rrun/record? without)))
+
+       (is (not (record? with)))
+       (is (not (map? with)))
+       (is (rrun/record? with)))))
+
+#?(:cljs
+   (deftest rtd-records-functions-cljs-test
+     (let [r (make-icrtd 1 2)]
+       (is (icrtd? r))
+       (is (not (icnrtd? r)))
+       (is (= 1 (icrtd-a r)))
+       (is (= 2 (icrtd-b r))))))
+
+;;; :meta option (works only with :rtd-record? true)
+#?(:cljs
+   (define-record-type ^{:foo "I am meta information"} MetaInfoCljs
+     {:rtd-record? true}
+     meta-infoc
+     meta-infoc?
+     []))
+
+#?(:cljs
+   (deftest meta-info-CLJS-test
+     (is (= "I am meta information"
+            (:foo (MetaInfoCljs :meta))))))

@@ -169,6 +169,16 @@
                                             "what's your last name?" "Sperber"})
                                           (ex3)))))
 
+(deftest with-handler-state
+  (is (= [nil {::with-handler-state true}]
+         (run-free-reader-state-exception (null-monad-command-config nil nil)
+                                          (monadic
+                                           (with-handler
+                                             (fn [exn]
+                                               (put-state-component! ::with-handler-state true))
+                                             (monadic
+                                              (free-throw 'something))))))))
+
 (deftest test-and-finally
   (is (= [(make-exception-value "It's Mike") {::output ["Hello"]}]
          (run-free-reader-state-exception (run-ask-tell-config

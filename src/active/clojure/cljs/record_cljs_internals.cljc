@@ -3,7 +3,7 @@
             [cljs.compiler :as comp]
             #?(:cljs [cljs.core :as core])
             #?(:cljs [cljs.analyzer :as ana])
-            #?(:cljs [cljs.spec.alpha :as spec])
+            #?(:cljs [cljs.spec.alpha])
             [active.clojure.record-runtime :as rrun])
   #?(:cljs (:require-macros [cljs.core :as core])))
 
@@ -337,10 +337,10 @@
 (defn add-spec-code [spec-name predicate field-triples constructor-args constructor]
   `(do
      ;; Spec for a record type
-     (spec/def ~spec-name
-       (spec/and ~predicate
+     (cljs.spec.alpha/def ~spec-name
+       (cljs.spec.alpha/and ~predicate
                  ~@(map (fn [[?field ?accessor _]]
-                          `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
+                          `#(cljs.spec.alpha/valid? ~(name-spec ?field) (~?accessor %)))
                         field-triples)))
      ;; Spec for constructor function
      ~(let [c-specs (mapcat (fn [constructor-arg]
@@ -348,8 +348,8 @@
                                                          (map first field-triples)))]
                                 [(keyword constructor-arg) (name-spec field)]))
                             constructor-args)]
-        `(spec/fdef ~constructor
-           :args (spec/cat ~@c-specs)
+        `(cljs.spec.alpha/fdef ~constructor
+           :args (cljs.spec.alpha/cat ~@c-specs)
            :ret ~spec-name))))
 
 (defn fn-get-accessor-from-field-triple
@@ -443,10 +443,10 @@
        ~(when-let [spec-name (:spec options)]
           `(do
              ;; Spec for a record type
-             (spec/def ~spec-name
-               (spec/and ~predicate
+             (cljs.spec.alpha/def ~spec-name
+               (cljs.spec.alpha/and ~predicate
                          ~@(map (fn [[field accessor _]]
-                                  `#(spec/valid? ~(name-spec field) (~accessor %)))
+                                  `#(cljs.spec.alpha/valid? ~(name-spec field) (~accessor %)))
                                 field-triples)))
              ;; Spec for constructor function
              ~(let [c-specs (mapcat (fn [constructor-arg]
@@ -454,8 +454,8 @@
                                                                  (map first field-triples)))]
                                         [(keyword constructor-arg) (name-spec field)]))
                                     constructor-args)]
-                `(spec/fdef ~constructor
-                   :args (spec/cat ~@c-specs)
+                `(cljs.spec.alpha/fdef ~constructor
+                   :args (cljs.spec.alpha/cat ~@c-specs)
                    :ret ~spec-name))))
        ~r)))
 
@@ -475,13 +475,8 @@
                          assoc :doc (str "record-type-descriptor for type " type))
           (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
                                             ~(mapv rrun/make-record-field fields)))
-        ;; Type symbol
-        #_(def ~(vary-meta type assoc
-                         :doc (str "This is the type symbol for records of type [[" type
-                                   "]] with fields " fields ""))
-          (quote ~type)
-          )
 
+        ;; type symbol is bound to a function that returns stuff.
         (defn ~type [op#]
           (case op#
             :rtd ~rtd-symbol

@@ -4,6 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0"]
+                 [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [io.aviso/pretty "0.1.34"]
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [org.clojure/test.check "0.10.0-alpha2"]]
@@ -26,7 +27,14 @@
                                  :optimizations :whitespace  ;; This is required for testing with nashorn.
                                  :pretty-print true}}}}
 
-  :profiles {:cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
+  :profiles {:dev {:dependencies   [[lein-doo "0.1.7"]
+                                    [com.bhauman/figwheel-main "0.2.0"]
+                                    [com.bhauman/rebel-readline-cljs "0.1.4"]]
+                   :resource-paths ["target" "resources"]}
+
+             :test {:source-paths ["src" "test"]}
+
+             :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [com.cemerick/piggieback "0.2.2"]
                                    [org.clojure/tools.nrepl "0.2.10"]
                                    [doo "0.1.10"]]
@@ -37,7 +45,7 @@
 
   :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]
             "test-phantom" ["with-profile" "cljs" "doo" "phantom" "test"]
-            }
+            "fig" ["trampoline" "with-profile" "+dev,+test" "run" "-m" "figwheel.main" "-b" "dev" "-r"]}
 
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-doo "0.1.10"]]

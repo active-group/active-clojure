@@ -154,8 +154,10 @@
                    subs)))
 
 (deftest constructor-spec-test
-  ;; Needs to be called, so that function spec errors are given:
-  (spec-test/instrument)
+  ;; Needs to be called, so that function spec errors are given
+  ;; "Instrument takes a fully-qualified symbol to resolve it in
+  ;; the context of the current namespace."
+  (spec-test/instrument `constructor-ns)
   (try (make-int-string 2.2 "a")
        (catch #?(:clj Exception :cljs js/Error) e
          (is (includes? e "2.2" "int?"))))
@@ -212,6 +214,12 @@
    (make-generative-record field)
    generative-record?
    [field generative-record-field])
+
+;;; CLJS only:
+;;; After evaluating the following expression, it is expected, that you get warnings like these
+;; [Figwheel:WARNING] Compile Warning: map->GenerativeRecord at line 212 is being replaced  /Users/kaan/projekte/active-clojure/test/active/clojure/record_test.cljc   line:217  column:1
+;; [Figwheel:WARNING] Compile Warning: generative-record? at line 212 is being replaced  /Users/kaan/projekte/active-clojure/test/active/clojure/record_test.cljc   line:217  column:1
+;; [Figwheel:WARNING] Compile Warning: make-generative-record at line 212 is being replaced  /Users/kaan/projekte/active-clojure/test/active/clojure/record_test.cljc   line:217  column:1
 
 (define-record-type GenerativeRecord
    (make-generative-record)

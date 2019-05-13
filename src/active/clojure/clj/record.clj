@@ -16,6 +16,14 @@
                                    predicate field-triples opt+specs))))
 
 
+(defmacro record-type-rtd
+   [rt]
+   `(~rt :rtd))
+
+(defmacro record-type-meta
+  [rt]
+  `(~rt :meta))
+
 ;; (defn predicate->record-meta [predicate]
 ;;   ;; Expects a namespace resolved predicate
 ;;   ;; if the predicate meta contains UnresolvedRecordMeta it returns a RecordMeta

@@ -174,9 +174,9 @@ for the given type, and instead a `record-type-descriptor` is created.
 
 #### Meta information (CLJ)
 
-If `java-class?` is `false`, you can provide meta information with keyword
-`:meta`. You can use the type's name to retrieve these infos: `(MyRecord
-:meta)`.
+If `java-class?` is `false`, you can provide meta information via
+`(define-record-type ^{:foo "bar"} MyRecord)`. You can use the type's name to
+retrieve these infos: `(MyRecord :meta)`.
 
 #### RTD record
 
@@ -185,9 +185,9 @@ implementation for ClojureScript is used instead of `defrecord`.
 
 #### Meta information (CLJS)
 
-If `rtd-record?` is `true`, you can provide meta information with keyword
-`:meta`. You can use the type's name to retrieve these infos: `(MyRecord
-:meta)`.
+If `rtd-record?` is `true`, you can provide meta information via
+`(define-record-type ^{:foo "bar"} MyRecord)`. You can use the type's name to
+retrieve these infos: `(MyRecord :meta)`.
 
 ### Lenses
 

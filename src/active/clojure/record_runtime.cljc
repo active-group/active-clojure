@@ -25,7 +25,8 @@
          fields (.-fields rtd)]
     (if (empty? fields)
       ;; FIXME: more expressive exception
-      (throw (new Error (str "field " name "not found in rtd " (.-name rtd))))
+      (throw #?(:clj (new Error (str "field " name "not found in rtd " (.-name rtd)))
+                :cljs (js/Error. (str "field " name "not found in rtd " (.-name rtd)))))
       (let [^RecordField field (first fields)]
         (if (= (.-name field) name)
           i
@@ -108,7 +109,8 @@
   `(when-not (and (record? ~?r)
                   (identical? ~?rtd (.-rtd ~?r)))
      ;; FIXME: more expressive exception
-     (throw (new Error "not a record of the correct type"))))
+     (throw #?(:clj (new Error "not a record of the correct type")
+               :cljs (js/Error. "not a record of the correct type")))))
 
 (defn record-get
   [^RecordTypeDescriptor rtd ^Record r ^long index]

@@ -824,10 +824,9 @@ Each profile has the same format as the top-level configuration itself
                                    (map (fn [[path v1 v2]]
                                           [(vec (cons idx path)) v1 v2])
                                         (diff-configuration-objects el-schema el1 el2)))
-                                 (map vector
-                                      (range)
-                                      (take common-count config-object-1)
-                                      (take common-count config-object-2)))
+                                 (range)
+                                 (take common-count config-object-1)
+                                 (take common-count config-object-2))
           triples-1 (if (> count1 count2)
                       (map (fn [idx v]
                              [[(+ idx count2)] v nil])

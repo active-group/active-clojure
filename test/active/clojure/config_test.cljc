@@ -290,3 +290,22 @@
             {:strings [{} {} {}]})))
     (is (= ["foo" "bar" "baz"]
            (c/access config string-setting strings-section)))))
+
+(deftest sequence-diff
+  (is (= '([[:strings 1 :string] "bar" "fix"])
+         (c/diff-configurations
+          strings-schema
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}
+             {:string "baz"}]})
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "fix"}
+             {:string "baz"}]})))))

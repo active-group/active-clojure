@@ -4,8 +4,10 @@
             #?(:cljs [cljs.core :as core])
             #?(:cljs [cljs.analyzer :as ana])
             #?(:cljs [cljs.spec.alpha])
-            [active.clojure.record-runtime :as rrun])
-  #?(:cljs (:require-macros [cljs.core :as core])))
+            [active.clojure.record-runtime :as rrun]
+            [active.clojure.record-helper :as r-help])
+  #?(:cljs (:require-macros [cljs.core :as core]
+                            [active.clojure.record-helper :as r-help])))
 
 #?(:clj (alias 'core 'clojure.core))
 
@@ -276,231 +278,158 @@
 
 ;;;; END CLJS internals
 
-(defn- document-with-arglist
-  [n arglist doc]
-  (vary-meta n
-             (fn [m]
-               (let [m (if (contains? m :doc)
-                         m
-                         (assoc m :doc doc))]
-                 (if (contains? m :arglists)
-                   m
-                   (assoc m :arglists `'(~arglist)))))))
-
-(defn- name-doc
-  [field]
-  (if-let [doc (:doc (meta field))]
-    (str " (" doc ")")
-    ""))
-
-(defn- name-spec
-  [field]
-  (or (:spec (meta field))
-      'cljs.core/any?))
-
-(defn- reference
-  [name]
-  (str "[[" (ns-name *ns*) "/" name "]]"))
-
-
-(defn report-lens-deprecation [type]
-  (println (str "active.clojure.record WARNING for record-type `" type
-                "`: the explicit definition of lenses is deprecated in favor of regular "
-                "accessors already being lenses")))
 
 ;;; Helper functions for emit-*-record-defintion
-(defn add-predicate-doc [type predicate docref]
-  (document-with-arglist predicate '[thing] (str "Is object a `" type "` record? " docref)))
 
-(defn add-constructor-doc [constructor constructor-args type field-triples]
-  (document-with-arglist
-   constructor
-   (vec constructor-args)
-   (str "Construct a `" type "`"
-        (name-doc type)
-        " record.\n"
-        (apply str
-               (map (fn [[?field ?accessor ?lens]]
-                      (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
-                           (if ?lens
-                             (str ", lens " (reference ?lens))
-                             "")))
-                    field-triples)))))
+#?(:clj
+   (defn add-spec-code [spec-name predicate field-triples constructor-args constructor]
+     `(do
+        ;; Spec for a record type
+        (cljs.spec.alpha/def ~spec-name
+          (cljs.spec.alpha/and ~predicate
+                               ~@(map (fn [[?field ?accessor _]]
+                                        `#(cljs.spec.alpha/valid? ~(r-help/name-spec ?field) (~?accessor %)))
+                                      field-triples)))
+        ;; Spec for constructor function
+        ~(let [c-specs (mapcat (fn [constructor-arg]
+                                 (let [field (first (filter #(= constructor-arg %)
+                                                            (map first field-triples)))]
+                                   [(keyword constructor-arg) (r-help/name-spec field)]))
+                               constructor-args)]
+           `(cljs.spec.alpha/fdef ~constructor
+              :args (cljs.spec.alpha/cat ~@c-specs)
+              :ret ~spec-name)))))
 
-(defn add-accessor-doc [accessor type field docref]
-  (document-with-arglist accessor
-                         (vector type)
-                         (str "Lens for the `" field "` field"
-                              (name-doc field)
-                              " from a [[" type "]] record. " docref)))
+#?(:clj
+   (defn fn-get-accessor-from-field-triple
+     [type docref constructor field-triples]
+     (fn [[field accessor lens]]
+       (let [rec (with-meta `rec# {:tag type})
+             data `data#
+             v `v#]
+         `[(def ~(r-help/add-accessor-doc accessor type field docref)
+             (lens/lens (fn [~rec]
+                          (when-not (instance? ~type ~rec)
+                            (throw (js/Error. ~(str "Wrong record type (" rec ") passed to accessor ("
+                                                    accessor ")."))))
+                          (. ~rec ~(symbol (str "-" field))))
+                        (fn [~data ~v]
+                          (~constructor ~@(map
+                                           (fn [[shove-field shove-accessor]]
+                                             (if (= field shove-field)
+                                               v
+                                               `(~shove-accessor ~data)))
+                                           field-triples)))))
+           ~(when lens
+              (r-help/report-lens-deprecation type)
+              `(def ~lens ~accessor))
+           ]))))
 
-(defn add-spec-code [spec-name predicate field-triples constructor-args constructor]
-  `(do
-     ;; Spec for a record type
-     (cljs.spec.alpha/def ~spec-name
-       (cljs.spec.alpha/and ~predicate
-                 ~@(map (fn [[?field ?accessor _]]
-                          `#(cljs.spec.alpha/valid? ~(name-spec ?field) (~?accessor %)))
-                        field-triples)))
-     ;; Spec for constructor function
-     ~(let [c-specs (mapcat (fn [constructor-arg]
-                              (let [field (first (filter #(= constructor-arg %)
-                                                         (map first field-triples)))]
-                                [(keyword constructor-arg) (name-spec field)]))
-                            constructor-args)]
-        `(cljs.spec.alpha/fdef ~constructor
-           :args (cljs.spec.alpha/cat ~@c-specs)
-           :ret ~spec-name))))
-
-(defn fn-get-accessor-from-field-triple
-  [type docref constructor field-triples]
-  (fn [[field accessor lens]]
-    (let [rec (with-meta `rec# {:tag type})
-          data `data#
-          v `v#]
-      `[(def ~(add-accessor-doc accessor type field docref)
-          (lens/lens (fn [~rec]
-                       (when-not (instance? ~type ~rec)
-                         (throw (js/Error. ~(str "Wrong record type (" rec ") passed to accessor ("
-                                                 accessor ")."))))
-                       (. ~rec ~(symbol (str "-" field))))
-                      (fn [~data ~v]
-                        (~constructor ~@(map
-                                         (fn [[shove-field shove-accessor]]
-                                           (if (= field shove-field)
-                                             v
-                                             `(~shove-accessor ~data)))
-                                         field-triples)))))
-        ~(when lens
-           (report-lens-deprecation type)
-           `(def ~lens ~accessor))
-        ])))
-
-(defn fn-get-accessor-from-field-triple-no-java-class
-  [type docref constructor field-triples fields rtd-symbol]
-  (fn [[field accessor lens]]
-    (let [?rec `rec#
-          ?data `data#
-          ?v `v#]
-      `[(def ~(add-accessor-doc accessor type field docref)
-           (lens/lens (fn [~?rec]
-                        ;; Get index of field, at commpile time
-                        ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
-                               i (field-index-map field)]
-                           `(rrun/record-get ~rtd-symbol ~?rec ~i)))
-                      (fn [~?data ~?v]
-                        (~constructor ~@(map
-                                         (fn [[?shove-field ?shove-accessor]]
-                                           (if (= field ?shove-field)
-                                             ?v
-                                             `(~?shove-accessor ~?data)))
-                                         field-triples)))))
-        ~(when lens
-           (report-lens-deprecation type)
-           `(def ~lens ~accessor))
-        ])))
 ;;; End of Helper functions
 
 ;;; Emit-*-record-definitions
-(defn emit-javascript-record-definition
-  [env type options constructor constructor-args predicate field-triples opt+specs]
-  (let [docref               (str "See " (reference constructor) ".")
-        constructor-args-set (set constructor-args)
-        fields                (mapv first field-triples)
-        rsym                  (vary-meta type assoc :internal-ctor true)
-        r                     (vary-meta
-                               (:name (cljs.analyzer/resolve-var (dissoc env :locals) rsym))
-                               assoc :internal-ctor true)]
-    (validate-fields "defrecord" type fields)
-    `(do
-       ;; direct use of `defrecord` - to be replaced in the future
-       ;; (defrecord ~type ~fields ~@opt+specs)
-       (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
-       ~(emit-defrecord options env rsym r fields (->impl-map opt+specs))
-       (set! (.-getBasis ~r) (fn [] '[~@fields]))
-       (set! (.-cljs$lang$type ~r) true)
-       (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))
-       (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (cljs.core/-write writer# ~(str r))))
-       ;; Create arrow constructor
-       (when-not (= false (:arrow-constructor? ~options))
-         ~(build-positional-factory rsym r fields))
-       ~(build-map-factory rsym r fields)
+#?(:clj
+   (defn emit-javascript-record-definition
+     [env type options constructor constructor-args predicate field-triples opt+specs]
+     (let [docref               (str "See " (r-help/reference constructor) ".")
+           constructor-args-set (set constructor-args)
+           fields                (mapv first field-triples)
+           rsym                  (vary-meta type assoc :internal-ctor true)
+           r                     (vary-meta
+                                  (:name (cljs.analyzer/resolve-var (dissoc env :locals) rsym))
+                                  assoc :internal-ctor true)]
+       (validate-fields "defrecord" type fields)
+       `(do
+          ;; direct use of `defrecord` - to be replaced in the future
+          ;; (defrecord ~type ~fields ~@opt+specs)
+          (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
+          ~(emit-defrecord options env rsym r fields (->impl-map opt+specs))
+          (set! (.-getBasis ~r) (fn [] '[~@fields]))
+          (set! (.-cljs$lang$type ~r) true)
+          (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))
+          (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (cljs.core/-write writer# ~(str r))))
+          ;; Create arrow constructor
+          (when-not (= false (:arrow-constructor? ~options))
+            ~(build-positional-factory rsym r fields))
+          ~(build-map-factory rsym r fields)
 
 
-       (def ~predicate (fn [x#] (instance? ~type x#)))
-       (def ~(add-constructor-doc constructor constructor-args type field-triples)
-         (fn [~@constructor-args]
-           (new ~type
-                ~@(map (fn [[field _]]
-                         (if (contains? constructor-args-set field)
-                           `~field
-                           `nil))
-                       field-triples))))
-       (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
-       ~@(mapcat (fn-get-accessor-from-field-triple type docref constructor field-triples)
-                 field-triples)
-       ;; Specs
-       ~(when-let [spec-name (:spec options)]
-          `(do
-             ;; Spec for a record type
-             (cljs.spec.alpha/def ~spec-name
-               (cljs.spec.alpha/and ~predicate
-                         ~@(map (fn [[field accessor _]]
-                                  `#(cljs.spec.alpha/valid? ~(name-spec field) (~accessor %)))
-                                field-triples)))
-             ;; Spec for constructor function
-             ~(let [c-specs (mapcat (fn [constructor-arg]
-                                      (let [field (first (filter #(= constructor-arg %)
-                                                                 (map first field-triples)))]
-                                        [(keyword constructor-arg) (name-spec field)]))
-                                    constructor-args)]
-                `(cljs.spec.alpha/fdef ~constructor
-                   :args (cljs.spec.alpha/cat ~@c-specs)
-                   :ret ~spec-name))))
-       ~r)))
+          (def ~(r-help/add-predicate-doc type predicate docref)
+            (fn [x#] (instance? ~type x#)))
+          (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+            (fn [~@constructor-args]
+              (new ~type
+                   ~@(map (fn [[field _]]
+                            (if (contains? constructor-args-set field)
+                              `~field
+                              `nil))
+                          field-triples))))
+          (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
+          ~@(mapcat (fn-get-accessor-from-field-triple type docref constructor field-triples)
+                    field-triples)
+          ;; Specs
+          ~(when-let [spec-name (:spec options)]
+             `(do
+                ;; Spec for a record type
+                (cljs.spec.alpha/def ~spec-name
+                  (cljs.spec.alpha/and ~predicate
+                                       ~@(map (fn [[field accessor _]]
+                                                `#(cljs.spec.alpha/valid? ~(r-help/name-spec field) (~accessor %)))
+                                              field-triples)))
+                ;; Spec for constructor function
+                ~(let [c-specs (mapcat (fn [constructor-arg]
+                                         (let [field (first (filter #(= constructor-arg %)
+                                                                    (map first field-triples)))]
+                                           [(keyword constructor-arg) (r-help/name-spec field)]))
+                                       constructor-args)]
+                   `(cljs.spec.alpha/fdef ~constructor
+                      :args (cljs.spec.alpha/cat ~@c-specs)
+                      :ret ~spec-name))))
+          ~r))))
 
-(defn emit-own-record-definition
-  [type options constructor constructor-args predicate field-triples opt+specs]
-  (let [?docref (str "See " (reference constructor) ".")
-         constructor-args-set (set constructor-args)
-         fields (mapv first field-triples)
+#?(:clj
+   (defn emit-own-record-definition
+     [type options constructor constructor-args predicate field-triples opt+specs]
+     (let [docref (str "See " (r-help/reference constructor) ".")
+           constructor-args-set (set constructor-args)
+           fields (mapv first field-triples)
+           _ (r-help/validate-fields fields nil)
+           rtd-symbol (gensym (str type "-rtd-gensym-"))]
+       `(do
+          (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples)
+                   ~@(map (fn [[?field ?accessor ?lens]] ?field) field-triples))
 
-         rtd-symbol (gensym (str type "-rtd-gensym-"))]
-     `(do
-        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples)
-                 ~@(map (fn [[?field ?accessor ?lens]] ?field) field-triples))
+          ;; record-type-descriptor
+          (def ~(vary-meta rtd-symbol
+                           assoc :doc (str "record-type-descriptor for type " type))
+            (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
+                                              ~(mapv rrun/make-record-field fields)))
 
-        ;; record-type-descriptor
-        (def ~(vary-meta rtd-symbol
-                         assoc :doc (str "record-type-descriptor for type " type))
-          (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
-                                            ~(mapv rrun/make-record-field fields)))
+          ;; type symbol is bound to a function that returns stuff.
+          (defn ~type [op#]
+            (case op#
+              :rtd ~rtd-symbol
+              :meta ~(meta type)
+              :ns *ns*
+              :no-op))
 
-        ;; type symbol is bound to a function that returns stuff.
-        (defn ~type [op#]
-          (case op#
-            :rtd ~rtd-symbol
-            :meta ~(meta type)
-            :ns *ns*
-            :no-op))
-
-        ;; Predicate
-        (def ~(add-predicate-doc type predicate ?docref)
-          (fn [x#]
-            (rrun/record-of-type? x# ~rtd-symbol)))
-        ;; Constructor
-        (def ~(add-constructor-doc constructor constructor-args type field-triples)
-          (fn [~@constructor-args]
-            (rrun/make-record ~rtd-symbol
-                              ~@(map (fn [[?field _]]
-                                       (if (contains? constructor-args-set ?field)
-                                         `~?field
-                                         `nil))
-                                     field-triples))))
-        ;; Accessors
-        ~@(mapcat (fn-get-accessor-from-field-triple-no-java-class
-                   type ?docref constructor field-triples fields rtd-symbol)
-                  field-triples)
-        ;; Specs
-        ~(when-let [spec-name (:spec options)]
-           (add-spec-code spec-name predicate field-triples constructor-args constructor)))))
+          ;; Predicate
+          (def ~(r-help/add-predicate-doc type predicate docref)
+            (fn [x#]
+              (rrun/record-of-type? x# ~rtd-symbol)))
+          ;; Constructor
+          (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+            (fn [~@constructor-args]
+              (rrun/make-record ~rtd-symbol
+                                ~@(map (fn [[?field _]]
+                                         (if (contains? constructor-args-set ?field)
+                                           `~?field
+                                           `nil))
+                                       field-triples))))
+          ;; Accessors
+          ~@(mapcat (r-help/fn-get-accessor-from-field-triple-no-java-class
+                     type docref constructor field-triples fields rtd-symbol)
+                    field-triples)
+          ;; Specs
+          ~(when-let [spec-name (:spec options)]
+             (add-spec-code spec-name predicate field-triples constructor-args constructor))))))

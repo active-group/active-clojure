@@ -1,6 +1,7 @@
 (ns active.clojure.record-helper
   (:require [active.clojure.lens :as lens]
-            [active.clojure.condition :as c]))
+            [active.clojure.condition :as c]
+            [clojure.spec.alpha :as spec]))
 
 ;;; Nongenerative stuff
 ;; Maps from nongenerative-id to {:ns *ns* :form define-record-form}
@@ -96,3 +97,145 @@
            ;; generative, just return arguments.
            [?type ?options ?constructor ?constructor-args ?predicate ?field-triples ?opt+specs])))
      ))
+
+
+;;; record_*_internals helpers
+#?(:clj
+   (defn report-lens-deprecation [type]
+     (println (str "active.clojure.record WARNING for record-type `" type
+                   "`: the explicit definition of lenses is deprecated in favor of regular "
+                   "accessors already being lenses"))))
+
+#?(:clj
+   (defn reference
+     [name]
+     (str "[[" (ns-name *ns*) "/" name "]]")))
+
+#?(:clj
+   (defn name-spec
+     [field]
+     (or (:spec (meta field))
+         `any?)))
+
+#?(:clj
+   (defn name-doc
+     [field]
+     (if-let [doc (:doc (meta field))]
+       (str " (" doc ")")
+       "")))
+
+#?(:clj
+   (defn document-with-arglist
+     [n arglist doc]
+     (vary-meta n
+                (fn [m]
+                  (let [m (if (contains? m :doc)
+                            m
+                            (assoc m :doc doc))]
+                    (if (contains? m :arglists)
+                      m
+                      (assoc m :arglists `'(~arglist))))))))
+
+#?(:clj
+   (defn validate-fields
+     ""
+     [fields name]
+     (let [specials '#{__meta __hash __hasheq __extmap}]
+       (when (some specials fields)
+         (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records.")))))))
+
+;;; Helper functions for emit-*-record-defintion
+#?(:clj
+   (defn add-predicate-doc [type predicate docref]
+     (document-with-arglist predicate '[thing] (str "Is object a `" type "` record? " docref))))
+
+#?(:clj
+   (defn add-constructor-doc [constructor constructor-args type field-triples]
+     (document-with-arglist
+      constructor
+      (vec constructor-args)
+      (str "Construct a `" type "`"
+           (name-doc type)
+           " record.\n"
+           (apply str
+                  (map (fn [[?field ?accessor ?lens]]
+                         (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
+                              (if ?lens
+                                (str ", lens " (reference ?lens))
+                                "")))
+                       field-triples))))))
+
+#?(:clj
+   (defn add-accessor-doc [accessor type field docref]
+     (document-with-arglist accessor
+                            (vector type)
+                            (str "Lens for the `" field "` field"
+                                 (name-doc field)
+                                 " from a [[" type "]] record. " docref))))
+
+#?(:clj
+   (defn add-spec-code [spec-name predicate field-triples constructor-args constructor]
+     `(do
+        ;; Spec for a record type
+        (spec/def ~spec-name
+          (spec/and ~predicate
+                    ~@(map (fn [[?field ?accessor _]]
+                             `#(spec/valid? ~(name-spec ?field) (~?accessor %)))
+                           field-triples)))
+        ;; Spec for constructor function
+        ~(let [c-specs (mapcat (fn [constructor-arg]
+                                 (let [field (first (filter #(= constructor-arg %)
+                                                            (map first field-triples)))]
+                                   [(keyword constructor-arg) (name-spec field)]))
+                               constructor-args)]
+           `(spec/fdef ~constructor
+              :args (spec/cat ~@c-specs)
+              :ret ~spec-name)))))
+
+#?(:clj
+   (defn fn-get-accessor-from-field-triple
+     [type docref constructor field-triples]
+     (fn [[field accessor lens]]
+       (let [?rec (with-meta `rec# {:tag type})
+             ?data `data#
+             ?v `v#]
+         `[(def ~(add-accessor-doc accessor type field docref)
+             (lens/lens (fn [~?rec]
+                          (. ~?rec ~(symbol (str "-" field))))
+                        (fn [~?data ~?v]
+                          (~constructor ~@(map
+                                           (fn [[?shove-field ?shove-accessor]]
+                                             (if (= field ?shove-field)
+                                               ?v
+                                               `(~?shove-accessor ~?data)))
+                                           field-triples)))))
+           ~(when lens
+              (report-lens-deprecation type)
+              `(def ~lens ~accessor))
+           ]))))
+
+#?(:clj
+   (defn fn-get-accessor-from-field-triple-no-java-class
+     [type docref constructor field-triples fields rtd-symbol]
+     (fn [[field accessor lens]]
+       (let [?rec `rec#
+             ?data `data#
+             ?v `v#]
+         `[(def ~(add-accessor-doc accessor type field docref)
+             (lens/lens (fn [~?rec]
+                          ;; Get index of field, at commpile time
+                          ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
+                                 i (field-index-map field)]
+                             `(rrun/record-get ~rtd-symbol ~?rec ~i)))
+                        (fn [~?data ~?v]
+                          (~constructor ~@(map
+                                           (fn [[?shove-field ?shove-accessor]]
+                                             (if (= field ?shove-field)
+                                               ?v
+                                               `(~?shove-accessor ~?data)))
+                                           field-triples)))))
+           ~(when lens
+              (report-lens-deprecation type)
+              `(def ~lens ~accessor))
+           ]))))
+;;; End of Helper functions

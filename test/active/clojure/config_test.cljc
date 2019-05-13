@@ -320,3 +320,32 @@
             [{:string "foo"}
              {:string "fix"}
              {:string "baz"}]})))))
+
+(def map-of-range-schema
+  (c/schema "map-of-range-diff-example"
+            (c/setting :mp
+                       "map example"
+                       (c/map-of-range c/string-range c/string-range))))
+
+(deftest map-of-range-diff
+  (is (= (set
+          '([[:mp "1"] "one" nil]
+            [[:mp "2"] "two" "fortytwo"]
+            [[:mp "23"] nil "twentythree"]))
+         (set
+          (c/diff-configurations
+           map-of-range-schema
+           (c/make-configuration
+            map-of-range-schema
+            []
+            {:mp
+             {"1" "one"
+              "2" "two"
+              "3" "three"}})
+           (c/make-configuration
+            map-of-range-schema
+            []
+            {:mp
+             {"23" "twentythree"
+              "2" "fortytwo"
+              "3" "three"}}))))))

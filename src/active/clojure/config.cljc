@@ -52,15 +52,24 @@ Each profile has the same format as the top-level configuration itself
      or a [[RangeError]] object.
   - `reduce` is a function accepting a range, a key, a function, an initial result,
      and a value, reducing collection values similar to clojure [[reduce]], calling
-     `(f range key res v)` on all scalar values."
+     `(f range key res v)` on all scalar values.
+  - `diff` is a function accepting two values that returns a sequence of `[path v1 v2]`, see
+    diff functions below"
      }
-   make-range description completer reduce)
+   really-make-range description completer reduce diff)
   range?
   [description range-description
    ;; takes the range, a key that says where the value was found, and the value
    ;; returns either a "completed" value or a range error
    completer range-completer
-   reduce range-reduce])
+   reduce range-reduce
+   diff range-diff])
+
+(defn make-range
+  ([description completer reduce]
+   (make-range description completer reduce (fn [a b] [[nil a b]])))
+  ([description completer reduce diff]
+   (really-make-range description completer reduce diff)))
 
 (define-record-type
   ^{:doc "Description of an error that occurred during range checking"}
@@ -385,7 +394,19 @@ Each profile has the same format as the top-level configuration itself
                              v))
                           res
                           v)))
-              ))
+              ;; diff: keys of map-of-ranges are added to path and the values
+              ;; then are diffed themselves
+              (fn [a b]
+                (let [keys-in-both
+                      (set/union (set (keys a)) (set (keys b)))]
+                  (remove nil? (mapcat (fn [k] (let [v-a (get a k)
+                                                     v-b (get b k)]
+                                                 (if (not= v-a v-b)
+                                                   (map (fn [[p' v1' v2']]
+                                                          [(concat [k] p') v1' v2'])
+                                                        ((range-diff val-range) (get a k) (get b k)))
+                                                   nil)))
+                                       keys-in-both))))))
 
 #?(:clj (def slurpable-range
   "Range for something that may be passed to [[slurp]]."
@@ -794,6 +815,14 @@ Each profile has the same format as the top-level configuration itself
                res)
       (really-make-configuration res schema))))
 
+(defn diff-setting-values
+  "Returns sequence of triples `[path-vector version-1 version-2]` of settings that differ.
+   Handles some ranges more intelligently."
+  [setting path v1 v2]
+  (map (fn [[p' v1' v2']]
+         [(concat path p') v1' v2'])
+       ((range-diff (setting-range setting)) v1 v2)))
+
 (defn diff-configuration-objects
   "Returns sequence of triples `[path-vector version-1 version-2]` of settings that differ.
 
@@ -802,12 +831,14 @@ Each profile has the same format as the top-level configuration itself
   (cond
     (map-schema? schema)
     (concat (filter identity
-                    (map (fn [[key _]]
-                           (let [v1 (get config-object-1 key)
-                                 v2 (get config-object-2 key)]
-                             (and (not= v1 v2)
-                                  [[key] v1 v2])))
-                         (map-schema-settings-map schema)))
+                    (mapcat
+                     (fn [[key setting]]
+                       (let [v1 (get config-object-1 key)
+                             v2 (get config-object-2 key)]
+                         (if (not= v1 v2)
+                           (diff-setting-values setting [key] v1 v2)
+                           [])))
+                     (map-schema-settings-map schema)))
             (mapcat (fn [[key section]]
                       (map (fn [[path v1 v2]]
                              [(vec (cons key path)) v1 v2])

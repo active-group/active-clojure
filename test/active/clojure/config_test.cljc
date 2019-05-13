@@ -219,6 +219,17 @@
 
 
 (deftest diff
+  (is (empty?
+       (c/diff-configurations
+        schema3
+        (c/make-configuration
+         schema3
+         []
+         {:inherits {:foo 5}})
+        (c/make-configuration
+         schema3
+         []
+         {:inherits {:foo 5}}))))
   (is (= '([[:inherits :foo] 5 0] [[:outer :inherits :foo] 5 0])
          (c/diff-configurations
           schema3

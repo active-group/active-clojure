@@ -86,14 +86,19 @@ Each profile has the same format as the top-level configuration itself
    path range-error-path
    value range-error-value])
 
+(defn scalar-range-reduce
+  [completer]
+  (fn [range path f res val]
+    (let [v' (completer range path val)]
+      (c/assert (not (range-error? v')) (pr-str v'))
+      (f range path res v'))))
+
 (defn make-scalar-range
   "Make a range for unstructured, non-collection ranges."
-  [description completer]
-  (make-range description completer
-              (fn [range path f res val]
-                (let [v' (completer range path val)]
-                  (c/assert (not (range-error? v')) (pr-str v'))
-                  (f range path res v')))))
+  ([description completer]
+   (make-range description completer (scalar-range-reduce completer)))
+  ([description completer diff]
+   (make-range description completer (scalar-range-reduce completer) diff)))
 
 (defn any-value-range
   "Range for any value at all."
@@ -146,7 +151,8 @@ Each profile has the same format as the top-level configuration itself
                 (if (nil? val)
                   (f range path res nil) ;; or just res?
                   ((range-reduce range) range path f
-                   res val)))))
+                   res val)))
+              (fn [a b] ((range-diff range) a b))))
 
 (defn optional-default-range
   "Range for something that may be in an underlying range. If it is nil, then `dflt` is used, which must be in the underlying range too."
@@ -161,7 +167,8 @@ Each profile has the same format as the top-level configuration itself
                 ((range-reduce range) range path f
                  res (if (nil? val)
                        dflt
-                       val)))))
+                       val)))
+              (fn [a b] ((range-diff range) a b))))
 
 (defn integer-between-range
   "Range for an integer from a specified range, with explicit default."
@@ -359,6 +366,22 @@ Each profile has the same format as the top-level configuration itself
                           (map-indexed vector (map vector v rs)))))
               ))
 
+(defn map-of-ranges-diff-fn
+  ;; diff: keys of map-of-ranges are added to path and the values
+  ;; then are diffed themselves
+  [range]
+  (fn [a b]
+    (let [keys-in-both
+          (set/union (set (keys a)) (set (keys b)))]
+      (remove nil? (mapcat (fn [k] (let [v-a (get a k)
+                                         v-b (get b k)]
+                                     (if (not= v-a v-b)
+                                       (map (fn [[p' v1' v2']]
+                                              [(concat [k] p') v1' v2'])
+                                            ((range-diff range) (get a k) (get b k)))
+                                       nil)))
+                           keys-in-both)))))
+
 (defn map-of-range
   "Range for a map with keys and values of underlying ranges, respectively."
   [key-range val-range]
@@ -394,19 +417,7 @@ Each profile has the same format as the top-level configuration itself
                              v))
                           res
                           v)))
-              ;; diff: keys of map-of-ranges are added to path and the values
-              ;; then are diffed themselves
-              (fn [a b]
-                (let [keys-in-both
-                      (set/union (set (keys a)) (set (keys b)))]
-                  (remove nil? (mapcat (fn [k] (let [v-a (get a k)
-                                                     v-b (get b k)]
-                                                 (if (not= v-a v-b)
-                                                   (map (fn [[p' v1' v2']]
-                                                          [(concat [k] p') v1' v2'])
-                                                        ((range-diff val-range) (get a k) (get b k)))
-                                                   nil)))
-                                       keys-in-both))))))
+              (map-of-ranges-diff-fn val-range)))
 
 #?(:clj (def slurpable-range
   "Range for something that may be passed to [[slurp]]."
@@ -842,8 +853,8 @@ Each profile has the same format as the top-level configuration itself
             (mapcat (fn [[key section]]
                       (map (fn [[path v1 v2]]
                              [(vec (cons key path)) v1 v2])
-                           (diff-configuration-objects (section-schema section) 
-                                                (get config-object-1 key) (get config-object-2 key))))
+                           (diff-configuration-objects (section-schema section)
+                                                       (get config-object-1 key) (get config-object-2 key))))
                     (map-schema-sections-map schema)))
 
     (sequence-schema? schema)

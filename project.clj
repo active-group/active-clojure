@@ -27,7 +27,10 @@
                                  :optimizations :whitespace  ;; This is required for testing with nashorn.
                                  :pretty-print true}}}}
 
-  :profiles {:dev {:dependencies   [[lein-doo "0.1.7"]
+  :profiles {;; to use figwheel-main
+             ;; run `lein fig` and then open browser at
+             ;; http://localhost:9500/figwheel-extra-main/auto-testing
+             :dev {:dependencies   [[lein-doo "0.1.7"]
                                     [com.bhauman/figwheel-main "0.2.0"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]]
                    :resource-paths ["target" "resources"]}

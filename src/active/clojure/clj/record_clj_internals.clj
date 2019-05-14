@@ -279,14 +279,14 @@
   ctor pulling the extra args out of the & overage parameter.  Finally, the
   arity is constrained to the number of expected fields and an ArityException
   will be thrown at runtime if the actual arg count does not match."
-   [nom classname fields]
+   [nom classname fields meta-data]
    (let [fn-name (symbol (str '-> nom))
          [field-args over] (split-at 20 fields)
          field-count (count fields)
          arg-count (count field-args)
          over-count (count over)
          docstring (str "Positional factory function for class " classname ".")]
-     `(defn ~fn-name
+     `(defn ~(vary-meta fn-name (fn [m] (merge meta-data m)))
         ~docstring
         [~@field-args ~@(if (seq over) '[& overage] [])]
         ~(if (seq over)
@@ -302,7 +302,8 @@
 (defn emit-java-record-definition
    [type options constructor constructor-args predicate field-triples opt+specs]
    (let [?docref (str "See " (r-help/reference constructor) ".")
-         constructor-args-set (set constructor-args)]
+         constructor-args-set (set constructor-args)
+         meta-data (meta type)]
      `(do
         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples))
         ~(let [fields (mapv first field-triples)
@@ -320,19 +321,19 @@
               (import ~classname)
               ;; Create arrow constructor
               (when-not (= false (:arrow-constructor? ~options))
-                ~(build-positional-factory type classname fields))
-              (defn ~(symbol (str 'map-> type))
+                ~(build-positional-factory type classname fields meta-data))
+              (defn ~(vary-meta (symbol (str 'map-> type)) (fn [m] (merge meta-data m)))
                 ~(str "Factory function for class " classname ", taking a map of keywords to field values.")
                 ([m#] (~(symbol (str classname "/create"))
                        (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
               ~classname))
 
         ;; Predicate
-        (def ~(r-help/add-predicate-doc type predicate ?docref)
+        (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
           (fn [x#]
             (instance? ~type x#)))
         ;; Constructor
-        (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+        (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
           (fn [~@constructor-args]
             (new ~type
                  ~@(map (fn [[?field _]]
@@ -341,7 +342,7 @@
                             `nil))
                         field-triples))))
         ;; Accessors
-        ~@(mapcat (r-help/fn-get-accessor-from-field-triple type ?docref constructor field-triples)
+        ~@(mapcat (r-help/fn-get-accessor-from-field-triple type ?docref constructor field-triples meta-data)
                   field-triples)
         ;; Specs
         ~(when-let [spec-name (:spec options)]
@@ -364,28 +365,31 @@
          constructor-args-set (set constructor-args)
          fields (mapv first field-triples)
          _ (r-help/validate-fields fields nil)
-         rtd-symbol (gensym (str type "-rtd-gensym-"))]
+         rtd-symbol (gensym (str type "-rtd-gensym-"))
+         meta-data (meta type)]
      `(do
         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples))
 
         ;; record-type-descriptor
-        (def ~(vary-meta rtd-symbol
-                         assoc :doc (str "record-type-descriptor for type " type))
+        (def ~(r-help/add-meta rtd-symbol
+                               (merge meta-data {:doc (str "record-type-descriptor for type " type)}))
           (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
                                             ~(mapv rrun/make-record-field fields)))
 
         ;; type symbol is bound to a function that returns stuff.
-        (defn ~type [op#]
+        (defn ~(r-help/add-meta type meta-data) [op#]
           (case op#
             :rtd ~rtd-symbol
-            :meta ~(meta type)))
+            :meta ~(meta type)
+            :ns *ns*
+            :no-op))
 
         ;; Predicate
-        (def ~(r-help/add-predicate-doc type predicate ?docref)
+        (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
           (fn [x#]
             (rrun/record-of-type? x# ~rtd-symbol)))
         ;; Constructor
-        (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+        (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
           (fn [~@constructor-args]
             (rrun/make-record ~rtd-symbol
                               ~@(map (fn [[?field _]]
@@ -395,7 +399,7 @@
                                      field-triples))))
         ;; Accessors
         ~@(mapcat (r-help/fn-get-accessor-from-field-triple-no-java-class
-                   type ?docref constructor field-triples fields rtd-symbol)
+                   type ?docref constructor field-triples fields rtd-symbol meta-data)
                   field-triples)
         ;; Specs
         ~(when-let [spec-name (:spec options)]

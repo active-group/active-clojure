@@ -302,12 +302,12 @@
 
 #?(:clj
    (defn fn-get-accessor-from-field-triple
-     [type docref constructor field-triples]
+     [type docref constructor field-triples meta-data]
      (fn [[field accessor lens]]
        (let [rec (with-meta `rec# {:tag type})
              data `data#
              v `v#]
-         `[(def ~(r-help/add-accessor-doc accessor type field docref)
+         `[(def ~(r-help/add-meta (r-help/add-accessor-doc accessor type field docref) meta-data)
              (lens/lens (fn [~rec]
                           (when-not (instance? ~type ~rec)
                             (throw (js/Error. ~(str "Wrong record type (" rec ") passed to accessor ("
@@ -337,7 +337,8 @@
            rsym                  (vary-meta type assoc :internal-ctor true)
            r                     (vary-meta
                                   (:name (cljs.analyzer/resolve-var (dissoc env :locals) rsym))
-                                  assoc :internal-ctor true)]
+                                  assoc :internal-ctor true)
+           meta-data (meta type)]
        (validate-fields "defrecord" type fields)
        `(do
           ;; direct use of `defrecord` - to be replaced in the future
@@ -353,10 +354,10 @@
             ~(build-positional-factory rsym r fields))
           ~(build-map-factory rsym r fields)
 
-
-          (def ~(r-help/add-predicate-doc type predicate docref)
+          ;; Predicate
+          (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate docref) meta-data)
             (fn [x#] (instance? ~type x#)))
-          (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+          (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
             (fn [~@constructor-args]
               (new ~type
                    ~@(map (fn [[field _]]
@@ -365,7 +366,7 @@
                               `nil))
                           field-triples))))
           (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
-          ~@(mapcat (fn-get-accessor-from-field-triple type docref constructor field-triples)
+          ~@(mapcat (fn-get-accessor-from-field-triple type docref constructor field-triples meta-data)
                     field-triples)
           ;; Specs
           ~(when-let [spec-name (:spec options)]
@@ -394,31 +395,32 @@
            constructor-args-set (set constructor-args)
            fields (mapv first field-triples)
            _ (r-help/validate-fields fields nil)
-           rtd-symbol (gensym (str type "-rtd-gensym-"))]
+           rtd-symbol (gensym (str type "-rtd-gensym-"))
+           meta-data (meta type)]
        `(do
           (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples)
                    ~@(map (fn [[?field ?accessor ?lens]] ?field) field-triples))
 
           ;; record-type-descriptor
-          (def ~(vary-meta rtd-symbol
-                           assoc :doc (str "record-type-descriptor for type " type))
+          (def ~(r-help/add-meta rtd-symbol
+                                 (merge meta-data {:doc (str "record-type-descriptor for type " type)}))
             (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
                                               ~(mapv rrun/make-record-field fields)))
 
           ;; type symbol is bound to a function that returns stuff.
-          (defn ~type [op#]
+          (defn ~(r-help/add-meta type meta-data) [op#]
             (case op#
               :rtd ~rtd-symbol
-              :meta ~(meta type)
+              :meta ~meta-data
               :ns *ns*
               :no-op))
 
           ;; Predicate
-          (def ~(r-help/add-predicate-doc type predicate docref)
+          (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate docref) meta-data)
             (fn [x#]
               (rrun/record-of-type? x# ~rtd-symbol)))
           ;; Constructor
-          (def ~(r-help/add-constructor-doc constructor constructor-args type field-triples)
+          (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
             (fn [~@constructor-args]
               (rrun/make-record ~rtd-symbol
                                 ~@(map (fn [[?field _]]
@@ -428,7 +430,7 @@
                                        field-triples))))
           ;; Accessors
           ~@(mapcat (r-help/fn-get-accessor-from-field-triple-no-java-class
-                     type docref constructor field-triples fields rtd-symbol)
+                     type docref constructor field-triples fields rtd-symbol meta-data)
                     field-triples)
           ;; Specs
           ~(when-let [spec-name (:spec options)]

@@ -227,7 +227,7 @@
   unknown-command (make-unknown-command))
 
 (define-record-type
-  ^{doc "Configuration for supporting a set of monad commands."}
+  ^{:doc "Configuration for supporting a set of monad commands."}
   MonadCommandConfig
   (make-monad-command-config run-command env state)
   monad-command-config?

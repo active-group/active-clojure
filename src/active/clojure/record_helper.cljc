@@ -137,6 +137,11 @@
                       (assoc m :arglists `'(~arglist))))))))
 
 #?(:clj
+   (defn add-meta
+     [sym meta-info]
+     (vary-meta sym (fn [m] (merge meta-info m)))))
+
+#?(:clj
    (defn validate-fields
      ""
      [fields name]
@@ -148,6 +153,7 @@
 #?(:clj
    (defn add-predicate-doc [type predicate docref]
      (document-with-arglist predicate '[thing] (str "Is object a `" type "` record? " docref))))
+
 
 #?(:clj
    (defn add-constructor-doc [constructor constructor-args type field-triples]
@@ -194,12 +200,12 @@
 
 #?(:clj
    (defn fn-get-accessor-from-field-triple
-     [type docref constructor field-triples]
+     [type docref constructor field-triples meta-info]
      (fn [[field accessor lens]]
        (let [?rec (with-meta `rec# {:tag type})
              ?data `data#
              ?v `v#]
-         `[(def ~(add-accessor-doc accessor type field docref)
+         `[(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
              (lens/lens (fn [~?rec]
                           (. ~?rec ~(symbol (str "-" field))))
                         (fn [~?data ~?v]
@@ -216,12 +222,12 @@
 
 #?(:clj
    (defn fn-get-accessor-from-field-triple-no-java-class
-     [type docref constructor field-triples fields rtd-symbol]
+     [type docref constructor field-triples fields rtd-symbol meta-info]
      (fn [[field accessor lens]]
        (let [?rec `rec#
              ?data `data#
              ?v `v#]
-         `[(def ~(add-accessor-doc accessor type field docref)
+         `[(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
              (lens/lens (fn [~?rec]
                           ;; Get index of field, at commpile time
                           ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))

@@ -482,3 +482,52 @@
    (deftest meta-info-CLJS-test
      (is (= "I am meta information"
             (:foo (MetaInfoCljs :meta))))))
+
+
+
+;;; test meta-info inheritance
+
+(define-record-type ^{:foo "bar" :private true} MetaInheritance
+  ^{:floo "blar" :doc "Alternative documentation"} make-mi
+  ^{:floo "blar" :doc "Alternative documentation"} mi?
+  [a ^{:floo "blar" :doc "Alternative documentation"} mi-a])
+
+(deftest meta-inheritance-test
+  (is (= "bar" (:foo (meta #'->MetaInheritance))))
+  (is (= true (:private (meta #'->MetaInheritance))))
+  (is (= "bar" (:foo (meta #'map->MetaInheritance))))
+  (is (= true (:private (meta #'map->MetaInheritance))))
+  (is (= "bar" (:foo (meta #'mi-a))))
+  (is (= "blar" (:floo (meta #'mi-a))))
+  (is (= "Alternative documentation" (:doc (meta #'mi-a))))
+  (is (= true (:private (meta #'mi-a))))
+  (is (= "bar" (:foo (meta #'make-mi))))
+  (is (= "blar" (:floo (meta #'make-mi))))
+  (is (= "Alternative documentation" (:doc (meta #'make-mi))))
+  (is (= true (:private (meta #'make-mi))))
+  (is (= "bar" (:foo (meta #'mi?))))
+  (is (= "blar" (:floo (meta #'mi?))))
+  (is (= "Alternative documentation" (:doc (meta #'mi?))))
+  (is (= true (:private (meta #'mi?)))))
+
+(define-record-type ^{:foo "bar" :private true} MetaInheritanceRTD
+  {:java-class? false ; CLJ
+   :rtd-record? true  ; CLJS
+   }
+  ^{:floo "blar" :doc "Alternative documentation"} make-mi-rtd
+  ^{:floo "blar" :doc "Alternative documentation"} mi-rtd?
+  [a ^{:floo "blar" :doc "Alternative documentation"} mi-rtd-a])
+
+(deftest meta-inheritance-rtd-test
+  (is (= "bar" (:foo (meta #'mi-rtd-a))))
+  (is (= "blar" (:floo (meta #'mi-rtd-a))))
+  (is (= "Alternative documentation" (:doc (meta #'mi-rtd-a))))
+  (is (= true (:private (meta #'mi-rtd-a))))
+  (is (= "bar" (:foo (meta #'make-mi-rtd))))
+  (is (= "blar" (:floo (meta #'make-mi-rtd))))
+  (is (= "Alternative documentation" (:doc (meta #'make-mi-rtd))))
+  (is (= true (:private (meta #'make-mi-rtd))))
+  (is (= "bar" (:foo (meta #'mi-rtd?))))
+  (is (= "blar" (:floo (meta #'mi-rtd?))))
+  (is (= "Alternative documentation" (:doc (meta #'mi-rtd?))))
+  (is (= true (:private (meta #'mi-rtd?)))))

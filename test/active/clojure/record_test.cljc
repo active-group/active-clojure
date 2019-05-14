@@ -57,7 +57,7 @@
     (is (= 2 (schmdr r)))))
 
 
-;; Uninstantiated fields
+;; Uninstantiated fields and custom constructor args order
 
 (define-record-type Pu
   (make-pu c a)
@@ -73,6 +73,55 @@
     (is (= 2 (pua p)))
     (is (= 1 (puc p)))
     (is (nil? (pub p)))))
+
+(define-record-type Mu
+  (make-mu a b)
+  mu?
+  [a mua
+   b mub
+   c muc])
+
+(define-record-type MuRTD
+  {:java-class? false ; CLJ
+   :rtd-record? true} ; CLJS
+  (make-murtd a b)
+  murtd?
+  [a murtda
+   b murtdb
+   c murtdc])
+
+(deftest lens-shove-works-with-omitted-constructor-args-test
+  ;; Lens Law 1
+  (let [m (make-mu 1 2)]
+    (is (= 3
+           (muc (lens/shove m muc 3)))))
+  (let [m (make-murtd 1 2)]
+    (is (= 3
+           (murtdc (lens/shove m murtdc 3))))))
+
+(define-record-type Nu
+  (make-nu a c b)
+  nu?
+  [a nua
+   b nub
+   c nuc])
+
+(define-record-type NuRTD
+  (make-nurtd a c b)
+  nurtd?
+  [a nurtda
+   b nurtdb
+   c nurtdc])
+
+(deftest lens-shove-works-with-swapped-constructor-args-test
+  ;; Lens Law 1
+  (let [n (make-nu 1 2 3)]
+    (is (= (make-nu  1 3 3)
+           (lens/shove n nuc 3))))
+  (let [n (make-nurtd 1 2 3)]
+    (is (= (make-nurtd  1 3 3)
+           (lens/shove n nurtdc 3)))))
+
 
 ;; Records with lenses
 

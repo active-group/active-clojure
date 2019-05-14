@@ -314,12 +314,13 @@
                                                     accessor ")."))))
                           (. ~rec ~(symbol (str "-" field))))
                         (fn [~data ~v]
-                          (~constructor ~@(map
-                                           (fn [[shove-field shove-accessor]]
-                                             (if (= field shove-field)
-                                               v
-                                               `(~shove-accessor ~data)))
-                                           field-triples)))))
+                          ;; can't be ~constructor because constructor may take fewer arguments
+                          (new ~type ~@(map
+                                        (fn [[shove-field shove-accessor]]
+                                          (if (= field shove-field)
+                                            v
+                                            `(~shove-accessor ~data)))
+                                        field-triples)))))
            ~(when lens
               (r-help/report-lens-deprecation type)
               `(def ~lens ~accessor))

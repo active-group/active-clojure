@@ -16,7 +16,8 @@
                                                    null-monad-command-config
                                                    run-free-reader-state-exception execute-free-reader-state-exception
                                                    monad-command-config-run-command
-                                                   reify-command reify-as)])
+                                                   reify-command reify-as
+                                                   put-state-component!)])
             [active.clojure.condition :as c]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))

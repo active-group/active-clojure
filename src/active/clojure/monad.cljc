@@ -2,7 +2,10 @@
   "Monad related functionality, particularly free monads."
   (:require [active.clojure.condition :as c]
             #?(:clj [active.clojure.clj.record :refer [define-record-type]])
-            #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]]))
+            #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
+            #?(:clj [clojure.core :as core])
+            #?(:cljs [cljs.core :as core])
+            )
   #?(:cljs (:require-macros [active.clojure.monad :refer [monadic]])))
 
 (define-record-type ^:no-doc Return

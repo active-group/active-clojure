@@ -158,10 +158,8 @@
   (core/let [hinted-fields fields
              fields (vec (map #(with-meta % nil) fields))
              base-fields fields
-             pr-open (core/str "#" #?(:clj  (.getNamespace rname)
-                                      :cljs (namespace rname))
-                               "." #?(:clj  (.getName rname)
-                                      :cljs (name rname))
+             pr-open (core/str "#" (namespace rname)
+                               "." (name rname)
                                "{")
              fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
     (core/let [gs (gensym)

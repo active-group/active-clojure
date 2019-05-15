@@ -29,7 +29,7 @@ Each profile has the same format as the top-level configuration itself
    (:clj
     [(:require
       [active.clojure.condition :as c]
-      [active.clojure.clj.record :refer :all]
+      [active.clojure.record :refer :all]
       [clojure.set :as set])
      (:import java.net.URL)]
     :cljs
@@ -213,7 +213,7 @@ Each profile has the same format as the top-level configuration itself
                                                (str " with maximum length of " max-length)
                                                ""))
                      (fn [range path val]
-                       (if (and (string? val) (not (empty? val)) 
+                       (if (and (string? val) (not (empty? val))
                                 (if (some? max-length) (<= (count val) max-length) true))
                          val
                          (make-range-error range path val)))))

@@ -16,7 +16,7 @@ Example: A card consists of a number and a color
 
 ```clojure
 (ns namespace
-  (:require [active.clojure.clj.record :as r]))
+  (:require [active.clojure.record :as r]))
 
 (r/define-record-type Card
   (make-card number color)

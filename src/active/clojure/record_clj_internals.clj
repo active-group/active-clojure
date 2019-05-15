@@ -1,4 +1,4 @@
-(ns active.clojure.clj.record-clj-internals
+(ns active.clojure.record-clj-internals
   (:require [active.clojure.condition :as c]
             [active.clojure.lens :as lens]
             [active.clojure.record-runtime :as rrun]

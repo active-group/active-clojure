@@ -1,5 +1,5 @@
 (ns active.clojure.record-nongenerative-test
-  (:require #?(:clj [active.clojure.clj.record :refer [define-record-type]])
+  (:require #?(:clj [active.clojure.record :refer [define-record-type]])
             #?(:cljs [active.clojure.cljs.record]))
   #?(:cljs
      (:require-macros [active.clojure.cljs.record :refer [define-record-type]])))

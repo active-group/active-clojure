@@ -1,7 +1,7 @@
-(ns active.clojure.clj.record
+(ns active.clojure.record
   (:require [active.clojure.record-helper :as r-help]
-            [active.clojure.clj.record-clj-internals :refer [emit-java-record-definition
-                                                             emit-own-record-definition]]))
+            [active.clojure.record-clj-internals :refer [emit-java-record-definition
+                                                         emit-own-record-definition]]))
 
 (defmacro define-record-type
   [?type ?second & ?params]

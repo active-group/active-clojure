@@ -2,7 +2,7 @@
   (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
             #?(:clj [clojure.spec.alpha :as spec])
-            #?(:clj [active.clojure.clj.record :refer [define-record-type]])
+            #?(:clj [active.clojure.record :refer [define-record-type]])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [active.clojure.record-runtime :as rrun])

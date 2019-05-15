@@ -1,7 +1,7 @@
 (ns active.clojure.mock-monad
   "Mock monadic programs"
   (:require [active.clojure.monad :as monad]
-            #?(:clj [active.clojure.clj.record :refer :all])
+            #?(:clj [active.clojure.record :refer :all])
             #?(:clj [active.clojure.macro :refer [if-cljs]])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]])

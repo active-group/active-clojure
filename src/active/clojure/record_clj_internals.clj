@@ -261,7 +261,7 @@
                                                      ['java.util.Map 'clojure.lang.IPersistentMap])
                                                    (:remove-interfaces opts))))))
 
-          interfaces (vec (keys new-interfaces+methods))
+          interfaces (vec (remove #{'Object 'java.lang.Object} (keys new-interfaces+methods)))
           methods (apply concat (vec (vals new-interfaces+methods)))]
        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
           ~(conj hinted-fields '__meta '__extmap

@@ -30,7 +30,7 @@
   :profiles {;; to use figwheel-main
              ;; run `lein fig` and then open browser at
              ;; http://localhost:9500/figwheel-extra-main/auto-testing
-             :dev {:dependencies   [[lein-doo "0.1.7"]
+             :dev {:dependencies   [[lein-doo "0.1.10"]
                                     [com.bhauman/figwheel-main "0.2.0"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]
                                     [compojure "1.6.1"]]
@@ -39,9 +39,8 @@
              :test {:source-paths ["src" "test"]}
 
              :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
-                                   [com.cemerick/piggieback "0.2.2"]
-                                   [org.clojure/tools.nrepl "0.2.10"]
-                                   [doo "0.1.10"]]
+                                   [cider/piggieback "0.4.0"]
+                                   [nrepl/nrepl "0.6.0"]]
                     ;; run CLJS repl with
                     ;; lein with-profile cljs repl
                     ;; (cemerick.piggieback/cljs-repl (cljs.repl.rhino/repl-env))

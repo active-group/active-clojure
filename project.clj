@@ -32,7 +32,8 @@
              ;; http://localhost:9500/figwheel-extra-main/auto-testing
              :dev {:dependencies   [[lein-doo "0.1.7"]
                                     [com.bhauman/figwheel-main "0.2.0"]
-                                    [com.bhauman/rebel-readline-cljs "0.1.4"]]
+                                    [com.bhauman/rebel-readline-cljs "0.1.4"]
+                                    [compojure "1.6.1"]]
                    :resource-paths ["target" "resources"]}
 
              :test {:source-paths ["src" "test"]}
@@ -48,7 +49,10 @@
 
   :aliases {"test-nashorn" ["with-profile" "cljs" "doo" "nashorn" "test"]
             "test-phantom" ["with-profile" "cljs" "doo" "phantom" "test"]
-            "fig" ["trampoline" "with-profile" "+dev,+test" "run" "-m" "figwheel.main" "-b" "dev" "-r"]}
+            "fig" ["trampoline" "with-profile" "+dev,+test" "run" "-m" "figwheel.main" "-b" "dev" "-r"]
+            "figtest" ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
+            "figtest-headless" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url]}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
+            "figtest-headless-linux" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/opt/google/chrome/chrome\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]}
 
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-doo "0.1.10"]]

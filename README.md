@@ -4,6 +4,12 @@ A library with various basic utilities for programming with Clojure.
 
 [![Clojars Project](https://img.shields.io/clojars/v/de.active-group/active-clojure.svg)](https://clojars.org/de.active-group/active-clojure)
 
+### Breaking changes since version `0.28.0`
+- Clojure version 1.9.0 or higher and Clojurescript version 1.9.542 or higher
+  are required.
+-  the namespace of ClojureScript's `define-record-type` has changed from
+`active.clojure.record` to `active.clojure.cljs.record`.
+
 ## Usage
 
 ## Records

@@ -261,6 +261,7 @@
                                                      ['java.util.Map 'clojure.lang.IPersistentMap])
                                                    (:remove-interfaces opts))))))
 
+          ;; Remove `java.lang.Object` from interfaces. It isn't an interface
           interfaces (vec (remove #{'Object 'java.lang.Object} (keys new-interfaces+methods)))
           methods (apply concat (vec (vals new-interfaces+methods)))]
        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname

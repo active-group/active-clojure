@@ -433,6 +433,20 @@
   (is (= "Hello, my field value is 3"
          (say (make-say-it 3)))))
 
+;;; Override method of ` Object` test
+(define-record-type ObjectToString
+  (make-ots a b)
+  ots?
+  [a ots-a
+   b ots-b]
+  Object
+  (toString [this] (str "Hello " a " " b)))
+
+(deftest override-object-method-toString-test
+  (is (= "Hello 3 4"
+         (str (make-ots 3 4)))))
+
+
 ;;;; No java-class option tests
 (define-record-type ICreateNoJavaClass
   {:java-class? false}

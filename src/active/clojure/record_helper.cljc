@@ -266,21 +266,22 @@
 
 #?(:clj
 
-   (defn define-constructor
+
+   (defn define-constructor-rtd
      "Defines a constructor based on a record-constructor-fn. This function takes one argument, a list of field symbols."
-     [type internal-constructor ic-args constructor-symbol constructor-args-symbols field-tuples meta-data]
+     [type rtd-symbol constructor-symbol constructor-args-symbols field-tuples meta-data]
      (let [sym-with-meta+doc (-> constructor-symbol
                                (add-constructor-doc constructor-args-symbols type field-tuples)
                                (add-meta meta-data))]
 
        `(def ~sym-with-meta+doc
           (fn [~@constructor-args-symbols]
-            (~internal-constructor ~ic-args
-              ~(map (fn [[field _]]
-                      (if (contains? (set constructor-args-symbols) field)
-                        `~field
-                        nil))
-                 field-tuples)))))))
+            (rrun/make-record ~rtd-symbol
+              ~@(map (fn [[field _]]
+                       (if (contains? (set constructor-args-symbols) field)
+                         `~field
+                         nil))
+                  field-tuples)))))))
 
 
 #_(defn define-accessors [type internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data]
@@ -288,3 +289,41 @@
       (get-accessor-from-field-tuple-no-java-class type
         internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data)
       field-tuples))
+
+
+#?(:clj
+   (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]
+
+     (let [?docref    (str "See " (reference constructor) ".")
+           fields     (mapv first field-tuples)
+           _          (validate-fields! fields)
+           rtd-symbol (gensym (str type "-rtd-gensym-"))
+           meta-data  (meta type)
+
+           field-triple->accessor (get-accessor-from-field-tuple-no-java-class
+                                    type ?docref constructor field-tuples fields rtd-symbol meta-data)
+           ]
+
+       `(do
+          (declare
+            ~@(map second field-tuples)
+            ~@(map first field-tuples))
+
+          ~(define-record-type-descriptor meta-data type fields rtd-symbol)
+          ~(define-type-function meta-data type rtd-symbol)
+
+
+          ;; Predicate
+          (def ~(add-meta (add-predicate-doc type predicate ?docref) meta-data)
+            (fn [x#] (rrun/record-of-type? x# ~rtd-symbol)))
+
+          ;; Constructor
+          ~(define-constructor-rtd type
+             rtd-symbol constructor constructor-args field-tuples meta-data)
+
+          ;; Accessors
+          ~@(map field-triple->accessor field-tuples)
+
+          ;; Specs
+          ~(when-let [spec-name (:spec options)]
+             (add-spec-code spec-name predicate field-tuples constructor-args constructor))))))

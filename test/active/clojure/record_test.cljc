@@ -9,7 +9,6 @@
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
-            #?(:cljs [active.clojure.condition :refer (Throwable)])
             #?(:cljs [active.clojure.cljs.record])
             #?(:cljs [active.clojure.record-nongenerative-test])
             #?(:cljs [cljs.test])
@@ -38,7 +37,8 @@
     (is (= 2 (kdr r)))))
 
 (deftest unique
-  (is (thrown? Throwable
+  (is (thrown? #?(:clj Throwable
+                  :cljs js/Object)
                (kar (FakePare. 1 2)))))
 
 ;; Omit constructor args

@@ -9,11 +9,11 @@
   ;; (only, when :nongenerative option is truthy)
   (when-let [[type options constructor constructor-args predicate field-triples opt+specs]
              (r-help/prepare-arguments! &form *ns* ?type ?second ?params)]
-    (if (= false (:java-class? options))
+    (if (false? (:java-class? options))
       (emit-own-record-definition type options constructor constructor-args
-                                  predicate field-triples opt+specs)
+        predicate field-triples opt+specs)
       (emit-java-record-definition type options constructor constructor-args
-                                   predicate field-triples opt+specs))))
+        predicate field-triples opt+specs))))
 
 
 (defmacro record-type-rtd

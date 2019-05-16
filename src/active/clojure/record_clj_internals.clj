@@ -360,48 +360,55 @@
 
 
 
-(defn emit-own-record-definition
-   [type options constructor constructor-args predicate field-triples opt+specs]
-   (let [?docref (str "See " (r-help/reference constructor) ".")
-         constructor-args-set (set constructor-args)
-         fields (mapv first field-triples)
-         _ (r-help/validate-fields fields nil)
-         rtd-symbol (gensym (str type "-rtd-gensym-"))
-         meta-data (meta type)]
-     `(do
-        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples))
+(defn emit-own-record-definition [type options constructor constructor-args predicate field-triples opt+specs]
 
-        ;; record-type-descriptor
-        (def ~(r-help/add-meta rtd-symbol
-                               (merge meta-data {:doc (str "record-type-descriptor for type " type)}))
-          (rrun/make-record-type-descriptor '~(symbol (str (ns-name *ns*)) (str type)) nil
-                                            ~(mapv rrun/make-record-field fields)))
+  (let [?docref (str "See " (r-help/reference constructor) ".")
+        constructor-args-set (set constructor-args)
+        fields (mapv first field-triples)
+        _ (r-help/validate-fields fields nil)
+        rtd-symbol (gensym (str type "-rtd-gensym-"))
+        meta-data (meta type)
 
-        ;; type symbol is bound to a function that returns stuff.
-        (defn ~(r-help/add-meta type meta-data) [op#]
-          (case op#
-            :rtd ~rtd-symbol
-            :meta ~(meta type)
-            :ns *ns*
-            :no-op))
+        field-triple->accessor (r-help/fn-get-accessor-from-field-triple-no-java-class
+                                 type ?docref constructor field-triples fields rtd-symbol meta-data)]
+    `(do
+       (declare ~@(map second field-triples))
 
-        ;; Predicate
-        (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
-          (fn [x#]
-            (rrun/record-of-type? x# ~rtd-symbol)))
-        ;; Constructor
-        (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
-          (fn [~@constructor-args]
-            (rrun/make-record ~rtd-symbol
-                              ~@(map (fn [[?field _]]
-                                       (if (contains? constructor-args-set ?field)
-                                         `~?field
-                                         `nil))
-                                     field-triples))))
-        ;; Accessors
-        ~@(mapcat (r-help/fn-get-accessor-from-field-triple-no-java-class
-                   type ?docref constructor field-triples fields rtd-symbol meta-data)
-                  field-triples)
-        ;; Specs
-        ~(when-let [spec-name (:spec options)]
-           (r-help/add-spec-code spec-name predicate field-triples constructor-args constructor)))))
+       ;; record-type-descriptor
+       ~(let [meta+doc (merge meta-data {:doc (str "record-type-descriptor for type " type)})
+              record-type-symbol (symbol (str (ns-name *ns*)) (str type))
+              record-fields (mapv rrun/make-record-field fields)]
+
+          `(def ~(r-help/add-meta rtd-symbol meta+doc)
+             (rrun/make-record-type-descriptor '~record-type-symbol nil ~record-fields)))
+
+       ;; type symbol is bound to a function that returns stuff.
+       (defn ~(r-help/add-meta type meta-data) [op#]
+         (case op#
+           :rtd  ~rtd-symbol
+           :meta ~(meta type)
+           :ns   *ns*
+           :no-op))
+
+       ;; Predicate
+       (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
+         (fn [x#]
+           (rrun/record-of-type? x# ~rtd-symbol)))
+
+       ;; Constructor
+       ~(let [sym-with-meta+doc (-> constructor
+                                  (r-help/add-constructor-doc constructor-args type field-triples)
+                                  (r-help/add-meta meta-data))]
+        `(def ~sym-with-meta+doc
+           (fn [~@constructor-args]
+             (rrun/make-record ~rtd-symbol
+               ~@(map (fn [[field _]]
+                        (if (contains? constructor-args-set field)
+                          `~field
+                          `nil))
+                   field-triples)))))
+       ;; Accessors
+       ~@(mapcat field-triple->accessor field-triples)
+       ;; Specs
+       ~(when-let [spec-name (:spec options)]
+          (r-help/add-spec-code spec-name predicate field-triples constructor-args constructor)))))

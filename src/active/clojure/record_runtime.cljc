@@ -46,6 +46,8 @@
                       vs)
        (Record. ~rtd ~a))))
 
+
+
 (defn make-record
   ([^RecordTypeDescriptor rtd]
    (Record. rtd (object-array 0)))

@@ -35,36 +35,42 @@
      (let [?options          (when (map? ?second) ?second)
            ?constructor-call (if ?options (first ?params) ?second)
            ?predicate        (if ?options (second ?params) (first ?params))
-           ?field-specs      (if ?options (nth ?params 2) (second ?params))
+           ?field-tuples     (if ?options (nth ?params 2) (second ?params))
            ?opt+specs        (if ?options (drop 3 ?params) (drop 2 ?params))]
+
        (when-not (or (and (list? ?constructor-call)
                        (not (empty? ?constructor-call)))
                    (symbol? ?constructor-call))
          (throw (throw-illegal-argument-exception (str "constructor call must be a list in " ns " " (meta form)))))
-       (when-not (vector? ?field-specs)
-         (throw (throw-illegal-argument-exception (str "field specs must be a vector in " ns " " (meta form)))))
-       (when-not (even? (count (remove seq? ?field-specs)))
-         (throw (throw-illegal-argument-exception (str "odd number of elements in field specs in " ns " " (meta form)))))
-       (when-not (every? true? (map #(= 3 (count %1)) (filter seq? ?field-specs)))
-         (throw (throw-illegal-argument-exception (str "wrong number of elements in field specs with lens in " ns " " (meta form)))))
-       (let [field-tuples (loop [specs   (seq ?field-specs)
-                                 triples '()]
-                            (if (empty? specs)
-                              (reverse triples)
-                              (let [spec (first specs)]
+
+       (when-not (vector? ?field-tuples)
+         (throw (throw-illegal-argument-exception (str "field tuples must be a vector in " ns " " (meta form)))))
+
+       (when-not (even? (count (remove seq? ?field-tuples)))
+         (throw (throw-illegal-argument-exception (str "odd number of elements in field tuples in " ns " " (meta form)))))
+
+       (when-not (every? true? (map #(= 3 (count %1)) (filter seq? ?field-tuples)))
+         (throw (throw-illegal-argument-exception (str "wrong number of elements in field tuples with lens in " ns " " (meta form)))))
+
+       (let [field-tuples (loop [?tuples   (seq ?field-tuples)
+                                 acc '()]
+                            (if (empty? ?tuples)
+                              (reverse acc)
+
+                              (let [tuple (first ?tuples)]
                                 (cond
-                                  (not (symbol? spec))
-                                  (throw (throw-illegal-argument-exception (str "invalid field spec " spec " in " ns " " (meta form))))
+                                  (not (symbol? tuple))
+                                  (throw (throw-illegal-argument-exception (str "invalid field tuple " tuple " in " ns " " (meta form))))
 
-                                  (empty? (rest specs))
-                                  (throw (throw-illegal-argument-exception (str "incomplete field spec for " spec " in " ns " " (meta form))))
+                                  (empty? (rest ?tuples))
+                                  (throw (throw-illegal-argument-exception (str "incomplete field tuple for " tuple " in " ns " " (meta form))))
 
-                                  (not (symbol? (fnext specs)))
-                                  (throw (throw-illegal-argument-exception (str "invalid accessor " (fnext specs) " for " spec " in " ns " " (meta form))))
+                                  (not (symbol? (fnext ?tuples)))
+                                  (throw (throw-illegal-argument-exception (str "invalid accessor " (fnext ?tuples) " for " tuple " in " ns " " (meta form))))
 
                                   :default
-                                  (recur (nnext specs)
-                                    (list* [spec (fnext specs) nil] triples))))))
+                                  (recur (nnext ?tuples)
+                                    (list* [tuple (fnext ?tuples) nil] acc))))))
 
              [?constructor & ?constructor-args] (cond
                                                   (list? ?constructor-call)
@@ -137,9 +143,9 @@
      (vary-meta sym (fn [m] (merge meta-info m)))))
 
 #?(:clj
-   (defn validate-fields
-     ""
-     [fields name]
+   (defn validate-fields!
+     "Checks if magics are used in field-names, throws if present"
+     [fields]
      (let [specials '#{__meta __hash __hasheq __extmap}]
        (when (some specials fields)
          (throw (AssertionError. (str "The names in " specials " cannot be used as field names for types or records.")))))))
@@ -151,20 +157,17 @@
 
 
 #?(:clj
-   (defn add-constructor-doc [constructor constructor-args type field-triples]
+   (defn add-constructor-doc [constructor constructor-args type field-tuples]
      (document-with-arglist
-      constructor
-      (vec constructor-args)
-      (str "Construct a `" type "`"
-           (name-doc type)
-           " record.\n"
-           (apply str
-                  (map (fn [[?field ?accessor ?lens]]
-                         (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)
-                              (if ?lens
-                                (str ", lens " (reference ?lens))
-                                "")))
-                       field-triples))))))
+       constructor
+       (vec constructor-args)
+       (str "Construct a `" type "`"
+         (name-doc type)
+         " record.\n"
+         (apply str
+           (map (fn [[?field ?accessor]]
+                  (str "\n`" ?field "`" (name-doc ?field) ": access via " (reference ?accessor)))
+             field-tuples))))))
 
 #?(:clj
    (defn add-accessor-doc [accessor type field docref]
@@ -217,28 +220,71 @@
            ]))))
 
 #?(:clj
-   (defn fn-get-accessor-from-field-triple-no-java-class
-     [type docref constructor field-triples fields rtd-symbol meta-info]
-     (fn [[field accessor lens]]
-       (let [?rec `rec#
+   (defn get-accessor-from-field-tuple-no-java-class
+     [type docref constructor field-tuples fields rtd-symbol meta-info]
+     (fn [[field accessor]]
+       (let [?rec  `rec#
              ?data `data#
-             ?v `v#]
-         `[(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
-             (lens/lens (fn [~?rec]
-                          ;; Get index of field, at commpile time
-                          ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
-                                 i (field-index-map field)]
-                             `(rrun/record-get ~rtd-symbol ~?rec ~i)))
-                        (fn [~?data ~?v]
-                          ;; can't be ~constructor because constructor may take fewer arguments
-                          (rrun/make-record ~rtd-symbol
-                                            ~@(map (fn [[?shove-field ?shove-accessor]]
-                                                     (if (= field ?shove-field)
-                                                       ?v
-                                                       `(~?shove-accessor ~?data)))
-                                                   field-triples)))))
-           ~(when lens
-              (report-lens-deprecation type)
-              `(def ~lens ~accessor))
-           ]))))
-;;; End of Helper functions
+             ?v    `v#]
+         `(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
+           (lens/lens (fn [~?rec]
+                        ;; Get index of field, at commpile time
+                        ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
+                               i               (field-index-map field)]
+                           `(println ~i)
+                           `(rrun/record-get ~rtd-symbol ~?rec ~i)))
+             (fn [~?data ~?v]
+               ;; can't be ~constructor because constructor may take fewer arguments
+               (rrun/make-record ~rtd-symbol
+                 ~@(map (fn [[shove-field shove-accessor]]
+                          (if (= field shove-field)
+                            ?v
+                            `(~shove-accessor ~?data)))
+                     field-tuples)))))))))
+
+
+
+#?(:clj
+  (defn define-record-type-descriptor [meta-data type fields rtd-symbol]
+    (let [meta+doc           (merge meta-data {:doc (str "record-type-descriptor for type " type)})
+          record-type-symbol (symbol (str (ns-name *ns*)) (str type))
+          record-fields      (mapv rrun/make-record-field fields)]
+
+      `(def ~(add-meta rtd-symbol meta+doc)
+         (rrun/make-record-type-descriptor '~record-type-symbol nil ~record-fields)))))
+
+
+#?(:clj
+   (defn define-type-function [meta-data type rtd-symbol]
+     `(defn ~(add-meta type meta-data) [op#]
+        (case op#
+          :rtd  ~rtd-symbol
+          :meta ~(meta type)
+          :ns   *ns*
+          :no-op))))
+
+
+#?(:clj
+
+   (defn define-constructor
+     "Defines a constructor based on a record-constructor-fn. This function takes one argument, a list of field symbols."
+     [type internal-constructor ic-args constructor-symbol constructor-args-symbols field-tuples meta-data]
+     (let [sym-with-meta+doc (-> constructor-symbol
+                               (add-constructor-doc constructor-args-symbols type field-tuples)
+                               (add-meta meta-data))]
+
+       `(def ~sym-with-meta+doc
+          (fn [~@constructor-args-symbols]
+            (~internal-constructor ~ic-args
+              ~(map (fn [[field _]]
+                      (if (contains? (set constructor-args-symbols) field)
+                        `~field
+                        nil))
+                 field-tuples)))))))
+
+
+#_(defn define-accessors [type internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data]
+    (map
+      (get-accessor-from-field-tuple-no-java-class type
+        internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data)
+      field-tuples))

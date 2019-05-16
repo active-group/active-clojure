@@ -41,7 +41,6 @@
   (is (thrown? Throwable
                (kar (FakePare. 1 2)))))
 
-
 ;; Omit constructor args
 
 (define-record-type Schmare

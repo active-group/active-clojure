@@ -272,6 +272,7 @@
           ~@(mapcat identity opts)
           ~@methods))))
 
+
 (defn- build-positional-factory
    "Used to build a positional factory for a given type/record.  Because of the
   limitation of 20 arguments to Clojure functions, this factory needs to be
@@ -299,15 +300,38 @@
               (throw (clojure.lang.ArityException. (+ ~arg-count (count ~'overage)) (name '~fn-name))))
            `(new ~classname ~@field-args)))))
 
+
 ;;; Emit-*-record-definitions
+
+
+
+(defn make-get-accessor-from-field-tuple-fn
+  [type docref constructor field-tuples meta-info]
+  (fn [[field accessor lens]]
+    (let [?rec  (with-meta `rec# {:tag type})
+          ?data `data#
+          ?v    `v#]
+      `(def ~(r-help/add-meta (r-help/add-accessor-doc accessor type field docref) meta-info)
+        (lens/lens (fn [~?rec]
+                     (. ~?rec ~(symbol (str "-" field))))
+          (fn [~?data ~?v]
+            ;; can't be ~constructor because constructor may take fewer arguments
+            (new ~type ~@(map
+                           (fn [[?shove-field ?shove-accessor]]
+                             (if (= field ?shove-field)
+                               ?v
+                               `(~?shove-accessor ~?data)))
+                           field-tuples))))))))
+
 (defn emit-java-record-definition
-   [type options constructor constructor-args predicate field-triples opt+specs]
-   (let [?docref (str "See " (r-help/reference constructor) ".")
-         constructor-args-set (set constructor-args)
-         meta-data (meta type)]
+   [type options constructor constructor-args predicate field-tuples opt+specs]
+  (let [?docref              (str "See " (r-help/reference constructor) ".")
+        constructor-args-set (set constructor-args)
+        meta-data            (meta type)]
      `(do
-        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-triples))
-        ~(let [fields (mapv first field-triples)
+        ;; This block is copy pasted from the original defrecord implementation & slightly altered
+        (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-tuples))
+        ~(let [fields (mapv first field-tuples)
                _ (r-help/validate-fields! fields)
                [interfaces+methods opts] (parse-opts+specs opt+specs)
                opts (merge opts options)
@@ -329,25 +353,32 @@
                        (if (instance? clojure.lang.MapEquivalence m#) m# (into {} m#)))))
               ~classname))
 
+
         ;; Predicate
         (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
-          (fn [x#]
-            (instance? ~type x#)))
+          (fn [x#] (instance? ~type x#)))
+
+
         ;; Constructor
-        (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)
+        ;; We cannot use define-constructor here, since the number of argument of new
+        ;; must be known at compile time and, thus, is not applyable.
+        (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-tuples) meta-data)
           (fn [~@constructor-args]
             (new ~type
                  ~@(map (fn [[?field _]]
                           (if (contains? constructor-args-set ?field)
                             `~?field
                             `nil))
-                        field-triples))))
+                        field-tuples))))
         ;; Accessors
-        ~@(mapcat (r-help/fn-get-accessor-from-field-triple type ?docref constructor field-triples meta-data)
-                  field-triples)
+        ~@(map (make-get-accessor-from-field-tuple-fn type
+                 ?docref constructor field-tuples meta-data)
+            field-tuples)
+
         ;; Specs
         ~(when-let [spec-name (:spec options)]
-           (r-help/add-spec-code spec-name predicate field-triples constructor-args constructor))
+           (r-help/add-spec-code spec-name predicate field-tuples constructor-args constructor))
+
         ;; When `map-protocol?` is `false`, we have to provide a print-method implementation
         ~(when (= false (:map-protocol? options))
            (let [w (vary-meta `w# assoc :tag 'java.io.Writer)
@@ -356,6 +387,6 @@
                 (.write ~w (str ~(str "#" *ns* "." type)
                                 (into {} ~(mapv (fn [[?field ?accessor _]]
                                                   `(vector ~(keyword ?field) (~?accessor ~v)))
-                                                field-triples))))))))))
+                                                field-tuples))))))))))
 
 

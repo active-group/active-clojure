@@ -348,6 +348,7 @@
           (set! (.-cljs$lang$type ~r) true)
           (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(str r))))
           (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (cljs.core/-write writer# ~(str r))))
+
           ;; Create arrow constructor
           (when-not (= false (:arrow-constructor? ~options))
             ~(build-positional-factory rsym r fields))
@@ -369,6 +370,7 @@
           (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
           ~@(mapcat (fn-get-accessor-from-field-triple type docref constructor field-triples meta-data)
                     field-triples)
+
           ;; Specs
           ~(when-let [spec-name (:spec options)]
              `(do

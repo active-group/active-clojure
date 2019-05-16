@@ -196,31 +196,11 @@
               :args (spec/cat ~@c-specs)
               :ret ~spec-name)))))
 
-#?(:clj
-   (defn fn-get-accessor-from-field-triple
-     [type docref constructor field-triples meta-info]
-     (fn [[field accessor lens]]
-       (let [?rec (with-meta `rec# {:tag type})
-             ?data `data#
-             ?v `v#]
-         `[(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
-             (lens/lens (fn [~?rec]
-                          (. ~?rec ~(symbol (str "-" field))))
-                        (fn [~?data ~?v]
-                          ;; can't be ~constructor because constructor may take fewer arguments
-                          (new ~type ~@(map
-                                        (fn [[?shove-field ?shove-accessor]]
-                                          (if (= field ?shove-field)
-                                            ?v
-                                            `(~?shove-accessor ~?data)))
-                                        field-triples)))))
-           ~(when lens
-              (report-lens-deprecation type)
-              `(def ~lens ~accessor))
-           ]))))
+
 
 #?(:clj
-   (defn get-accessor-from-field-tuple-no-java-class
+   (defn make-get-accessor-from-field-tuple-fn
+     "Creating helper function for rtd-record generation"
      [type docref constructor field-tuples fields rtd-symbol meta-info]
      (fn [[field accessor]]
        (let [?rec  `rec#
@@ -269,14 +249,14 @@
 
    (defn define-constructor-rtd
      "Defines a constructor based on a record-constructor-fn. This function takes one argument, a list of field symbols."
-     [type rtd-symbol constructor-symbol constructor-args-symbols field-tuples meta-data]
+     [type make-record constructor-symbol constructor-args-symbols field-tuples meta-data]
      (let [sym-with-meta+doc (-> constructor-symbol
                                (add-constructor-doc constructor-args-symbols type field-tuples)
                                (add-meta meta-data))]
 
        `(def ~sym-with-meta+doc
           (fn [~@constructor-args-symbols]
-            (rrun/make-record ~rtd-symbol
+            (~make-record
               ~@(map (fn [[field _]]
                        (if (contains? (set constructor-args-symbols) field)
                          `~field
@@ -300,9 +280,8 @@
            rtd-symbol (gensym (str type "-rtd-gensym-"))
            meta-data  (meta type)
 
-           field-triple->accessor (get-accessor-from-field-tuple-no-java-class
-                                    type ?docref constructor field-tuples fields rtd-symbol meta-data)
-           ]
+           field-triple->accessor (make-get-accessor-from-field-tuple-fn
+                                    type ?docref constructor field-tuples fields rtd-symbol meta-data)]
 
        `(do
           (declare
@@ -318,8 +297,13 @@
             (fn [x#] (rrun/record-of-type? x# ~rtd-symbol)))
 
           ;; Constructor
-          ~(define-constructor-rtd type
-             rtd-symbol constructor constructor-args field-tuples meta-data)
+          ;; We are defining a anonymous function for the define constructor function.
+          ;; Since this function cannot be constructed in clj, we need to it at runtime.
+          ;; To make the symbol `a` known to both, we define it before-hand in macro expansion
+          ~(let [a (gensym)]
+           `(let [~a (fn [& x#] (apply rrun/make-record ~rtd-symbol x#))]
+             ~(define-constructor-rtd type
+                a constructor constructor-args field-tuples meta-data)))
 
           ;; Accessors
           ~@(map field-triple->accessor field-tuples)

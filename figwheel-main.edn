@@ -1,0 +1,6 @@
+{:target-dir "resources"
+ :log-level :info
+ :open-url false
+ :auto-testing true
+ :watch-dirs ["src" "test" "dev"]
+ :extra-main-files {:testing {:main signatures.figwheel-test-runner}}}

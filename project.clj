@@ -11,8 +11,6 @@
 
   :generated-paths ["target"]
 
-  :clean-targets ^{:protect false} [:generated-paths]
-
   :cljsbuild {:builds
               {:dev {:source-paths ["src"]
                      :compiler {:output-to "target/main.js"
@@ -34,9 +32,10 @@
                                     [com.bhauman/figwheel-main "0.2.0"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]
                                     [compojure "1.6.1"]]
-                   :resource-paths ["target" "resources"]}
-
-             :test {:source-paths ["src" "test"]}
+                   :source-paths ["src" "dev"]
+                   :clean-targets ^{:protect false} ["resources/public/js/compiled"
+                                                     "resources/public/cljs-out"
+                                                     :target-path]}
 
              :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [cider/piggieback "0.4.0"]

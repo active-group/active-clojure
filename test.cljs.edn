@@ -2,9 +2,5 @@
   :ring-server-options {:port 9550}
   :open-url "http://[[server-hostname]]:[[server-port]]/test"
   :ring-handler active.clojure.figwheel/figwheel-test-handler
-  :repl-eval-timeout 60000
-  :target-dir "resources"
-  :log-level :info
-  :auto-testing true
-  :extra-main-files {:testing {:main active.clojure.figwheel-test-runner}}}
+  :repl-eval-timeout 60000}
 {:main active.clojure.figwheel-test-runner}

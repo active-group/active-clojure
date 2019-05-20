@@ -54,9 +54,9 @@
        (stest/instrument)
        (try (make-kv "foo" :bar)
             (catch Exception e
-              (t/is (= "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec:
-In: [0] val: \"foo\" fails spec: :active.clojure.record-spec-test/k at: [:args :k] predicate: int?\n"
-                       (.getMessage e))))))))
+              (t/is (clojure.string/includes?
+                     (.getMessage e)
+                     "Call to #'active.clojure.record-spec-test/make-kv did not conform to spec")))))))
 
 (define-record-type Dith
   (make-dith tso)

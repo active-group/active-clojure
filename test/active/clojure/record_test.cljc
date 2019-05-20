@@ -282,13 +282,19 @@
    [field non-generative-record-field])
 
 ;; Helper macro that allows to test a macro.
+;; Note: Clojure / Java introduced new error handling features with Clojure version 1.10.0.
+;; Therefore we're using `(.getMessage (.getCause e))` now instead of only `(getMessage e)`.
 #?(:clj (defmacro throws-exception?
           [form]
           (try
             (eval form)
             (catch Exception e
-              (= "This record type definition already exists with different arguments."
-                 (.getMessage e))))))
+              (or (clojure.string/includes?
+                   (str e)
+                   "This record type definition already exists with different arguments.")
+                  (clojure.string/includes?
+                   (.getMessage (.getCause e))
+                   "This record type definition already exists with different arguments."))))))
 
 (deftest nongenerative-record-test
    ;; Other implementation should throw an error

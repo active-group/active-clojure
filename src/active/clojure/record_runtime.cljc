@@ -35,7 +35,32 @@
 
 (deftype Record
     [^RecordTypeDescriptor rtd
-     ^{:tag "[Ljava.lang.Object;"} slots])
+     ^{:tag "[Ljava.lang.Object;"} slots]
+  #?@(:clj
+      [java.lang.Object
+       (equals [this other]
+               (if (instance? Record other)
+                 (let [this-rtd ^RecordTypeDescriptor (.rtd this)
+                       this-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record this)
+                       other-rtd ^RecordTypeDescriptor (.rtd ^Record other)
+                       other-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record other)]
+                   (and (.equals ^RecordTypeDescriptor this-rtd ^RecordTypeDescriptor other-rtd)
+                        (java.util.Arrays/deepEquals this-slots other-slots)))
+                 false))] ; must be `false`, `nil` is no Java value
+      :cljs
+      [IEquiv
+       (-equiv [this other]
+               (if (instance? Record other)
+                 (let [this-rtd ^RecordTypeDescriptor (.-rtd this)
+                       this-slots (.-slots this)
+                       other-rtd ^RecordTypeDescriptor (.-rtd other)
+                       other-slots (.-slots other)]
+                   (and (= ^RecordTypeDescriptor this-rtd ^RecordTypeDescriptor other-rtd)
+                        (.equals goog.array
+                                 this-slots
+                                 other-slots
+                                 -equiv)))
+                 false))]))
 
 (defmacro really-make-record
   [rtd & vs]

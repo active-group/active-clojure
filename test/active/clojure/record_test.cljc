@@ -599,3 +599,41 @@
   (is (= "blar" (:floo (meta #'mi-rtd?))))
   (is (= "Alternative documentation" (:doc (meta #'mi-rtd?))))
   (is (= true (:private (meta #'mi-rtd?)))))
+
+
+;;; rtd-record equality test
+(define-record-type EqualityRecord
+  {:java-class? false
+   :rtd-record? true}
+  make-er
+  er?
+  [a er-a
+   b er-b])
+
+(define-record-type EqualityRecord2
+  {:java-class? false
+   :rtd-record? true}
+  make-er2
+  er2?
+  [a er2-a
+   b er2-b])
+
+(defrecord EqualityClojureRecord [a b])
+
+(deftest equality-of-rtd-records-test
+  (is (= (make-er 1 2) (make-er 1 2)))
+  (is (not= (make-er 1 1) (make-er 1 2)))
+  (is (not= (make-er 1 2) (make-er 2 2)))
+  (is (not= (make-er 1 2) (make-er 2 1)))
+  (is (not= (make-er2 1 2) (make-er 1 2)))
+
+  (testing "other is not an rtd-record"
+    (is (not= (make-er 1 2) 0))
+    (is (not= (make-er 1 2) "String"))
+    (is (not= (make-er 1 2) (->EqualityClojureRecord 1 2))))
+
+  (testing "nested records"
+    (is (= (make-er (make-er 1 2) 2)
+           (make-er (make-er 1 2) 2)))
+    (is (not= (make-er (make-er 1 2) 2)
+              (make-er (make-er 1 1) 2)))))

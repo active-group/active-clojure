@@ -618,6 +618,53 @@
   [a er2-a
    b er2-b])
 
+(define-record-type EqualityRecord3
+  {:java-class? false
+   :rtd-record? true}
+  make-er3
+  er3?
+  [])
+
+(define-record-type EqualityRecord4
+  {:java-class? false
+   :rtd-record? true}
+  make-er4
+  er4?
+  [])
+
+(define-record-type EqualityRecord5
+  {:java-class? false
+   :rtd-record? true}
+  make-er5
+  er5?
+  [a er-5-a
+   b er-5-b
+   c er-5-c
+   d er-5-d
+   e er-5-e
+   f er-5-f
+   g er-5-g
+   h er-5-h
+   i er-5-i
+   j er-5-j
+   k er-5-k])
+(define-record-type EqualityRecord6
+  {:java-class? false
+   :rtd-record? true}
+  make-er6
+  er6?
+  [a er-6-a
+   b er-6-b
+   c er-6-c
+   d er-6-d
+   e er-6-e
+   f er-6-f
+   g er-6-g
+   h er-6-h
+   i er-6-i
+   j er-6-j
+   k er-6-k])
+
 (defrecord EqualityClojureRecord [a b])
 
 (deftest equality-of-rtd-records-test
@@ -626,6 +673,19 @@
   (is (not= (make-er 1 2) (make-er 2 2)))
   (is (not= (make-er 1 2) (make-er 2 1)))
   (is (not= (make-er2 1 2) (make-er 1 2)))
+  (is (not= (make-er3) (make-er 1 2)))
+
+
+  (testing "two records of other types with no fields"
+    (is (not= (make-er3) (make-er4))))
+
+  (testing "records with many fields"
+    (is (= (make-er5 1 2 3 4 5 6 7 8 9 10 11)
+           (make-er5 1 2 3 4 5 6 7 8 9 10 11)))
+    (is (not= (make-er5 1 2 3 4 5 6 7 8 9 10 11)
+              (make-er5 1 2 3 0 5 6 7 8 9 10 11)))
+    (is (not= (make-er5 1 2 3 4 5 6 7 8 9 10 11)
+              (make-er2 1 2))))
 
   (testing "other is not an rtd-record"
     (is (not= (make-er 1 2) 0))

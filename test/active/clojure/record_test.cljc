@@ -296,9 +296,9 @@
                    (.getMessage (.getCause e))
                    "This record type definition already exists with different arguments."))))))
 
-(deftest nongenerative-record-test
+#_(deftest nongenerative-record-test
    ;; Other implementation should throw an error
-   (is (throws-exception?
+  (is (throws-exception?
         (define-record-type NonGenerativeRecord
           {:nongenerative "NonGenerativeRecord"}
           (make-non-generative-record)

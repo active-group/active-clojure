@@ -9,6 +9,7 @@
            'active.clojure.monad-test
            'active.clojure.mock-monad-test
            'active.clojure.record-test
+           'active.clojure.sum-type-test
            'active.clojure.record-spec-test
            'active.clojure.match-test
            'active.clojure.config-test

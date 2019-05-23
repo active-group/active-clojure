@@ -4,6 +4,8 @@
             [clojure.spec.alpha :as spec]
             [active.clojure.record-runtime :as rrun]))
 
+
+
 ;;; Nongenerative stuff
 ;; Maps from nongenerative-id to {:ns *ns* :form define-record-form}
 #?(:clj
@@ -70,7 +72,7 @@
 
                                   :default
                                   (recur (nnext ?tuples)
-                                    (list* [tuple (fnext ?tuples) nil] acc))))))
+                                    (list* [tuple (fnext ?tuples)] acc))))))
 
              [?constructor & ?constructor-args] (cond
                                                   (list? ?constructor-call)
@@ -206,42 +208,52 @@
        (let [?rec  `rec#
              ?data `data#
              ?v    `v#]
-         `(def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
-           (lens/lens (fn [~?rec]
-                        ;; Get index of field, at commpile time
-                        ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
-                               i               (field-index-map field)]
-                           `(println ~i)
-                           `(rrun/record-get ~rtd-symbol ~?rec ~i)))
-             (fn [~?data ~?v]
-               ;; can't be ~constructor because constructor may take fewer arguments
-               (rrun/make-record ~rtd-symbol
-                 ~@(map (fn [[shove-field shove-accessor]]
-                          (if (= field shove-field)
-                            ?v
-                            `(~shove-accessor ~?data)))
-                     field-tuples)))))))))
+         `(do
+            (def ~(add-meta (add-accessor-doc accessor type field docref) meta-info)
+              (lens/lens (fn [~?rec]
+                          ;; Get index of field, at commpile time
+                          ~(let [field-index-map (into {} (map-indexed (fn [i f] [f i]) fields))
+                                 i               (field-index-map field)]
+                             `(println ~i)
+                             `(rrun/record-get ~rtd-symbol ~?rec ~i)))
+               (fn [~?data ~?v]
+                 ;; can't be ~constructor because constructor may take fewer arguments
+                 (rrun/make-record ~rtd-symbol
+                   ~@(map (fn [[shove-field shove-accessor]]
+                            (if (= field shove-field)
+                              ?v
+                              `(~shove-accessor ~?data)))
+                       field-tuples))))))
+         ))))
 
 
 
 #?(:clj
-  (defn define-record-type-descriptor [meta-data type fields rtd-symbol]
-    (let [meta+doc           (merge meta-data {:doc (str "record-type-descriptor for type " type)})
-          record-type-symbol (symbol (str (ns-name *ns*)) (str type))
-          record-fields      (mapv rrun/make-record-field fields)]
+   (defn define-record-type-descriptor [meta-data type fields rtd-symbol]
+     (let [meta+doc           (merge meta-data {:doc (str "record-type-descriptor for type " type)})
+           record-type-symbol (symbol (str (ns-name *ns*)) (str type))
+           record-fields      (mapv rrun/make-record-field fields)]
 
-      `(def ~(add-meta rtd-symbol meta+doc)
-         (rrun/make-record-type-descriptor '~record-type-symbol nil ~record-fields)))))
+       `(def ~(add-meta rtd-symbol meta+doc)
+          (rrun/make-record-type-descriptor '~record-type-symbol nil ~record-fields)))))
 
+(def record-identifier ::record)
 
 #?(:clj
-   (defn define-type-function [meta-data type rtd-symbol]
-     `(defn ~(add-meta type meta-data) [op#]
-        (case op#
-          :rtd  ~rtd-symbol
-          :meta ~(meta type)
-          :ns   *ns*
-          :no-op))))
+   (defn define-type-function [meta-data type rtd-symbol predicate constructor args field-tuples]
+     (let [sym-fn (fn [a] (str *ns* "/" a))
+           field-tuples-sym (mapv (fn [[name accessor]] [(str name) (sym-fn accessor)]) field-tuples)
+           additional-meta {:meta         (meta type)
+                            :t            record-identifier
+                            :rtd          (sym-fn rtd-symbol)
+                            :predicate    (sym-fn predicate)
+                            :constructor  (sym-fn constructor)
+                            :args         (mapv str args)
+                            :field-tuples field-tuples-sym
+                            :ns           (str *ns*)}]
+
+       `(def ~(add-meta type (merge meta-data additional-meta))
+          ~additional-meta))))
 
 
 #?(:clj
@@ -283,13 +295,13 @@
            field-triple->accessor (make-get-accessor-from-field-tuple-fn
                                     type ?docref constructor field-tuples fields rtd-symbol meta-data)]
 
+
        `(do
           (declare
             ~@(map second field-tuples)
             ~@(map first field-tuples))
 
           ~(define-record-type-descriptor meta-data type fields rtd-symbol)
-          ~(define-type-function meta-data type rtd-symbol)
 
 
           ;; Predicate
@@ -302,12 +314,15 @@
           ;; To make the symbol `a` known to both, we define it before-hand in macro expansion
           ~(let [a (gensym)]
            `(let [~a (fn [& x#] (apply rrun/make-record ~rtd-symbol x#))]
-             ~(define-constructor-rtd type
-                a constructor constructor-args field-tuples meta-data)))
+              ~(define-constructor-rtd type
+                 a constructor constructor-args field-tuples meta-data)))
 
           ;; Accessors
           ~@(map field-triple->accessor field-tuples)
 
           ;; Specs
           ~(when-let [spec-name (:spec options)]
-             (add-spec-code spec-name predicate field-tuples constructor-args constructor))))))
+             (add-spec-code spec-name predicate field-tuples constructor-args constructor))
+
+          ~(define-type-function meta-data type rtd-symbol predicate constructor constructor-args field-tuples)
+          ))))

@@ -6,8 +6,8 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [io.aviso/pretty "0.1.34"]
-                 [org.clojure/core.match "0.3.0-alpha5"]
-                 [org.clojure/test.check "0.10.0-alpha2"]]
+                 [org.clojure/core.match "0.3.0"]
+                 [org.clojure/test.check "0.10.0-alpha4"]]
 
   :generated-paths ["target"]
 

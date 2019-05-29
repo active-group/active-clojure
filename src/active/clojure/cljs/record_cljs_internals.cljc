@@ -232,7 +232,7 @@
                              entry#)))]
 
                 'ISeqable
-                [`(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                [`(~'-seq [this#] (seq (concat [~@(map #(core/list 'cljs.core/MapEntry. (keyword %) % nil) base-fields)]
                                                ~'__extmap)))]
 
                 'IIterable
@@ -390,4 +390,3 @@
                       :args (cljs.spec.alpha/cat ~@c-specs)
                       :ret ~spec-name))))
           ~r))))
-

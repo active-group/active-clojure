@@ -697,3 +697,13 @@
            (make-er (make-er 1 2) 2)))
     (is (not= (make-er (make-er 1 2) 2)
               (make-er (make-er 1 1) 2)))))
+
+
+;;; `keys` function has to work on old records
+(define-record-type KeysRecord
+  make-kr
+  kr?
+  [a kr-a])
+
+(deftest cljs-record-key-seq-test
+  (is (= :a (first (keys (make-kr 1))))))

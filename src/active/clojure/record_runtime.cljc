@@ -35,7 +35,8 @@
 
 (deftype Record
     [^RecordTypeDescriptor rtd
-     ^{:tag "[Ljava.lang.Object;"} slots]
+     ^{:tag #?(:clj "[Ljava.lang.Object;"
+               :cljs "js/Object")} slots]
   #?@(:clj
       [java.lang.Object
        (equals [this other]
@@ -60,7 +61,25 @@
                                  this-slots
                                  other-slots
                                  -equiv)))
-                 false))]))
+                 false))])
+  Object
+  (toString [^Record this]
+    (let [rtd        (.-rtd this)
+          rtd-fields (map (comp keyword :name) (seq (:fields rtd)))
+          rtd-name   (:name rtd)
+          slots      (seq (.-slots this))]
+      (str rtd-name
+           (into {} (mapv vector rtd-fields slots))))))
+
+;; overriding default printing
+#?(:clj
+   (defmethod clojure.core/print-method Record [^Record rec ^java.io.Writer writer]
+     (.write writer (str rec)))
+   :cljs
+   (extend-protocol IPrintWithWriter
+     Record
+     (-pr-writer [rec writer _]
+       (write-all writer (str rec)))))
 
 (defmacro really-make-record
   [rtd & vs]
@@ -70,8 +89,6 @@
                         `(aset ~a ~i ~v))
                       vs)
        (Record. ~rtd ~a))))
-
-
 
 (defn make-record
   ([^RecordTypeDescriptor rtd]

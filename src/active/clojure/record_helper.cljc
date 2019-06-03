@@ -233,9 +233,8 @@
      (let [meta+doc           (merge meta-data {:doc (str "record-type-descriptor for type " type)})
            record-type-symbol (symbol (str (ns-name *ns*)) (str type))
            record-fields      (mapv rrun/make-record-field fields)]
-
        `(def ~(add-meta rtd-symbol meta+doc)
-          (rrun/make-record-type-descriptor '~record-type-symbol nil ~record-fields)))))
+          (rrun/make-record-type-descriptor '~record-type-symbol nil '~record-fields)))))
 
 (def record-identifier ::record)
 

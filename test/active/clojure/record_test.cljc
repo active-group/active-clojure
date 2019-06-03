@@ -707,3 +707,59 @@
 
 (deftest cljs-record-key-seq-test
   (is (= :a (first (keys (make-kr 1))))))
+
+;;; rtd `str` and `print-method` tests
+(define-record-type RTDStr
+  {:rtd-record? true
+   :java-class? false}
+  make-rtd-str
+  rtd-str?
+  [])
+
+(define-record-type RTDStr2
+  {:rtd-record? true
+   :java-class? false}
+  make-rtd-str2
+  rtd-str2?
+  [a rtd-str2-a
+   b rtd-str2-b])
+
+(deftest rtd-str-test
+  (testing "str / toString"
+    (is (= "active.clojure.record-test/RTDStr{}"
+           (str (make-rtd-str))))
+    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
+           (str (make-rtd-str2 1 2)))))
+  (testing "pr-str / print-method"
+    (is (= "active.clojure.record-test/RTDStr{}"
+           (pr-str (make-rtd-str))))
+    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
+           (pr-str (make-rtd-str2 1 2))))))
+
+;; str should work as before with non-rtd-records
+(define-record-type NonRTDStr
+  {:rtd-record? true
+   :java-class? false}
+  make-nrtd-str
+  nrtd-str?
+  [])
+
+(define-record-type NonRTDStr2
+  {:rtd-record? true
+   :java-class? false}
+  make-nrtd-str2
+  nrtd-str2?
+  [a nrtd-str2-a
+   b nrtd-str2-b])
+
+(deftest non-rtd-str-test
+  (testing "str / toString"
+    (is (= "active.clojure.record-test/RTDStr{}"
+           (str (make-rtd-str))))
+    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
+           (str (make-rtd-str2 1 2)))))
+  (testing "pr-str / print-method"
+    (is (= "active.clojure.record-test/RTDStr{}"
+           (pr-str (make-rtd-str))))
+    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
+           (pr-str (make-rtd-str2 1 2))))))

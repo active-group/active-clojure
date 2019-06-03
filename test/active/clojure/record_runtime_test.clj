@@ -37,3 +37,22 @@
   (let [r2 (r/make-record rtd2 1 2)]
     (is (thrown? Error (r/record-get rtd0 r2 0)))
     (is (thrown? Error (r/record-update rtd0 r2 0 :new)))))
+
+(deftest to-string-test
+  (let [r0 (r/make-record rtd0)
+        r1 (r/make-record rtd1 1)
+        r2 (r/make-record rtd2 1 2)]
+    (testing "str / toString"
+      (is (= "active.clojure.record-runtime-test/rtd0{}"
+             (str r0)))
+      (is (= "active.clojure.record-runtime-test/rtd1{:f1 1}"
+             (str r1)))
+      (is (= "active.clojure.record-runtime-test/rtd2{:f1 1, :f2 2}"
+             (str r2))))
+    (testing "pr-str / print-method"
+      (is (= "active.clojure.record-runtime-test/rtd0{}"
+             (pr-str r0)))
+      (is (= "active.clojure.record-runtime-test/rtd1{:f1 1}"
+             (pr-str r1)))
+      (is (= "active.clojure.record-runtime-test/rtd2{:f1 1, :f2 2}"
+             (pr-str r2))))))

@@ -736,30 +736,23 @@
     (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
            (pr-str (make-rtd-str2 1 2))))))
 
-;; str should work as before with non-rtd-records
+;; `pr-str` should work as before with non-rtd-records (`str` wasn't really implemented)
 (define-record-type NonRTDStr
-  {:rtd-record? true
-   :java-class? false}
   make-nrtd-str
   nrtd-str?
   [])
 
 (define-record-type NonRTDStr2
-  {:rtd-record? true
-   :java-class? false}
   make-nrtd-str2
   nrtd-str2?
   [a nrtd-str2-a
    b nrtd-str2-b])
 
 (deftest non-rtd-str-test
-  (testing "str / toString"
-    (is (= "active.clojure.record-test/RTDStr{}"
-           (str (make-rtd-str))))
-    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
-           (str (make-rtd-str2 1 2)))))
   (testing "pr-str / print-method"
-    (is (= "active.clojure.record-test/RTDStr{}"
-           (pr-str (make-rtd-str))))
-    (is (= "active.clojure.record-test/RTDStr2{:a 1, :b 2}"
-           (pr-str (make-rtd-str2 1 2))))))
+    (is (= #?(:clj "#active.clojure.record_test.NonRTDStr{}"
+              :cljs "#active.clojure.record-test.NonRTDStr{}")
+           (pr-str (make-nrtd-str))))
+    (is (= #?(:clj "#active.clojure.record_test.NonRTDStr2{:a 1, :b 2}"
+              :cljs "#active.clojure.record-test.NonRTDStr2{:a 1, :b 2}")
+           (pr-str (make-nrtd-str2 1 2))))))

@@ -14,4 +14,5 @@
            'active.clojure.match-test
            'active.clojure.config-test
            'active.clojure.macro-test
-           'active.clojure.functions-test)
+           'active.clojure.functions-test
+           'active.clojure.record-runtime-test)

@@ -149,12 +149,24 @@
 
 ; assumes that ?r, ?rtd are identifiers alerady
 (defmacro record-check-rtd!
-  [?rtd ?r]
-  `(when-not (and (record? ~?r)
-                  (identical? ~?rtd (.-rtd ~?r)))
-     ;; FIXME: more expressive exception
-     (throw #?(:clj (new Error "not a record of the correct type")
-               :cljs (js/Error. "not a record of the correct type")))))
+  "Checks, if a given element is an rtd-record and if that's the case,
+  if it has the same rtd as the given.
+
+  Note: To prevent reflection warnings, we had to add the record symbol,
+  which has a type hint attached.
+  The outer if condition is needed, because primitive types can't be type hinted."
+  [^RecordTypeDescriptor ?rtd ^Record ?r]
+  (let [error (if (:ns &env)
+                `(js/Error. (str "Not a record of the correct type [[" (:name ~?rtd) "]]"))
+                `(new Error (str "Not a record of the correct type [[" (:name ~?rtd) "]]")))
+        record (vary-meta (gensym) assoc :tag `Record)]
+    (if (or (symbol? ?r) (list? ?r))
+      `(do
+         (when-not (and (record? ~?r)
+                        (let [~record ~?r]
+                          (identical? ~?rtd (.-rtd ~record))))
+           (throw ~error)))
+      `(throw ~error))))
 
 (defn record-get
   [^RecordTypeDescriptor rtd ^Record r ^long index]

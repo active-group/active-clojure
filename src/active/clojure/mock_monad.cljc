@@ -43,9 +43,6 @@
 
 ;; clojure-check assertions as a monadic command:
 ;; NOTE Don't use this in CLJS
-(defmacro m-is [& forms]
-  `(monad/return (is ~@forms)))
-
 (def check-mocks-empty
   (monad/monadic
    [mocks (monad/get-state-component ::mocks)]
@@ -53,8 +50,8 @@
    (if-cljs
     ;; We must be careful here to call the function version in CLJS
     ;; (otherwise, it expands to clojure.test/is and not cljs.test/is)
-     (monad/return (is (empty? rmocks) "Did not see expected mocked commands."))
-     (m-is (empty? rmocks) "Did not see expected mocked commands."))
+     (monad/return (cljs.test/is (empty? rmocks) "Did not see expected mocked commands."))
+     (monad/return (clojure.test/is (empty? rmocks) "Did not see expected mocked commands.")))
     (monad/return nil)))
 
 (defn mock-effect
@@ -82,18 +79,14 @@
   ([mocks m]
    (mock-execute-monad (monad/null-monad-command-config {} {}) mocks m))
   ([command-config mocks m]
-   (try (monad/run-free-reader-state-exception
-         (monad/combine-monad-command-configs command-config
-                                              (mock-commands mocks))
-         (monad/monadic
-          [res m]
-          ;; check that mock stack is empty at 'end'
-          check-mocks-empty
-          (monad/return res)))
-        #?(:clj (catch Exception e
-                  (println "e =" e))
-           :cljs (catch js/Error e
-                   (println "e =" e))))))
+   (monad/run-free-reader-state-exception
+    (monad/combine-monad-command-configs command-config
+                                         (mock-commands mocks))
+    (monad/monadic
+     [res m]
+     ;; check that mock stack is empty at 'end'
+     check-mocks-empty
+     (monad/return res)))))
 
 ;; FIXME This should be renamed to `mock-execute-monad`
 (defn mock-run-monad
@@ -101,14 +94,10 @@
    `mocks` should be a sequence, whose values can be created by the
   `mock`, `mock-result` or `mock-effect` and other functions above, and are
   expected to appear in that order while executing `m`."
-  ([command-config mocks m]
-   (try (first (mock-execute-monad command-config mocks m))
-        #?(:clj (catch Exception e
-                  (println "e =" e))
-           :cljs (catch js/Error e
-                   (println "e =" e)))))
   ([mocks m]
-   (mock-run-monad (monad/null-monad-command-config {} {}) mocks m)))
+   (mock-run-monad (monad/null-monad-command-config {} {}) mocks m))
+  ([command-config mocks m]
+   (first (mock-execute-monad command-config mocks m))))
 
 (defn with-mock-run-monad
   "Immediately calls f with a function of two arguments, `mocks` and

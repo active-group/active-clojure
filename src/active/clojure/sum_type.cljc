@@ -13,8 +13,8 @@
   (str "in " (:ns debug-info) ", line: " (:line debug-info) ", column: " (:column debug-info)))
 
 #?(:clj
-   (defn throw-illegal-argument-exception [msg]
-     (throw (java.lang.IllegalArgumentException. msg))))
+   (defn throw-illegal-argument-exception [^java.lang.String msg]
+     (throw (new java.lang.IllegalArgumentException msg))))
 
 #?(:clj
    (defn- metadata

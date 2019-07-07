@@ -9,13 +9,13 @@ A library with various basic utilities for programming with Clojure.
   are required.
 - The namespace of ClojureScript's `define-record-type` has changed from
   `active.clojure.record` to `active.clojure.cljs.record`.
-- To make sure that the right `active-clojure` version get's picked up by
+- To make sure that the right `active-clojure` version gets picked up by
   Leiningen, you should exclude previous `active-clojure` that are included in
   the dependencies transitively by adding `:exclusions [active-clojure]` to
   libraries that come with the dependency.  When in doubt, check `lein deps :why
   active-clojure`.
-- Since selectors are now lenses by default, the previously used "lens tripels"
-  are no longer valid, you need to remove the parens and the third element and
+- Since selectors are now lenses by default, the previously used "lens triples"
+  are no longer valid. You need to remove the parens and the third element and
   use the selector instead of the name of the lens everywhere in your code.
 
 ## Usage

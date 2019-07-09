@@ -2,3 +2,4 @@ language: clojure
 
 script:
   - lein figtest-travis
+  - lein test

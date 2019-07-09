@@ -50,7 +50,9 @@
             "fig" ["trampoline" "with-profile" "+dev,+test" "run" "-m" "figwheel.main" "-b" "dev" "-r"]
             "figtest" ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
             "figtest-headless" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url]}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
-            "figtest-headless-linux" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/opt/google/chrome/chrome\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]}
+            "figtest-headless-linux" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/opt/google/chrome/chrome\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
+            "figtest-travis" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"google-chrome-stable\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
+            }
 
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-doo "0.1.10"]]

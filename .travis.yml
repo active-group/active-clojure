@@ -1,4 +1,4 @@
 language: clojure
 
 script:
-  - lein figtest-headless
+  - lein figtest-travis

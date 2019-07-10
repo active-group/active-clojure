@@ -218,15 +218,6 @@
         mult-shove
         lenses))
 
-;; not very general:
-;; (defn repeated
-;;   [n]
-;;   (lens #(take n (repeat %))
-;;         (fn [data v]
-;;           (or (some #(not (= % data))
-;;                     v)
-;;               data))))
-
 (defn- plus-yank [data lenses]
   (map yank
        (repeat data)

@@ -288,8 +288,6 @@
       (is (= {:a :b :c 42}
              (apply (lens/member :c) [{:a :b} 42]))))))
 
-((lens/contains 4) #{1 2 4 5} 8)
-
 (deftest lens-composition-equality
   (is (= (lens/>> (lens/pos 3) lens/nel-head)
          (lens/>> (lens/pos 3) lens/nel-head))))

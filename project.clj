@@ -37,6 +37,8 @@
                                                      "resources/public/cljs-out"
                                                      :target-path]}
 
+             :codox {:dependencies [[codox-theme-rdash "0.1.2"]]}
+             
              :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [cider/piggieback "0.4.0"]
                                    [nrepl/nrepl "0.6.0"]]
@@ -55,6 +57,13 @@
             }
 
   :plugins [[lein-cljsbuild "1.1.7"]
-            [lein-doo "0.1.10"]]
+            [lein-doo "0.1.10"]
+            [lein-codox "0.10.7"]]
+
+  :codox {:language :clojure
+          :metadata {:doc/format :markdown}
+          :themes [:rdash]
+          :src-dir-uri "http://github.com/active-group/active-clojure/blob/master/"
+          :src-linenum-anchor-prefix "L"}
 
   :global-vars {*warn-on-reflection* true})

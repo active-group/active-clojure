@@ -22,13 +22,14 @@
   #?@(:clj [clojure.lang.IFn
             (invoke [this data] (apply yanker data args))
             (invoke [this data v] (apply shover data v args))
-            (applyTo [this args]
-                     (let [args (object-array args)]
-                       (case (count args)
-                         1 (yanker (aget args 0))
-                         2 (shover (aget args 0) (aget args 1))
-                         (throw #?(:clj (java.lang.IllegalArgumentException. (str "invalid number of arguments (" (count args) ") to lens")))
-                                #?(:cljs (str "invalid number of arguments (" (count args) ") to lens"))))))]
+            (applyTo [this apply-args]
+                     (let [apply-args (object-array apply-args)]
+                       (case (count apply-args)
+                         1 (apply yanker (aget apply-args 0) args)
+                         2 (apply shover (aget apply-args 0) (aget apply-args 1) args)
+                         (let [error-msg (str "invalid number of arguments (" (count args) ") to lens")]
+                           (throw #?(:clj (java.lang.IllegalArgumentException. error-msg))
+                                  #?(:cljs error-msg))))))]
       :cljs [IFn
              (-invoke [this data] (apply yanker data args))
              (-invoke [this data v] (apply shover data v args))]))
@@ -133,7 +134,7 @@
 
 (defn pos
   "A lens over the nth element in a collection. Note that when shoving a
-  new value nils may be added before the given position, if the the collection is smaller."
+  new value nils may be added before the given position, if the collection is smaller."
   [n]
   (assert (number? n))
   (assert (>= n 0))
@@ -178,7 +179,8 @@
   [key & [not-found]]
   (lens get
         member-shove
-        key not-found))
+        key
+        not-found))
 
 (def ^{:doc "A trivial lens that just shows nil over anything, and does never change anything."}
   void

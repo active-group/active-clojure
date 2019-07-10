@@ -33,7 +33,13 @@
   (is (= {:foo 24}
          (lens/overhaul {:foo 23} :foo inc)))
   (is (= {:foo 42}
-         (lens/overhaul {:foo 23} :foo + 19))))
+         (lens/overhaul {:foo 23} :foo + 19)))
+  (is (= {:foo 122}
+         (lens/overhaul {:foo 123} (lens/member :foo) dec)))
+  (is (= {:foo 120}
+         (lens/overhaul {:foo 123} (lens/member :foo 1) - 3)))
+  (is (= {:foo 123 :bar -2}
+         (lens/overhaul {:foo 123} (lens/member :bar 1) - 3))))
 
 (deftest void
   (lens-laws-hold lens/void {} nil nil)
@@ -219,8 +225,6 @@
     (is (= [{:a 42} 13]
            (lens/shove [{:a 5} 27] l [42 13])))))
 
-
-
 (deftest explicit
   (let [car (lens/lens first (fn [l v] (cons v (rest l))))]
     (is (= 'foo
@@ -247,21 +251,44 @@
       (= 'bar
          (lens/shove 'baz lens/id 'bar))))
 
-
 (deftest explicit-lens-invocation
-  (testing "can use explicit lens like a function, for yank"
-    (is (= 1
-           (lens/nel-head [1 2 3 4])))
-    (is (= 4
-           ((lens/pos 3) [1 2 3 4]))))
-  (testing "can use explicit lens like a function, for shove"
-    (is (= [5 2 3 4]
-           (lens/nel-head [1 2 3 4] 5)))
-    (is (= [1 2 3 5]
-           ((lens/pos 3) [1 2 3 4] 5))))
+  (testing "can use explicit lens like a function"
+    (testing "for yanking"
+      (testing "'argless' lenses"
+        (is (= 1
+               (lens/nel-head [1 2 3 4])))
+        (is (= 4
+               ((lens/pos 3) [1 2 3 4]))))
+      (testing "lenses with args"
+        (is (= :shmup
+               ((lens/member :foo) {:bar 123 :foo :shmup})))))
+    (testing "for shoving"
+      (testing "'argless' lenses"
+        (is (= [5 2 3 4]
+               (lens/nel-head [1 2 3 4] 5)))
+        (is (= [1 2 3 5]
+               ((lens/pos 3) [1 2 3 4] 5))))
+      (testing "lenses with args"
+        (is (= {:a [1 2] :c :d}
+               ((lens/member :a) {:a :b :c :d} [1 2]))))))
   (testing "can apply explicit lens"
     (is (= [5 2 3 4]
            (apply lens/nel-head [1 2 3 4] [5])))))
+
+(deftest explicit-lens-apply
+  (testing "can apply explicit lenses (like functions)"
+    (testing "'argless lenses"
+      (is (= [5 2 3 4]
+             (apply lens/nel-head [1 2 3 4] [5])))
+      (is (= 3
+             (apply lens/void [3 5])))
+      (is (= :bar
+             (apply lens/id [:foo :bar]))))
+    (testing "lenses with args"
+      (is (= {:a :b :c 42}
+             (apply (lens/member :c) [{:a :b} 42]))))))
+
+((lens/contains 4) #{1 2 4 5} 8)
 
 (deftest lens-composition-equality
   (is (= (lens/>> (lens/pos 3) lens/nel-head)

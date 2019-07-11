@@ -42,6 +42,10 @@
     (assoc data lens v)
     (lens data v)))
 
+(defn- throw-invalid-number-of-arguments-error [n]
+  (let [error-msg (str "invalid number of arguments (" n ") to lens")]
+    (throw (java.lang.IllegalArgumentException. error-msg))))
+
 (defrecord ExplicitLens
     ^{:private true}
   [yanker shover args]
@@ -53,9 +57,7 @@
                        (case (count apply-args)
                          1 (apply yanker (aget apply-args 0) args)
                          2 (apply shover (aget apply-args 0) (aget apply-args 1) args)
-                         (let [error-msg (str "invalid number of arguments (" (count args) ") to lens")]
-                           (throw #?(:clj (java.lang.IllegalArgumentException. error-msg))
-                                  #?(:cljs error-msg))))))]
+                         (throw-invalid-number-of-arguments-error (count apply-args)))))]
       :cljs [IFn
              (-invoke [this data] (apply yanker data args))
              (-invoke [this data v] (apply shover data v args))]))

@@ -335,7 +335,21 @@
              (apply lens/id [:foo :bar]))))
     (testing "lenses with args"
       (is (= {:a :b :c 42}
-             (apply (lens/member :c) [{:a :b} 42]))))))
+             (apply (lens/member :c) [{:a :b} 42])))))
+  #?(:clj (testing "throws when called with the wrong number of arguments"
+            (is (thrown-with-msg? java.lang.IllegalArgumentException
+                                  #"arguments \(3\)"
+                                  (apply (lens/member :a) [{} 2 :too-many-args])))
+            (is (thrown-with-msg? java.lang.IllegalArgumentException
+                                  #"arguments \(0\)"
+                                  (apply (lens/member :a) []))))
+     :cljs (testing "throws when called with the wrong number of arguments"
+             (is (thrown-with-msg? js/Error
+                                   #"arity"
+                                   (apply (lens/member :a) [{} 2 :too-many-args])))
+             (is (thrown-with-msg? js/Error
+                                   #"arity"
+                                   (apply (lens/member :a) []))))))
 
 (deftest lens-composition-equality
   (is (= (lens/>> (lens/pos 3) lens/nel-head)

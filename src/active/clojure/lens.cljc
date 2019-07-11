@@ -62,14 +62,32 @@
              (-invoke [this data] (apply yanker data args))
              (-invoke [this data v] (apply shover data v args))]))
 
+(defrecord ExplicitLensWithoutArgs
+    ^{:private true}
+    [yanker shover]
+  #?@(:clj [clojure.lang.IFn
+            (invoke [this data] (yanker data))
+            (invoke [this data v] (shover data v))
+            (applyTo [this apply-args]
+                     (let [apply-args (object-array apply-args)]
+                       (case (count apply-args)
+                         1 (yanker (aget apply-args 0))
+                         2 (shover (aget apply-args 0) (aget apply-args 1))
+                         (throw-invalid-number-of-arguments-error (count apply-args)))))]
+      :cljs [IFn
+             (-invoke [this data] (yanker data))
+             (-invoke [this data v] (shover data v))]))
+
 (defn lens
   "Returns a new lens defined by the given yanker function, which
   takes a data structure and must return the focused value, and the
   given shover function which takes a data structure and the new value
   in the focus. Any additional arguments are passed unchanged to the yank
   and shove functions."
-  [yank shove & args]
-  (ExplicitLens. yank shove args))
+  ([yanker shover]
+   (ExplicitLensWithoutArgs. yanker shover))
+  ([yanker shover & args]
+   (ExplicitLens. yanker shover args)))
 
 (defn- xmap-yank [data f g & args]
   (apply f data args))

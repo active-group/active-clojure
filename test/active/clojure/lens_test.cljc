@@ -12,17 +12,20 @@
 (defn law-1-holds [l data v]
   ;; you get back what you put in
   (is (= v
-         (lens/yank (lens/shove data l v) l))))
+         (lens/yank (lens/shove data l v) l))
+      "Lens law 1 violated"))
 
 (defn law-2-holds [l data]
   ;; putting back what you got doesn't change anything
   (is (= data
-         (lens/shove data l (lens/yank data l)))))
+         (lens/shove data l (lens/yank data l)))
+      "Lens law 2 violated"))
 
 (defn law-3-holds [l data v1 v2]
   ;; second set wins, or setting once is the same as setting twice
   (is (= (lens/shove data l v1)
-         (lens/shove (lens/shove data l v2) l v1))))
+         (lens/shove (lens/shove data l v2) l v1))
+      "Lens law 3 violated"))
 
 (defn lens-laws-hold [l data v1 v2]
   (and (law-1-holds l data v1)
@@ -39,7 +42,9 @@
   (is (= {:foo 120}
          (lens/overhaul {:foo 123} (lens/member :foo 1) - 3)))
   (is (= {:foo 123 :bar -2}
-         (lens/overhaul {:foo 123} (lens/member :bar 1) - 3))))
+         (lens/overhaul {:foo 123} (lens/member :bar 1) - 3)))
+  (is (= [1 4 3]
+         (lens/overhaul [1 2 3] (lens/pos 1) + 2))))
 
 (deftest void
   (lens-laws-hold lens/void {} nil nil)
@@ -202,10 +207,16 @@
     (is (= [nil 42]
            (lens/yank {:b 42} l)))
     (is (= {:a 42 :b 21 :c 3}
-           (lens/shove {:a 13 :c 3} l [42 21])))
-    (is (= [1 nil]
-           (lens/yank {:a 1 :b 2 :c 3} (lens/++ :a lens/void))))
-    ))
+           (lens/shove {:a 13 :c 3} l [42 21]))))
+  (let [l (lens/++ (lens/pos 1) (lens/pos 3))
+        data [-4 2 0 17 -1 1]]
+    (lens-laws-hold l data [6 7] [8 9])
+    (is (= [2 17]
+           (lens/yank data l)))
+    (is (= [-4 11 0 12 -1 1]
+           (lens/shove data l [11 12]))))
+  (is (= [1 nil]
+         (lens/yank {:a 1 :b 2 :c 3} (lens/++ :a lens/void)))))
 
 (deftest >>
   (let [l (lens/>> :a :b)]
@@ -215,7 +226,14 @@
     (is (= nil
            (lens/yank {} l)))
     (is (= {:a {:b 8} :c 3}
-           (lens/shove {:a {:b 42} :c 3} l 8)))))
+           (lens/shove {:a {:b 42} :c 3} l 8))))
+  (let [l (lens/>> (lens/pos 1) :a (lens/member "shmup"))
+        data [{:a 1 :b 2} {:c [1 2 3] :a {"shmup" "shmip" "florb" "flubber"}}]]
+    (lens-laws-hold l data "b" "c")
+    (is (= "shmip"
+           (lens/yank data l)))
+    (is (= [{:a 1 :b 2} {:c [1 2 3] :a {"florb" "flubber"}}]
+           (lens/shove data l nil)))))
 
 (deftest **
   (let [l (lens/** :a lens/id)]
@@ -223,7 +241,13 @@
     (is (= [5 27]
            (lens/yank [{:a 5} 27] l)))
     (is (= [{:a 42} 13]
-           (lens/shove [{:a 5} 27] l [42 13])))))
+           (lens/shove [{:a 5} 27] l [42 13]))))
+  (let [l (lens/** (lens/pos 2) (lens/member 42) (lens/default 'dflt))]
+    (lens-laws-hold l [[4 3 2 1 0] {1 "a" 42 "b"} nil] [1 2 3] [4 5 'dflt])
+    (is (= [2 "b" 'dflt]
+           (lens/yank [[4 3 2 1 0] {1 "a" 42 "b"} nil] l)))
+    (is (= [[4 3 nil 1 0] {1 "a" 42 42} nil]
+           (lens/shove [[4 3 2 1 0] {1 "a" 42 "b"} 'dflt] l [nil 42 'dflt])))))
 
 (deftest explicit
   (let [car (lens/lens first (fn [l v] (cons v (rest l))))]
@@ -233,12 +257,15 @@
            (lens/shove '(foo bar baz) car 'bla)))))
 
 (deftest kw
+  (testing "Lens laws hold for keywords on maps that contain the respective key"
+    (lens-laws-hold :shmup {:flubber "a" :shmup 3} 4 5))
   (is (= 'foo
          (lens/yank {:foo 'foo :bar 'bar} :foo)))
   (is (= {:foo 'baz :bar 'bar}
          (lens/shove {:foo 'foo :bar 'bar} :foo 'baz))))
 
 (deftest at-index
+  (lens-laws-hold (lens/at-index 2) [3 17 42] -1 -2)
   (let [l (lens/at-index 2)]
     (is (= 'baz
            (lens/yank '[foo bar baz bla] l)))
@@ -246,6 +273,7 @@
            (lens/shove '[foo bar baz bla] l 'bam)))))
 
 (deftest id
+  (lens-laws-hold lens/id {"a" 3 "b" 4} 5 6)
   (is (= 'baz
          (lens/yank 'baz lens/id))
       (= 'bar
@@ -261,7 +289,16 @@
                ((lens/pos 3) [1 2 3 4]))))
       (testing "lenses with args"
         (is (= :shmup
-               ((lens/member :foo) {:bar 123 :foo :shmup})))))
+               ((lens/member :foo) {:bar 123 :foo :shmup}))))
+      (testing "composed lenses"
+        (is (= true
+               ((lens/>> (lens/at-index 1) (lens/is :foo)) [:bar :foo]))))
+      (testing "lens sums"
+        (is (= [false {"shmup" -1 "bar" 3} -1]
+               ((lens/++ (lens/is 42) lens/id (lens/member "shmup")) {"shmup" -1 "bar" 3}))))
+      (testing "lens products"
+        (is (= [:d nil :b]
+               ((lens/** (lens/at-index 1) lens/void :a) [[:c :d] [4 5] {:a :b}])))))
     (testing "for shoving"
       (testing "'argless' lenses"
         (is (= [5 2 3 4]
@@ -270,10 +307,16 @@
                ((lens/pos 3) [1 2 3 4] 5))))
       (testing "lenses with args"
         (is (= {:a [1 2] :c :d}
-               ((lens/member :a) {:a :b :c :d} [1 2]))))))
-  (testing "can apply explicit lens"
-    (is (= [5 2 3 4]
-           (apply lens/nel-head [1 2 3 4] [5])))))
+               ((lens/member :a) {:a :b :c :d} [1 2]))))
+      (testing "composed lenses"
+        (is (= [:fst {:b {:foo :shmup}}]
+               ((lens/>> (lens/at-index 1) :b (lens/member :foo)) [:fst {}] :shmup))))
+      (testing "lens sums"
+        (is (= {"shmup" :b :b 65}
+               ((lens/++ (lens/member "shmup") :b) {"shmup" -1 :b 3} [:b 65]))))
+      (testing "lens products"
+        (is (= [[:foo nil :baz] 2 {:a nil :b 4}]
+               ((lens/** (lens/at-index 1) lens/void :a) [[:foo :bar :baz] 2 {:a 3 :b 4}] [nil :foo nil])))))))
 
 (deftest explicit-lens-apply
   (testing "can apply explicit lenses (like functions)"

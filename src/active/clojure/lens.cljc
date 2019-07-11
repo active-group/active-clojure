@@ -1,31 +1,30 @@
-(ns active.clojure.lens)
+(ns active.clojure.lens
+  "Lenses should obey the following laws:
 
-;; Lenses should obey the following laws:
-;;
-;; (1) GetPut, or YankShove:
-;;     (= (yank (shove data my-lens val)
-;;              my-lens)
-;;        val)
-;;
-;;     Meaning: you get back what you put in.
-;;
-;; (2) PutGet, or ShoveYank:
-;;     (= (shove data
-;;               my-lens
-;;               (yank data my-lens))
-;;        data)
-;;
-;;     Meaning: putting back what you got does not change anything.
-;;
-;; (3) PutPut, or ShoveShove:
-;;     (= (shove data my-lens val-1)
-;;        (shove (shove data my-lens val-2) my-lens val-1))
-;;
-;;     Meaning: second shove wins, or shoving once is the same as shoving twice.
-;;
-;; A lens that satisfies these three laws is usually called "very well-behaved".
-;;
-;; See also `active.clojure.lens-test/lens-laws-hold`.
+  (1) GetPut, or YankShove:
+      (= (yank (shove data my-lens val)
+               my-lens)
+         val)
+
+      Meaning: you get back what you put in.
+
+  (2) PutGet, or ShoveYank:
+      (= (shove data
+                my-lens
+                (yank data my-lens))
+         data)
+
+      Meaning: putting back what you got does not change anything.
+
+  (3) PutPut, or ShoveShove:
+        (= (shove data my-lens val-1)
+           (shove (shove data my-lens val-2) my-lens val-1))
+
+      Meaning: second shove wins, or shoving once is the same as shoving twice.
+
+  A lens that satisfies these three laws is usually called \"very well-behaved\".
+
+  See also `active.clojure.lens-test/lens-laws-hold`.")
 
 (defn yank
   "Yank a value from the given data value, as defined by the given

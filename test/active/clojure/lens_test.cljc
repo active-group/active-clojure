@@ -233,7 +233,13 @@
     (is (= "shmip"
            (lens/yank data l)))
     (is (= [{:a 1 :b 2} {:c [1 2 3] :a {"florb" "flubber"}}]
-           (lens/shove data l nil)))))
+           (lens/shove data l nil))))
+  (testing "Empty composition of lenses is `lens/id`"
+    (is (= lens/id
+           (lens/>>))))
+  (testing "Composition of one lens is the lens itself"
+    (is (= (lens/member :foo)
+           (lens/>> (lens/member :foo))))))
 
 (deftest **
   (let [l (lens/** :a lens/id)]

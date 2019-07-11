@@ -200,14 +200,13 @@
 
 (defn pos
   "A lens over the nth element in a collection. Note that when shoving a
-  new value nils may be added before the given position, if the collection is smaller."
+  new value `nil`s may be added before the given position, if the collection is smaller."
   [n]
   (assert (number? n))
   (assert (>= n 0))
-  ;; there are probably more efficient implementations:
-  (if (= n 0)
-    head
-    (>> tail (pos (- n 1)))))
+  (apply >>
+         (conj (vec (repeat n tail))
+               head)))
 
 (def ^{:doc "A lens that views a sequence as a set."}
   as-set

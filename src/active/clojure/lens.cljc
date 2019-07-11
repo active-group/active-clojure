@@ -1,29 +1,31 @@
 (ns active.clojure.lens
   "Lenses should obey the following laws:
 
-  (1) GetPut, or YankShove:
+  GetPut, or YankShove:
+
       (= (yank (shove data my-lens val)
                my-lens)
          val)
 
-      Meaning: you get back what you put in.
+  Meaning: you get back what you put in.
 
-  (2) PutGet, or ShoveYank:
+  PutGet, or ShoveYank:
+
       (= (shove data
                 my-lens
                 (yank data my-lens))
          data)
 
-      Meaning: putting back what you got does not change anything.
+  Meaning: putting back what you got does not change anything.
 
-  (3) PutPut, or ShoveShove:
+  PutPut, or ShoveShove:
+
         (= (shove data my-lens val-1)
            (shove (shove data my-lens val-2) my-lens val-1))
 
-      Meaning: second shove wins, or shoving once is the same as shoving twice.
+  Meaning: second shove wins, or shoving once is the same as shoving twice.
 
   A lens that satisfies these three laws is usually called \"very well-behaved\".
-
   See also `active.clojure.lens-test/lens-laws-hold`.")
 
 (defn yank
@@ -69,6 +71,7 @@
 
 (defn- xmap-yank [data f g & args]
   (apply f data args))
+
 (defn- xmap-shove [data v f g & args]
   (apply g v args))
 
@@ -94,6 +97,7 @@
 
 (defn- comb-yank [data l1 l2]
   (yank (yank data l1) l2))
+
 (defn- comb-shove [data v l1 l2]
   (shove data l1 (shove (yank data l1) l2 v)))
 
@@ -114,6 +118,7 @@
 
 (defn- default-yank [data dflt]
   (if (nil? data) dflt data))
+
 (defn- default-shove [v dflt]
   (if (= dflt v) nil v))
 
@@ -246,6 +251,7 @@
   (map yank
        (repeat data)
        lenses))
+
 (defn- plus-shove [data v lenses]
   (reduce (fn [data [l v]] (shove data l v))
           data

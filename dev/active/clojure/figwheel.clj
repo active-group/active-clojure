@@ -1,4 +1,4 @@
-(ns active.clojure.figwheel
+(ns ^:no-doc active.clojure.figwheel
   (:require  [compojure.core :as compojure]))
 
 (def figwheel-test-handler

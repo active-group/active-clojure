@@ -1,4 +1,4 @@
-(ns active.clojure.cljs.record-cljs-internals
+(ns ^:no-doc active.clojure.cljs.record-cljs-internals
   (:require [active.clojure.lens :as lens]
             [cljs.compiler :as comp]
             #?(:cljs [cljs.core :as core])

@@ -95,26 +95,44 @@
           reacl.lens/>>."}
   id (xmap identity identity))
 
-(defn- comb-yank [data l1 l2]
-  (yank (yank data l1) l2))
+(defn- keyword-shove [data val key]
+  (assoc data key val))
 
-(defn- comb-shove [data v l1 l2]
-  (shove data l1 (shove (yank data l1) l2 v)))
+(defn- keyword-lens [kw]
+  (lens get
+        keyword-shove
+        kw))
 
-(defn- >>2
-  [l1 l2]
-  (lens comb-yank comb-shove l1 l2))
+(defn- lift-lens [my-lens]
+  (if (keyword? my-lens)
+    (keyword-lens my-lens)
+    my-lens))
+
+(defn- comb-yank [data lenses]
+  (reduce (fn [data my-lens]
+            (my-lens data))
+          data
+          lenses))
+
+(defn- comb-shove [data val lenses]
+  (let [lens-1 (first lenses)
+        remaining (rest lenses)]
+    (if (empty? remaining)
+      (lens-1 data val)
+      (lens-1 data
+              (comb-shove (lens-1 data)
+                          val
+                          remaining)))))
 
 (defn >>
-  "Returns a concatenation of two or more lenses, so that the combination shows the
+  "Returns a concatenation of lenses, so that the combination shows the
    value of the last one, in a data structure that the first one is put
    over."
-  [l1 & lmore]
-  (loop [res l1
-         lmore lmore]
-    (if (empty? lmore)
-      res
-      (recur (>>2 res (first lmore)) (rest lmore)))))
+  ([] id)
+  ([& [lens-1 & remaining :as lenses]]
+   (if (empty? remaining)
+     lens-1
+     (lens comb-yank comb-shove (mapv lift-lens lenses)))))
 
 (defn- default-yank [data dflt]
   (if (nil? data) dflt data))
@@ -136,29 +154,28 @@
   ^{:doc "A lens focusing on the first element in a collection. It
   yanks nil if the collection is empty, and will not insert nil into an empty collection."}
   head
-  (lens #(first %)
+  (lens first
         #(consx %2 (rest %1))))
 
 (def
-  ^{:doc
-  "A lens focusing on the first element in a non-empty
+  ^{:doc "A lens focusing on the first element in a non-empty
   collection. Behaviour on an empty collection is undefined."}
   nel-head
-  (lens #(first %)
+  (lens first
         #(cons %2 (rest %1))))
 
 (def
   ^{:doc "A lens focusing on the all but the first element in a collection.
   Note that nil will be prepended when shoving into an empty collection."}
   tail
-  (lens #(rest %)
+  (lens rest
         #(consx (first %1) %2)))
 
 (def
   ^{:doc "A lens focusing on the all but the first element in a non-empty collection.
   Behaviour on an empty collection is undefined."}
   nel-tail
-  (lens #(rest %)
+  (lens rest
         #(cons (first %1) %2)))
 
 (defn pos

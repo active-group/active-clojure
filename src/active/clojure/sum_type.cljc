@@ -398,7 +398,7 @@
      `arg` is the argument to be matched upon.
      `clauses` are pairs of conditions and bodies, e.g.:
 
-     `(match rgb-color? a
+     `(match rgb-color a
          red? \"red\"
          (make-green a) (str \"Green with \" a)
          blue? \"blue\")

@@ -361,3 +361,39 @@
          nil))
   (is (= (monadic (return 42))
          (return 42))))
+
+(deftest call-cc-test
+  (testing "non-tail escape call"
+    (let [f (fn [cont] (monadic
+                        (cont 42)
+                        (return 23)))]
+      (is (= [23 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (f return))))
+      (is (= [42 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (monadic
+               [r (call-cc f)]
+               (return r)))))
+      (is (= [42 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (call-cc f))))))
+  (testing "tail escape call"
+    (let [f (fn [cont] (cont 42))]
+      (is (= [42 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (f return))))
+      (is (= [42 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (monadic
+               [r (call-cc f)]
+               (return r)))))
+      (is (= [42 nil]
+             (execute-free-reader-state-exception
+              (null-monad-command-config nil nil)
+              (call-cc f)))))))

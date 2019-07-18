@@ -20,6 +20,19 @@
   [monad free-bind-monad
    cont free-bind-cont])
 
+(define-record-type CallCC
+  (call-cc f)
+  call-cc?
+  [f call-cc-f])
+
+;; This marks a continuation that was captured by call-cc to be able to discard
+;; the current continuation when calling the captured one.
+(define-record-type ^:private ReplaceCont
+  (replace-cont v cont)
+  replace-cont?
+  [v replace-cont-v
+   cont replace-cont-cont])
+
 (defn free-bind
   "Bind/flatMap for the free monad."
   [mv f]
@@ -307,12 +320,19 @@
               (cond
                (free-return? m) [(free-return-val m) state]
                (free-throw? m) [(make-exception-value (free-throw-exception m)) state]
+
+               (call-cc? m) (recur env state ((call-cc-f m) (fn [v] (replace-cont v return))))
+               (replace-cont? m) (recur env state ((replace-cont-cont m) (replace-cont-v m)))
+
                (free-bind? m)
                (let [m1 (:monad m)
                      cont (:cont m)]
                  (cond
                   (free-return? m1) (recur  env state (cont (free-return-val m1)))
                   (free-throw? m1) [(make-exception-value (free-throw-exception m1)) state]
+
+                  (call-cc? m1) (recur env state ((call-cc-f m1) (fn [v] (replace-cont v cont))))
+                  (replace-cont? m1) (recur env state ((replace-cont-cont m1) (replace-cont-v m1)))
 
                   (free-bind? m1) (unknown-command m m1)
 

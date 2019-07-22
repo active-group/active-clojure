@@ -112,7 +112,7 @@
 (def
   ^{:doc "Identity lens, that just show a data structure as it is.
           It's also the neutral element of lens concatenation
-          reacl.lens/>>."}
+          `reacl.lens/>>`."}
   id (xmap identity identity))
 
 (defn- keyword-shove [data val key]
@@ -148,11 +148,12 @@
   "Returns a concatenation of lenses, so that the combination shows the
    value of the last one, in a data structure that the first one is put
    over."
-  ([] id)
-  ([& [lens-1 & remaining :as lenses]]
-   (if (empty? remaining)
-     lens-1
-     (lens comb-yank comb-shove (mapv lift-lens lenses)))))
+  [& lenses]
+  (let [non-trivial-lenses (remove #{id} lenses)]
+    (if (empty? (rest non-trivial-lenses))
+      (or (first non-trivial-lenses)
+          id)
+      (lens comb-yank comb-shove (mapv lift-lens non-trivial-lenses)))))
 
 (defn- default-yank [data dflt]
   (if (nil? data) dflt data))

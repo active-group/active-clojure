@@ -239,7 +239,14 @@
            (lens/>>))))
   (testing "Composition of one lens is the lens itself"
     (is (= (lens/member :foo)
-           (lens/>> (lens/member :foo))))))
+           (lens/>> (lens/member :foo)))))
+  (testing "`lens/id` is the neutral element w.r.t. lens composition"
+    (is (= lens/nel-head
+           (lens/>> lens/nel-head
+                    lens/id)))
+    (is (= lens/nel-head
+           (lens/>> lens/id
+                    lens/nel-head)))))
 
 (deftest **
   (let [l (lens/** :a lens/id)]

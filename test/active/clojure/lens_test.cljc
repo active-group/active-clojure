@@ -351,6 +351,41 @@
                                    #"arity"
                                    (apply (lens/member :a) []))))))
 
-(deftest lens-composition-equality
-  (is (= (lens/>> (lens/pos 3) lens/nel-head)
-         (lens/>> (lens/pos 3) lens/nel-head))))
+(defrecord Comparer [shmup])
+
+(deftest lens-comparison
+  (let [items [:foo
+               identity
+               #(identity %)
+               #(identity %) ;; this is not equal to the line above
+               #{1 2 3}
+               {:a 1 :b 2}
+               nil
+               5
+               "peter"
+               (->Comparer :shmup)]
+        combinators [lens/>> lens/++ lens/**]]
+    (doall
+     (for [item-1 items
+           item-2 items
+           combinator combinators]
+       (testing "Equality of lenses without args behaves as expected:"
+         (let [gen-lens-1 #(lens/lens item-1 item-1)
+               gen-lens-2 #(lens/lens item-2 item-2)]
+           (if (= item-1 item-2)
+             (do
+               (testing "Lenses constructed from equal values are equal"
+                 (is (= (gen-lens-1)
+                        (gen-lens-2)))
+                 (testing "Compositions of equal lenses are equal"
+                   ;; Combined lenses are internally represented as lenses with args
+                   (is (= (combinator lens/nel-head (gen-lens-2))
+                          (combinator lens/nel-head (gen-lens-1)))))))
+             (do
+               (testing "Lenses constructed from unequal values are unequal"
+                 (is (not= (gen-lens-1)
+                           (gen-lens-2)))
+                 (testing "Compositions of unequal lenses cannot be equal"
+                   ;; = lenses with args where only the args differ
+                   (is (not= (combinator lens/nel-tail (gen-lens-2))
+                             (combinator lens/nel-tail (gen-lens-1))))))))))))))

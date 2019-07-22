@@ -5,6 +5,7 @@
             #?(:cljs [active.clojure.monad :refer (return
                                                    free-return free-return? 
                                                    free-bind free-bind?
+                                                   call-cc call-cc?
                                                    with-handler free-throw
                                                    get-state put-state!
                                                    get-env get-env-component with-env-component with-env

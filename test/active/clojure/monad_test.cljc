@@ -16,6 +16,7 @@
                                                    combine-monad-command-configs
                                                    null-monad-command-config
                                                    run-free-reader-state-exception execute-free-reader-state-exception
+                                                   run-monadic-swiss-army execute-monadic-swiss-army
                                                    monad-command-config-run-command
                                                    reify-command reify-as
                                                    put-state-component!)])
@@ -369,32 +370,32 @@
                         (cont 42)
                         (return 23)))]
       (is (= [23 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (call-cc f))))))
   (testing "tail escape call"
     (let [f (fn [cont] (cont 42))]
       (is (= [42 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-free-reader-state-exception
+             (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (call-cc f)))))))

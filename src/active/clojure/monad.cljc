@@ -326,18 +326,12 @@
                (free-return? m) [(free-return-val m) state]
                (free-throw? m) [(make-exception-value (free-throw-exception m)) state]
 
-               (call-cc? m) (recur env state ((call-cc-f m) (fn [v] (replace-cont v return))))
-               (replace-cont? m) (recur env state ((replace-cont-cont m) (replace-cont-v m)))
-
                (free-bind? m)
                (let [m1 (:monad m)
                      cont (:cont m)]
                  (cond
                   (free-return? m1) (recur  env state (cont (free-return-val m1)))
                   (free-throw? m1) [(make-exception-value (free-throw-exception m1)) state]
-
-                  (call-cc? m1) (recur env state ((call-cc-f m1) (fn [v] (replace-cont v cont))))
-                  (replace-cont? m1) (recur env state ((replace-cont-cont m1) (replace-cont-v m1)))
 
                   (free-bind? m1) (unknown-command m m1)
 
@@ -414,6 +408,131 @@
   "
   [^MonadCommandConfig command-config m & [state]]
   (let [res (run-free-reader-state-exception command-config m state)
+        [r state] res]
+    (if (exception-value? r)
+      (throw (exception-value-exception r)))
+    res))
+
+(defn run-monadic-swiss-army
+  "Run a monadic computation in an almighty monad.  Same as
+  [[`run-free-reader-state-exception`]] with the addition of `call-cc`.
+
+  - `command-config` is the configuration object for running commands
+  - `m` is the computation to run
+  - `state` an optional initial state (from a previous run) that is merged
+    into the one from `command-config`
+
+  Returns [result state]"
+  [^MonadCommandConfig command-config m & [state]]
+  (let [run-command (monad-command-config-run-command command-config)
+        env (monad-command-config-env command-config)
+        ;; we could try to add the initial-state of command-configs
+        ;; that haven't been used yet; but a map-valued state is not
+        ;; required by the interface. So we can only take one of them
+        state (merge (monad-command-config-state command-config)
+                     state)
+        unknown-command (fn [bind m]
+                          (if-let [{line :line column :column statement :statement} (meta bind)]
+                            (c/assertion-violation `run-free-reader-state-exception
+                                                   (str "unknown monad command in bind, line " line ", column " column)
+                                                   bind m
+                                                   statement)
+                            (c/assertion-violation `run-free-reader-state-exception
+                                                   "unknown monad command in bind"
+                                                   bind m)))]
+    (letfn [(run [env state m]
+              (cond
+               (free-return? m) [(free-return-val m) state]
+               (free-throw? m) [(make-exception-value (free-throw-exception m)) state]
+
+               (call-cc? m) (recur env state ((call-cc-f m) (fn [v] (replace-cont v return))))
+               (replace-cont? m) (recur env state ((replace-cont-cont m) (replace-cont-v m)))
+
+               (free-bind? m)
+               (let [m1 (:monad m)
+                     cont (:cont m)]
+                 (cond
+                  (free-return? m1) (recur  env state (cont (free-return-val m1)))
+                  (free-throw? m1) [(make-exception-value (free-throw-exception m1)) state]
+
+                  (call-cc? m1) (recur env state ((call-cc-f m1) (fn [v] (replace-cont v cont))))
+                  (replace-cont? m1) (recur env state ((replace-cont-cont m1) (replace-cont-v m1)))
+
+                  (free-bind? m1) (unknown-command m m1)
+
+                  (with-handler? m1)
+                  (let [[x state] (run env state (with-handler-body m1))]
+                    (if (exception-value? x)
+                      (let [res (run env state ((with-handler-handler m1) (exception-value-exception x)))
+                            [x state] res]
+                        (if (exception-value? x)
+                          res
+                          (recur env state (cont x))))
+                      (recur env state (cont x))))
+
+                  (get-env? m1)
+                  (recur env state (cont env))
+
+                  (with-env? m1)
+                  (let [res (run ((with-env-trans m1) env) state (with-env-body m1))
+                        [x state] res]
+                    (if (exception-value? x)
+                      res
+                      (recur env state (cont x))))
+
+                  (get-state? m1)
+                  (recur env state (cont state))
+
+                  (put-state!? m1)
+                  (recur env (put-state-state m1) (cont nil))
+
+                  :else
+                  (let [res (run-command run env state m1)]
+                    (if (unknown-command? res)
+                      (unknown-command m m1)
+                      (let [[x state] res]
+                        (if (exception-value? x)
+                          res
+                          (recur env state (cont x))))))))
+
+               (with-handler? m)
+               (let [[x state :as res] (run env state (with-handler-body m))]
+                 (if (exception-value? x)
+                   (recur env state ((with-handler-handler m) (exception-value-exception x)))
+                   res))
+
+               (get-env? m)
+               [env state]
+
+               (with-env? m)
+               (recur ((with-env-trans m) env) state (with-env-body m))
+
+               (get-state? m)
+               [state state]
+
+               (put-state!? m)
+               [nil state]
+
+               :else
+               (let [res (run-command run env state m)]
+                 (if (unknown-command? res)
+                   (unknown-command nil m)
+                   res))))]
+
+      (run env state m))))
+
+(defn execute-monadic-swiss-army
+  "Run monadic computation in an almighty monad, turning exceptions
+  into Clojure exceptions.  See [[`run-monadic-swiss-army]].
+
+  - `command-config` is the configuration object for running commands
+  - `m` is the computation to run
+  - `state` is an optional initial state (from a previous run)
+
+  Returns [result state].
+  "
+  [^MonadCommandConfig command-config m & [state]]
+  (let [res (run-monadic-swiss-army command-config m state)
         [r state] res]
     (if (exception-value? r)
       (throw (exception-value-exception r)))

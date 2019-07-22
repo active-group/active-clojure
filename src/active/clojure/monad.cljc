@@ -20,7 +20,12 @@
   [monad free-bind-monad
    cont free-bind-cont])
 
-(define-record-type CallCC
+(define-record-type ^{:doc "Accepts a function `f` with one argument that
+  returns a monadic value.  `call-cc` packages the current continuation as a
+  function and passes it as an argument to `f`.  If the function is called
+  later, the continuation of that call will be discarded and instead reinstate
+  the continuation that was in effect when the function was created."}
+  CallCC
   (call-cc f)
   call-cc?
   [f call-cc-f])

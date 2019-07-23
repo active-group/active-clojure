@@ -26,11 +26,19 @@
 
 (defn- run-mock-commands [run-any env state m]
   (let [[mock & r-mocks] (::mocks state)]
-    (if mock
-      (do (check-mock! mock m)
+    (cond
+      (vector? mock)
+      (let [[mk & mks] mock]
+        (check-mock! mk m)
+        (let [nstate (assoc state ::mocks (concat mks r-mocks))]
+          (run-any env nstate (mocked-result mk m))))
 
+      mock
+      (do (check-mock! mock m)
           (let [nstate (assoc state ::mocks r-mocks)]
             (run-any env nstate (mocked-result mock m))))
+
+      :else
       (do
         (is (= nil (monad/reify-command m)) "Unexpected command after end of mock list.")
         monad/unknown-command))))

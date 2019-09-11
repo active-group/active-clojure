@@ -1,4 +1,4 @@
-(defproject de.active-group/active-clojure "0.31.0-SNAPSHOT"
+(defproject de.active-group/active-clojure "0.31.0"
   :description "Active Clojure: Various Clojure utilities in use at Active Group"
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
@@ -38,7 +38,7 @@
                                                      :target-path]}
 
              :codox {:dependencies [[codox-theme-rdash "0.1.2"]]}
-             
+
              :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
                                    [cider/piggieback "0.4.0"]
                                    [nrepl/nrepl "0.6.0"]]

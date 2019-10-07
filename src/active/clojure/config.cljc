@@ -454,6 +454,7 @@ Each profile has the same format as the top-level configuration itself
   - `inherit?` says whether the setting values may be inherited from a surrounding section"
   [key description range & {:keys [inherit?]}]
   {:pre [(string? description)]}
+  (c/assert (not (identical? key :profiles)) "a setting can't be called :profiles")
   (make-setting key
                 description
                 range

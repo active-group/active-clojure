@@ -489,6 +489,7 @@ Each profile has the same format as the top-level configuration itself
 (defn section
   "Make a section within a config with settings of its own."
   [key schema & {:keys [inherit?]}]
+  (c/assert (not (identical? key :profiles)) "a section can't be called :profiles")
   (make-section key schema (if inherit? true false)))
 
 (define-record-type

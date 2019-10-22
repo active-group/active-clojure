@@ -516,14 +516,19 @@ Each profile has the same format as the top-level configuration itself
 (define-record-type
   ^{:doc "A sequence schema describes a sequence config format."}
   SequenceSchema
-  (make-sequence-schema description element-schema)
+  (make-sequence-schema description element-schema non-empty?)
   sequence-schema?
   [description sequence-schema-description
-   element-schema sequence-schema-element-schema])
+   element-schema sequence-schema-element-schema
+   non-empty? sequence-schema-non-empty?])
 
 (defn sequence-schema
   [desc el-schema]
-  (make-sequence-schema desc el-schema))
+  (make-sequence-schema desc el-schema false))
+
+(defn nonempty-sequence-schema
+  [desc el-schema]
+  (make-sequence-schema desc el-schema true))
 
 (declare normalize&check-config-object)
 
@@ -778,7 +783,10 @@ Each profile has the same format as the top-level configuration itself
                els config   ; FIXME: now misnamed
                res (transient [])]
           (if (empty? els)
-            (persistent! res)
+            (let [result (persistent! res)]
+              (if (and (sequence-schema-non-empty? schema) (empty? result))
+                (make-range-error :nonempty-sequence-must-not-be-empty path result)
+                result))
             (let [r (normalize&check-config-object-internal el-schema
                                                             (first els)
                                                             inherited-map

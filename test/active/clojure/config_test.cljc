@@ -292,6 +292,51 @@
            {:string "bar"}
            {:string "baz"}]})]
     (is (= {:strings
+            []}
+           (c/normalize&check-config-object
+            strings-schema
+            []
+            {})))
+    (is (= {:strings
+            [{:string "foo"}
+             {:string "foo"}
+             {:string "foo"}]}
+           (c/normalize&check-config-object
+            strings-schema
+            []
+            {:strings [{} {} {}]})))
+    (is (= ["foo" "bar" "baz"]
+           (c/access config string-setting strings-section)))))
+
+(def nonempty-strings-section
+  (c/section :strings
+             (c/nonempty-sequence-schema
+              "Sequence of string sections that must not be empty"
+              (c/schema
+               "String section"
+               string-setting))))
+
+(def nonempty-strings-schema
+  (c/schema "Mapping access"
+            nonempty-strings-section))
+
+(deftest nonempty-sequence-schemas-test
+  (let [config
+        (c/make-configuration
+         nonempty-strings-schema
+         []
+         {:strings
+          [{:string "foo"}
+           {:string "bar"}
+           {:string "baz"}]})]
+    (try (c/normalize&check-config-object
+          nonempty-strings-schema
+          []
+          {})
+         (is false) ;; never reached
+         (catch Exception e
+           (is true)))
+    (is (= {:strings
             [{:string "foo"}
              {:string "foo"}
              {:string "foo"}]}

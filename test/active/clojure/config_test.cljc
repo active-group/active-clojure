@@ -348,6 +348,42 @@
            (c/access config string-setting strings-section)))))
 
 (deftest sequence-diff
+  (is (= '([[:strings 2] nil {:string "baz"}]
+           [[:strings 3] nil {:string "baf"}])
+         (c/diff-configurations
+          strings-schema
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}]})
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}
+             {:string "baz"}
+             {:string "baf"}]}))))
+  (is (= '([[:strings 2] {:string "baz"} nil]
+           [[:strings 3] {:string "baf"} nil])
+         (c/diff-configurations
+          strings-schema
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}
+             {:string "baz"}
+             {:string "baf"}]})
+          (c/make-configuration
+           strings-schema
+           []
+           {:strings
+            [{:string "foo"}
+             {:string "bar"}]}))))
   (is (= '([[:strings 1 :string] "bar" "fix"])
          (c/diff-configurations
           strings-schema

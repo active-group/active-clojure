@@ -882,12 +882,12 @@ Each profile has the same format as the top-level configuration itself
           triples-1 (if (> count1 count2)
                       (map (fn [idx v]
                              [[(+ idx count2)] v nil])
-                           (range) config-object-1)
+                           (range) (drop common-count config-object-1))
                       [])
           triples-2 (if (> count2 count1)
                       (map (fn [idx v]
                              [[(+ idx count1)] nil v])
-                           (range) config-object-2)
+                           (range) (drop common-count config-object-2))
                       [])]
       (concat triples-common triples-1 triples-2))))
 

@@ -311,17 +311,18 @@
     (let [?rec  (with-meta `rec# {:tag type})
           ?data `data#
           ?v    `v#]
-      `(def ~(r-help/add-meta (r-help/add-accessor-doc accessor type field docref) meta-info)
-        (lens/lens (fn [~?rec]
-                     (. ~?rec ~(symbol (str "-" field))))
-          (fn [~?data ~?v]
-            ;; can't be ~constructor because constructor may take fewer arguments
-            (new ~type ~@(map
-                           (fn [[?shove-field ?shove-accessor]]
-                             (if (= field ?shove-field)
-                               ?v
-                               `(~?shove-accessor ~?data)))
-                           field-tuples))))))))
+      ;; Note that a two-arity function like this is a lens as defined by active.clojure.lens.
+      `(defn ~(r-help/add-meta (r-help/add-accessor-doc accessor type field docref) meta-info)
+         ([~?rec]
+          (. ~?rec ~(symbol (str "-" field))))
+         ([~?data ~?v]
+          ;; can't be ~constructor because constructor may take fewer arguments
+          (new ~type ~@(map
+                        (fn [[?shove-field ?shove-accessor]]
+                          (if (= field ?shove-field)
+                            ?v
+                            `(~?shove-accessor ~?data)))
+                        field-tuples)))))))
 
 (defn emit-java-record-definition
    [type options constructor constructor-args predicate field-tuples opt+specs]

@@ -329,13 +329,11 @@
           [{:string "foo"}
            {:string "bar"}
            {:string "baz"}]})]
-    (try (c/normalize&check-config-object
-          nonempty-strings-schema
-          []
-          {})
-         (is false) ;; never reached
-         (catch Exception e
-           (is true)))
+    (is (thrown? #?(:clj Exception) #?(:cljs js/Error)
+                 (c/normalize&check-config-object
+                  nonempty-strings-schema
+                  []
+                  {})))
     (is (= {:strings
             [{:string "foo"}
              {:string "foo"}

@@ -53,7 +53,10 @@
             "figtest" ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
             "figtest-headless" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url]}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
             "figtest-headless-linux" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"/opt/google/chrome/chrome\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
-            "figtest-travis" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"google-chrome-stable\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
+            ;; google-chrome-stable seems to be broken at the moment:
+            ;; https://github.com/bhauman/figwheel-main/issues/159
+            ;; we start chrome headless in karma in travis.yml
+            ;; "figtest-travis" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"google-chrome-stable\" \"--no-sandbox\" \"--headless\" \"--disable-gpu\" \"--repl\" :open-url] :repl-eval-timeout 30000}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
             }
 
   :plugins [[lein-cljsbuild "1.1.7"]

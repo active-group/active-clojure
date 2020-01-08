@@ -9,5 +9,5 @@ before_install:
 script:
   - lein figtest-travis
   - lein doo firefox-headless test once
-  - lein doo firefox-chrome test once
+  - lein doo chrome-headless test once
   - lein test

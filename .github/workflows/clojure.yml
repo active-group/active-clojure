@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: install karma
+    - name: Install karma
       run: |
           sudo npm install -g karma
           sudo npm install -g karma-cljs-test
@@ -22,7 +22,7 @@ jobs:
         lein doo firefox-headless test once
         lein doo chrome-headless test once
         lein test
-    - name: notify with mattermost upon failure
+    - name: Notify with mattermost upon failure
       if: failure()
       run: |
         URL=https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}

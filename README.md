@@ -3,7 +3,7 @@
 A library with various basic utilities for programming with Clojure.
 
 [![Clojars Project](https://img.shields.io/clojars/v/de.active-group/active-clojure.svg)](https://clojars.org/de.active-group/active-clojure)
-[![Actions Status](https://github.com/active-group/active-viz/workflows/Tests/badge.svg)](https://github.com/active-group/active-viz/actions)
+[![Actions Status](https://github.com/active-group/active-clojure/workflows/Tests/badge.svg)](https://github.com/active-group/active-clojure/actions)
 
 ### Breaking changes since version `0.28.0`
 - Clojure version 1.9.0 or higher and Clojurescript version 1.9.542 or higher

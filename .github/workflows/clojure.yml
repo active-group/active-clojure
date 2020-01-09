@@ -1,0 +1,35 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: install karma
+      run: |
+          sudo npm install -g karma
+          sudo npm install -g karma-cljs-test
+          sudo npm install -g karma-firefox-launcher
+          sudo npm install -g karma-chrome-launcher
+    - name: Install dependencies
+      run: lein deps
+    - name: Run tests 
+      run: |
+        lein doo firefox-headless test once
+        lein doo chrome-headless test once
+        lein test
+    - name: notify with mattermost upon failure
+      if: failure()
+      run: |
+        URL=https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}
+        echo "{\"text\":\"Failure in tests: ${URL}\"}" > mattermost.json
+    - uses: mattermost/action-mattermost-notify@1.0.0
+      if: failure()
+      env:
+        MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        MATTERMOST_USERNAME: ${{ secrets.MATTERMOST_USERNAME }}
+        MATTERMOST_CHANNEL: ${{ secrets.MATTERMOST_CHANNEL }}

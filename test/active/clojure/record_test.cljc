@@ -285,25 +285,26 @@
 ;; Note: Clojure / Java introduced new error handling features with Clojure version 1.10.0.
 ;; Therefore we're using `(.getMessage (.getCause e))` now instead of only `(getMessage e)`.
 #?(:clj (defmacro throws-exception?
-          [form]
+          [form msg]
           (try
             (eval form)
             (catch Exception e
               (or (clojure.string/includes?
                    (str e)
-                   "This record type definition already exists with different arguments.")
+                   msg)
                   (clojure.string/includes?
                    (.getMessage (.getCause e))
-                   "This record type definition already exists with different arguments."))))))
+                   msg))))))
 
-#_(deftest nongenerative-record-test
+(deftest nongenerative-record-test
    ;; Other implementation should throw an error
   (is (throws-exception?
-        (define-record-type NonGenerativeRecord
-          {:nongenerative "NonGenerativeRecord"}
-          (make-non-generative-record)
-          non-generative-record?
-          [])))
+       (define-record-type NonGenerativeRecord
+         {:nongenerative "NonGenerativeRecord"}
+         (make-non-generative-record)
+         non-generative-record?
+         [])
+       "This record type definition already exists with different arguments."))
    ;; The exact same definition should not throw an exception
    (is (nil? (define-record-type NonGenerativeRecord
                {:nongenerative "NonGenerativeRecord"}
@@ -317,7 +318,8 @@
           {:nongenerative "NonGROtherNS"}
           (make-ngrons field)
           ngrons?
-          [field ngrons-field]))))
+          [field ngrons-field])
+        "This record type definition already exists with different arguments.")))
 
 ;;; Test automatic generation of nongenerative id
 (define-record-type NonGenerativeRecordAuto

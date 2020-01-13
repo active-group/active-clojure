@@ -84,7 +84,14 @@
              ;; Rename for nongenerative test
              new-ns   ns
              new-form form]
-       ;;; Check nongenerative option
+
+         ;;; Check if constructor-args are in field-names
+         (let [?field-names-set (set (map first field-tuples))]
+           (doseq [?constructor-arg ?constructor-args]
+             (when-not (contains? ?field-names-set ?constructor-arg)
+               (throw (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta form)))))))
+
+         ;;; Check nongenerative option
          (if-let [non-g-id (:nongenerative ?options)]
            ;; nongenerative
            (if-let [{:keys [ns form]} (get @global-record-type-registry non-g-id)]

@@ -758,3 +758,13 @@
     (is (= #?(:clj "#active.clojure.record_test.NonRTDStr2{:a 1, :b 2}"
               :cljs "#active.clojure.record-test.NonRTDStr2{:a 1, :b 2}")
            (pr-str (make-nrtd-str2 1 2))))))
+
+
+;;; Only constructor args that are contained in fields are allowed
+(deftest constructor-args-not-in-fields-test
+  (is (throws-exception?
+       (define-record-type ConstructorArgsNotInFields
+         (make-canif arg)
+         canif?
+         [])
+       "Illegal argument")))

@@ -768,3 +768,10 @@
          canif?
          [])
        "Illegal argument")))
+
+(deftest typo-in-field-name-test
+  (is (throws-exception?
+       (define-record-type Schlingel
+         (make-schlingel name) schlingel?
+         [nam schlingel-name])
+       "Illegal argument")))

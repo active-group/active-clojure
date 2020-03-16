@@ -149,7 +149,7 @@
                                 (mapcat (fn [[? kb]] (make-post-binding kb kb nil)) optional-clauses)))
                           bindings (vec (concat required-bindings optional-bindings))
                           _ (let [names (map first (partition 2 required-bindings))]
-                              (when (not (apply distinct? names))
+                              (when (and (not-empty names) (not (apply distinct? names)))
                                 (throw (IllegalArgumentException. (str "binding names must be unique in " *ns* " "
                                                                        (meta &form) ": names "
                                                                        (mapv key (remove (comp #{1} val) (frequencies names)))

@@ -97,3 +97,10 @@
      (is (= ["a" "b" "c" 42 23 65 "bar"]
             (example-or-matcher two-data)))
      (is (= false (example-matcher {:kind "none"})))))
+
+#?(:clj
+   (deftest t-map-matcher-no-required-bindings
+     (is (= "thing"
+            ((map-matcher
+             [(:some :as some)] some)
+             {:some "thing"})))))

@@ -21,7 +21,9 @@
 #?(:clj
    (defn throw-illegal-argument-exception
      [msg]
-     (c/assertion-violation `throw-illegal-argument-exception "Illegal argument" msg)))
+     (c/assertion-violation `throw-illegal-argument-exception
+                            (str "Illegal argument: " msg)
+                            msg)))
 
 
 #?(:clj
@@ -89,7 +91,7 @@
          (let [?field-names-set (set (map first field-tuples))]
            (doseq [?constructor-arg ?constructor-args]
              (when-not (contains? ?field-names-set ?constructor-arg)
-               (throw (throw-illegal-argument-exception (str "constructor argument " ?constructor-arg " is not a field in " *ns* " " (meta form)))))))
+               (throw (throw-illegal-argument-exception (str "Constructor argument `" ?constructor-arg "` is not a field in " *ns* " " (meta form)))))))
 
          ;;; Check nongenerative option
          (if-let [non-g-id (:nongenerative ?options)]

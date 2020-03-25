@@ -767,11 +767,11 @@
          (make-canif arg)
          canif?
          [])
-       "Illegal argument")))
+       "Illegal argument: Constructor argument `arg` is not a field in active.clojure.record-test")))
 
 (deftest typo-in-field-name-test
   (is (throws-exception?
        (define-record-type Schlingel
          (make-schlingel name) schlingel?
          [nam schlingel-name])
-       "Illegal argument")))
+       "Illegal argument: Constructor argument `name` is not a field in active.clojure.record-test")))

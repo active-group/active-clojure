@@ -26,7 +26,10 @@
   Meaning: second shove wins, or shoving once is the same as shoving twice.
 
   A lens that satisfies these three laws is usually called \"very well-behaved\".
-  See also `active.clojure.lens-test/lens-laws-hold`.")
+  See also `active.clojure.lens-test/lens-laws-hold`."
+  (:require [active.clojure.functions :as f]
+            [clojure.set :as set])
+  (:refer-clojure :exclude [merge first second]))
 
 (defn yank
   "Yank a value from the given data value, as defined by the given
@@ -135,7 +138,7 @@
           lenses))
 
 (defn- comb-shove [data val lenses]
-  (let [lens-1 (first lenses)
+  (let [lens-1 (clojure.core/first lenses)
         remaining (rest lenses)]
     (if (empty? remaining)
       (lens-1 data val)
@@ -151,7 +154,7 @@
   [& lenses]
   (let [non-trivial-lenses (remove #{id} lenses)]
     (if (empty? (rest non-trivial-lenses))
-      (or (first non-trivial-lenses)
+      (or (clojure.core/first non-trivial-lenses)
           id)
       (lens comb-yank comb-shove (mapv lift-lens non-trivial-lenses)))))
 
@@ -175,14 +178,14 @@
   ^{:doc "A lens focusing on the first element in a collection. It
   yanks nil if the collection is empty, and will not insert nil into an empty collection."}
   head
-  (lens first
+  (lens clojure.core/first
         #(consx %2 (rest %1))))
 
 (def
   ^{:doc "A lens focusing on the first element in a non-empty
   collection. Behaviour on an empty collection is undefined."}
   nel-head
-  (lens first
+  (lens clojure.core/first
         #(cons %2 (rest %1))))
 
 (def
@@ -190,14 +193,14 @@
   Note that nil will be prepended when shoving into an empty collection."}
   tail
   (lens rest
-        #(consx (first %1) %2)))
+        #(consx (clojure.core/first %1) %2)))
 
 (def
   ^{:doc "A lens focusing on the all but the first element in a non-empty collection.
   Behaviour on an empty collection is undefined."}
   nel-tail
   (lens rest
-        #(cons (first %1) %2)))
+        #(cons (clojure.core/first %1) %2)))
 
 (defn pos
   "A lens over the nth element in a collection. Note that when shoving a
@@ -208,6 +211,14 @@
   (apply >>
          (conj (vec (repeat n tail))
                head)))
+
+(def ^{:doc "A lens over the first element in a collection. Equivent to [[pos]] 0."}
+  first
+  (pos 0))
+
+(def ^{:doc "A lens over the second element in a collection. Equivent to [[pos]] 1."}
+  second
+  (pos 1))
 
 (def ^{:doc "A lens that views a sequence as a set."}
   as-set
@@ -317,3 +328,65 @@
   (lens nth
         at-index-shove
         n))
+
+(letfn [(shove-1 [struct ns keep]
+          (let [skeys (keys struct)]
+            [(reduce (fn [res k]
+                       (if (contains? ns k)
+                         (assoc res k (get ns k))
+                         (if (contains? keep k)
+                           res
+                           (dissoc res k))))
+                     struct
+                     skeys)
+             (select-keys ns (set/difference (set (keys ns)) (set skeys)))]))]
+  (def ^{:doc "A lens over a sequence of maps or records, that yields
+a merged map of all of them. If maps or records have fields of the
+same name, the value in right most map is used and updated on a
+change. If an update contains new keys, they are put in the left-most
+map. If an update misses keys, those fields are removed on the
+right-most element where they were before."}  merge
+    (fn
+      ([structs]
+       (apply clojure.core/merge structs))
+      ([structs ns]
+       (if (empty? structs)
+         structs ;; or maybe that should be an error?
+         (let [[result remain keep] (reduce (fn [[result remain keep] next-struct]
+                                              (let [[next-res next-remain] (shove-1 next-struct remain keep)]
+                                                [(cons next-res result)
+                                                 next-remain
+                                                 ;; structs to the left can keep the keys that were 'shadowed' by this.
+                                                 (set/union keep (set (keys next-struct)))
+                                                 ]))
+                                            [nil ns #{}]
+                                            (reverse structs))]
+           (->> (cons (clojure.core/merge (clojure.core/first result) remain)
+                      (rest result))
+                (into (empty structs)))))))))
+
+(let [map-f (fn
+              ([mp outer]
+               (reduce-kv (fn [inner k lens]
+                            (assoc inner k (yank outer lens)))
+                          mp mp))
+              ([mp outer inner]
+               (reduce-kv (fn [outer k lens]
+                            (shove outer lens (get inner k)))
+                          outer
+                          mp)))
+      vec-f (fn
+              ([v outer]
+               (mapv (fn [lens]
+                       (yank outer lens))
+                     v))
+              ([v outer inner]
+               (reduce (fn [outer i]
+                         (shove outer (get v i) (get inner i)))
+                       outer
+                       (range (count v)))))]
+  (defn pattern [p]
+    (cond
+      (map? p) (f/partial map-f p)
+      (vector? p) (f/partial vec-f p)
+      :else (assert false "Pattern must be a map or a vector."))))

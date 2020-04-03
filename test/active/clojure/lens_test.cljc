@@ -396,3 +396,81 @@
                    ;; = lenses with args where only the args differ
                    (is (not= (combinator lens/nel-tail (gen-lens-2))
                              (combinator lens/nel-tail (gen-lens-1))))))))))))))
+
+(defrecord MergeRec1 [a])
+(defrecord MergeRec2 [b])
+
+(deftest merge-lens-test
+  (testing "full data"
+    (lens-laws-hold lens/merge [{:a 42} {:b 10}] {:a 21 :b 5} {:a 1 :b 2}))
+
+  (testing "preserves records"
+    (is (= [(MergeRec1. 10) (MergeRec2. 5)]
+           (lens/shove [(MergeRec1. 42) (MergeRec2. 10)]
+                       lens/merge
+                       {:a 10 :b 5}))))
+
+  (testing "missing data is removed once where it should have been"
+    (is (= [{:a 42} {}]
+           (lens/shove [{:a 21} {:b 10}]
+                       lens/merge
+                       {:a 42})))
+    (is (= [{} {:b 10}]
+           (lens/shove [{:a 42} {:b 5}]
+                       lens/merge
+                       {:b 10})))
+    (is (= [{:a 21} {}]
+           (lens/shove [{:a 21} {:a 10}]
+                       lens/merge
+                       {})))
+    
+    (lens-laws-hold lens/merge [{:a 42} {:b 10}] {:a 21} {:a 2})
+    (lens-laws-hold lens/merge [{:a 42} {:b 10}] {:b 21} {:b 2}))
+  
+  (testing "new data is added on left-most"
+    (is (= [{:a 42 :c 17} {:b 10}]
+           (lens/shove [{:a 42} {:b 10}]
+                       lens/merge
+                       {:a 42 :b 10 :c 17})))
+    
+    (lens-laws-hold lens/merge [{:a 42} {:b 10}] {:a 42 :b 10 :c 17} {:a 42 :b 10 :c 42}))
+
+  (testing "duplicate keys are taken from right and shadow thos on the left"
+    (is (= {:a 10}
+           (lens/yank [{:a 42} {:a 10}]
+                      lens/merge)))
+    (is (= [{:a 42} {:a 21}]
+           (lens/shove [{:a 42} {:a 10}]
+                       lens/merge
+                       {:a 21})))
+    
+    (lens-laws-hold lens/merge [{:a 42} {:a 10}] {:a 21} {:a 2}))
+  )
+
+(deftest pattern-lens-test
+  (testing "as a map"
+    (is (= {:a 42 :b 10}
+           (lens/yank {:foo 42 :bar 10}
+                      (lens/pattern {:a :foo :b :bar}))))
+
+    (is (= {:foo 21 :bar 5}
+           (lens/shove {:foo 42 :bar 10}
+                       (lens/pattern {:a :foo :b :bar})
+                       {:a 21 :b 5})))
+    
+    (lens-laws-hold (lens/pattern {:a :foo :b :bar})
+                    {:foo 42 :bar 10} {:a 21 :b 5} {:a 11 :b 3}))
+
+  (testing "as a vector"
+    (is (= [42 10]
+           (lens/yank {:foo 42 :bar 10}
+                      (lens/pattern [:foo :bar]))))
+
+    (is (= {:foo 21 :bar 5}
+           (lens/shove {:foo 42 :bar 10}
+                       (lens/pattern [:foo :bar])
+                       [21 5])))
+    
+    (lens-laws-hold (lens/pattern [:foo :bar])
+                    {:foo 42 :bar 10} [21 5] [11 3]))
+  )

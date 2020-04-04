@@ -146,26 +146,48 @@
 (deftest pos
   (let [l (lens/pos 1)]
     (lens-laws-hold l [12 42] 7 65)
+    (lens-laws-hold l '(12 42) 7 65)
+    
     (is (= 42
            (lens/yank [12 42] l)))
+    (is (= 42
+           (lens/yank '(12 42) l)))
     (is (= nil
            (lens/yank [] l)))
     (is (= nil
            (lens/yank nil l)))
     (is (= nil
            (lens/yank [10] l)))
+    
     (is (= [[nil 3]]
            (lens/shove nil (lens/>> (lens/pos 0) (lens/pos 1)) 3)))
     (is (= [nil [nil 3]]
            (lens/shove nil (lens/>> (lens/pos 1) (lens/pos 1)) 3)))
     (is (= [13 42]
            (lens/shove [13 0] l 42)))
+    (is (= 42
+           (lens/yank [13 42] l)))
+    
+    (is (= (list 13 42)
+           (lens/shove (list 13 0) l 42)))
     (is (= [13 42]
            (lens/shove [13] l 42)))
     (is (= [nil 42]
            (lens/shove [] l 42)))
     (is (= [nil 42] ;; ??
            (lens/shove nil l 42)))))
+
+(deftest at-index
+  (lens-laws-hold (lens/at-index 0) [12 42] 7 65)
+  (lens-laws-hold (lens/at-index 1) '(12 42) 7 65)
+
+  (is (= [13 42]
+         (lens/shove [13 0] (lens/at-index 1) 42)))
+  (is (= '(13 42)
+         (lens/shove '(13 0) (lens/at-index 1) 42)))
+  
+  (is (vector? (lens/shove [13 0] (lens/at-index 1) 42)))
+  (is (list? (lens/shove '(13 0) (lens/at-index 0) 42))))
 
 (deftest default
   (let [l (lens/default 42)]

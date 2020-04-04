@@ -202,23 +202,21 @@
   (lens rest
         #(cons (clojure.core/first %1) %2)))
 
-(defn pos
-  "A lens over the nth element in a collection. Note that when shoving a
+(let [pos-get (fn [data n]
+                (clojure.core/first (drop n data)))
+      pos-set (fn [data v n]
+                (let [[front back] (split-at n data)
+                      ff (take n front)]
+                  (concat ff (repeat (- n (count ff)) nil) (list v) (rest back))))]
+  (defn pos
+    "A lens over the nth element in a sequence. Note that when shoving a
   new value `nil`s may be added before the given position, if the collection is smaller."
-  [n]
-  (assert (number? n))
-  (assert (>= n 0))
-  (apply >>
-         (conj (vec (repeat n tail))
-               head)))
-
-(def ^{:doc "A lens over the first element in a collection. Equivent to [[pos]] 0."}
-  first
-  (pos 0))
-
-(def ^{:doc "A lens over the second element in a collection. Equivent to [[pos]] 1."}
-  second
-  (pos 1))
+    [n]
+    (assert (number? n))
+    (assert (>= n 0))
+    (lens pos-get
+          pos-set
+          n)))
 
 (def ^{:doc "A lens that views a sequence as a set."}
   as-set
@@ -317,17 +315,28 @@
 
 (defn- at-index-shove [coll v n]
   (let [[front back] (split-at n coll)]
-    (concat front
-            [v]
-            (rest back))))
+    (let [s (concat front
+                    (list v)
+                    (rest back))]
+      (if (seq? coll)
+        s
+        (into (empty coll) s)))))
 
 (defn at-index
-  "Returns a lens that focuses on the value at position n in a sequence.
-  The sequence must have >= n elements."
+  "Returns a lens that focuses on the value at index n in a collection.
+  The sequence must have >= n elements. Preserves the collection type when shoving."
   [n]
   (lens nth
         at-index-shove
         n))
+
+(def ^{:doc "A lens over the first element in a collection. Equivent to [[at-index]] of 0."}
+  first
+  (at-index 0))
+
+(def ^{:doc "A lens over the second element in a collection. Equivent to [[at-index]] of 1."}
+  second
+  (at-index 1))
 
 (letfn [(shove-1 [struct ns keep]
           (let [skeys (keys struct)]

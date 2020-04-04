@@ -7,6 +7,7 @@
            'active.clojure.debug-test
            'active.clojure.lens-test
            'active.clojure.monad-test
+           'active.clojure.freer-monad-test
            'active.clojure.mock-monad-test
            'active.clojure.record-test
            'active.clojure.sum-type-test

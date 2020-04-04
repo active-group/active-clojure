@@ -1,12 +1,11 @@
 (ns active.clojure.freer-monad-test
-  #?(:cljs (:require-macros [active.clojure.monad :refer (monadic)]
+  #?(:cljs (:require-macros [active.clojure.freer-monad :refer (monadic)]
                             [cljs.test :refer (is deftest run-tests testing)]))
   (:require #?(:clj [active.clojure.freer-monad :refer :all])
-            #?(:cljs [active.clojure.freer-monad :refer (return
-                                                         free-return free-return? 
-                                                         free-bind free-bind?
+            #?(:cljs [active.clojure.freer-monad :refer (return return? return-result
+                                                         bind bind? bind-first-action bind-continuations apply-continuations
                                                          call-cc call-cc?
-                                                         with-handler free-throw
+                                                         with-handler signal
                                                          get-state put-state!
                                                          get-env get-env-component with-env-component with-env
                                                          and-finally bind-except sequ sequ_

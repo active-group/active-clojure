@@ -10,7 +10,8 @@
             #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
             #?(:clj [clojure.core :as core])
             #?(:cljs [cljs.core :as core])
-            ))
+            )
+  #?(:cljs (:require-macros [active.clojure.freer-monad :refer [monadic]])))
 
 (define-record-type ^:no-doc Return
   (return result)
@@ -85,7 +86,7 @@
         (recur (queue-node-left left)
                (make-queue-node (queue-node-right left) right))
         (do
-          (.set-decomposed decomposed-queue left right)
+          (set-decomposed decomposed-queue left right)
           nil)))
     queue))
 
@@ -230,8 +231,8 @@
   ([continuations first-result ^DecomposedQueue decomposed-queue]
    (if-let [continuation (queue-decompose continuations decomposed-queue)]
      (continuation first-result)
-     (let [first-continuation (.get-first-continuation decomposed-queue)
-           rest-continuations (.get-rest-continuations decomposed-queue)
+     (let [first-continuation (get-first-continuation decomposed-queue)
+           rest-continuations (get-rest-continuations decomposed-queue)
            action (first-continuation first-result)]
        (cond
          (return? action) (recur rest-continuations (return-result action) decomposed-queue)

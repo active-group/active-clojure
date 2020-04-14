@@ -37,13 +37,13 @@
   (loop [m m
          msgs []]
     (cond
-     (free-return? m) [(:val m) msgs]
+     (free-return? m) [(free-return-val m) msgs]
 
      (free-bind? m)
-     (let [m1 (:monad m)
-           cont (:cont m)]
+     (let [m1 (free-bind-monad m)
+           cont (free-bind-cont m)]
        (cond
-        (free-return? m1) (recur (cont (:val m1)) msgs)
+        (free-return? m1) (recur (cont (free-return-val m1)) msgs)
 
         (free-bind? m1) (c/assertion-violation `run "nested bind; should not happen" m m1)
 
@@ -341,28 +341,33 @@
     (is (= m
            (reify-command m)))))
 
+; inlining this results in no metadata; go figure
+(defn fake-return 
+  [result]
+  `(return ~result))
+
 (deftest metadata-test
   (let [stmt (monadic
-              [a (return 42)]
-              [b (return 21)]
+              [a (fake-return 42)] ; plain return will collapse everything to a single return
+              [b (fake-return 21)]
               (return 10))]
     (let [base (meta stmt)]
-      (is (= (set (keys (select-keys base #{:line :column :statement})))
-             #{:line :column :statement}))
+      (is (= #{:line :column :statement}
+             (set (keys (select-keys base #{:line :column :statement})))))
       
-      (is (= (:statement base)
-             '[a (return 42)]))
+      (is (= '[a (fake-return 42)]
+             (:statement base)))
       
-      (is (= (select-keys (meta ((:cont stmt) nil)) #{:line :column :statement})
-             {:statement '[b (return 21)]
+      (is (= {:statement '[b (fake-return 21)]
               :column (:column base)
-              :line (inc (or (:line base) -1))}))))
+              :line (inc (or (:line base) -1))}
+             (select-keys (meta ((free-bind-cont stmt) nil)) #{:line :column :statement})))))
   
   ;; and we don't need/want metadata on this:
-  (is (= (meta (monadic (return 42)))
-         nil))
-  (is (= (monadic (return 42))
-         (return 42))))
+  (is (= nil
+         (meta (monadic (return 42)))))
+  (is (= (return 42)
+         (monadic (return 42)))))
 
 (deftest call-cc-test
   (testing "non-tail escape call"

@@ -57,9 +57,16 @@
   `<key-and-name>` is a keyword, it is converted to a name for binding
   the value (and usesd as keyword when used as a key).
 
-  `<value>` can be any value, regular expressions are also
-  possible (only in Clojure, though, `core.match` does not support
-  regex matching in ClojureScript).
+  `<value>` can be:
+
+  - any value, regular expressions are also possible (only in Clojure, though,
+    `core.match` does not support regex matching in ClojureScript).
+
+  - a list of alternative values in the form of: `(:or <value> <value>*)`.
+
+  - a custom compare function in the form of:
+    `(:compare-fn <compare-fn>)` where `<compare-fn>` accepts the value that
+    is mapped to `<key>` or `<key-and-name>`.
 
   `<value>` also can be a list of alternative values in the form of:
   `(:or <value> <value>*)`.
@@ -105,20 +112,24 @@
                   (if (= :else clauses)
                     [b (concat mcc [clauses consequent])]
                     (let [clauses (if (symbol? clauses) (eval clauses) clauses)
-                          match-and-bind-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 4 (count %))) clauses)
+                          compare-fn-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 4 (count %)) (seq? (second %)) (= :compare-fn (first (second %)))) clauses)
+                          match-and-bind-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 4 (count %)) (not (and (seq? (second %)) (= :compare-fn (first (second %)))))) clauses)
                           destructure-clauses-with-as (filter #(and (seq? %) (not= '? (first %)) (= 3 (count %))) clauses)
-                          match-and-bind-clauses (filter #(and (seq? %) (not= '? (first %)) (= 2 (count %))) clauses)
+                          compare-fn-clauses (filter #(and (seq? %) (not= '? (first %)) (= 2 (count %)) (seq? (second %)) (= :compare-fn (first (second %)))) clauses)
+                          match-and-bind-clauses (filter #(and (seq? %) (not= '? (first %)) (= 2 (count %)) (not (and (seq? (second %)) (= :compare-fn (first (second %)))))) clauses)
                           destructure-clauses (filter #(or (keyword? %) (symbol? %) (vector? %)) clauses)
                           make-name #(if (keyword? %) (symbol (name %)) %)
                           make-key #(if (keyword? %) % (str %))
                           make-keys #(if (vector? %) (vec (map make-key %)) [(make-key %)])
-                          special-default #(if (and (list? %) (= :or (first %))) nil %)
+                          special-default #(if (and (list? %) (contains? #{:or :compare-fn} (first %))) nil %)
                           make-binding (fn [b v] [(make-name (if (vector? b) (last b) b)) v])
                           make-post-binding (fn [b k d] (make-binding b `(get-in ~message ~(make-keys k) ~(special-default d))))
                           required-bindings
                           (vec (concat
                                 (mapcat (fn [[k v _ b]] (make-post-binding b k v)) match-and-bind-clauses-with-as)
-                                (mapcat (fn [[kb v]] (make-post-binding kb kb v)) match-and-bind-clauses)))
+                                (mapcat (fn [[kb v]] (make-post-binding kb kb v)) match-and-bind-clauses)
+                                (mapcat (fn [[k cmp-fn _ b]] (make-post-binding b k cmp-fn)) compare-fn-clauses-with-as)
+                                (mapcat (fn [[kb cmp-fn]] (make-post-binding kb kb cmp-fn)) compare-fn-clauses)))
                           assoc-once (fn [m k v] (if (get-in m k)
                                                    (throw (IllegalArgumentException. (str "keys must be unique in " *ns* " " (meta &form) ": key " k " is already in " m)))
                                                    (assoc-in m k v)))
@@ -135,7 +146,13 @@
                                                 (map (fn [[k v _ b]] [k v]) match-and-bind-clauses-with-as)
                                                 (map (fn [[kb v]] [kb v]) match-and-bind-clauses)
                                                 (map (fn [[k _ b]] [k b]) destructure-clauses-with-as)
-                                                (map (fn [kb] [kb (make-name kb)]) destructure-clauses)))
+                                                (map (fn [kb] [kb (make-name kb)]) destructure-clauses)
+                                                (map (fn [[k cmp-fn _ b]] [k '_]) compare-fn-clauses-with-as)
+                                                (map (fn [[kb cmp-fn]] [kb '_]) compare-fn-clauses)))
+                          guards (map (fn [[k cmp-fn* & _]]
+                                        (let [cmp-fn (second cmp-fn*)]
+                                          `(constantly (~cmp-fn (get-in ~message ~(make-keys k))))))
+                                      (concat compare-fn-clauses-with-as compare-fn-clauses))
                           all-optional-clauses (filter #(and (seq? %) (= '? (first %))) clauses)
                           optional-clauses (filter #(= 2 (count %)) all-optional-clauses)
                           optional-clauses-with-default (filter #(= 3 (count %)) all-optional-clauses)
@@ -154,9 +171,14 @@
                                                                        (meta &form) ": names "
                                                                        (mapv key (remove (comp #{1} val) (frequencies names)))
                                                                        " are not uniqe")))))]
-                      [(vec (concat b bindings)) (concat mcc [match-clause (if (empty? bindings)
-                                                                             consequent
-                                                                             `(let ~bindings ~consequent))])])))
+                      [(vec (concat b bindings)) (concat mcc
+                                                         (if (empty? guards)
+                                                           [match-clause (if (empty? bindings)
+                                                                           consequent
+                                                                           `(let ~bindings ~consequent))]
+                                                           [(list match-clause :guard (vec guards)) (if (empty? bindings)
+                                                                                                      consequent
+                                                                                                      `(let ~bindings ~consequent))]))])))
                 [[] []] (partition 2 args))]
     `(fn [~message]
          (match/match ~message

@@ -1,4 +1,4 @@
-(defproject de.active-group/active-clojure "0.35.0-SNAPSHOT"
+(defproject de.active-group/active-clojure "0.36.0-SNAPSHOT"
   :description "Active Clojure: Various Clojure utilities in use at Active Group"
   :url "http://github.com/active-group/active-clojure"
   :license {:name "Eclipse Public License"
@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [io.aviso/pretty "0.1.34"]
-                 [org.clojure/core.match "0.3.0"]
+                 [org.clojure/core.match "1.0.0"]
                  [org.clojure/test.check "0.10.0-alpha4"]]
 
   :generated-paths ["target"]

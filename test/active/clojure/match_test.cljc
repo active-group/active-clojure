@@ -1,5 +1,5 @@
 (ns active.clojure.match-test
-  (:require #?(:clj [active.clojure.match :refer (defpattern map-matcher)])
+  (:require #?(:clj [active.clojure.match :refer (defpattern map-matcher match)])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test :as t]))
   #?(:cljs
@@ -104,3 +104,26 @@
             ((map-matcher
              [(:some :as some)] some)
              {:some "thing"})))))
+
+#?(:clj
+   (defpattern one-guard
+     [(:kind #"one")
+      (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
+      (:y (:compare-fn #(= % (:y {:x "x" :y "y" :z "z"}))))
+      (:z :as z)
+      :w]))
+
+#?(:clj
+   (def example-guard-matcher
+     (map-matcher
+      one-guard [x y z w]
+      two [a b c Z Y X foo]
+      :else false)))
+
+#?(:clj
+   (deftest t-map-matcher-guard
+     (is (= ["x" "y" "z" "w"]
+            (example-guard-matcher one-data)))
+     (is (= ["a" "b" "c" 42 23 65 "bar"]
+            (example-guard-matcher two-data)))
+     (is (= false (example-guard-matcher {:kind "none"})))))

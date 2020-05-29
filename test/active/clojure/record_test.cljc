@@ -775,3 +775,73 @@
          (make-schlingel name) schlingel?
          [nam schlingel-name])
        "Illegal argument: Constructor argument `name` is not a field in active.clojure.record-test")))
+
+
+;;; More than 20 fields should be possible
+(define-record-type ManyFields
+  {:java-class? false}
+  (make-many-fields a b c d e f g h i j k l m n o p q r s t u v w x y z)
+  many-fields?
+  [a many-fields-a
+   b many-fields-b
+   c many-fields-c
+   d many-fields-d
+   e many-fields-e
+   f many-fields-f
+   g many-fields-g
+   h many-fields-h
+   i many-fields-i
+   j many-fields-j
+   k many-fields-k
+   l many-fields-l
+   m many-fields-m
+   n many-fields-n
+   o many-fields-o
+   p many-fields-p
+   q many-fields-q
+   r many-fields-r
+   s many-fields-s
+   t many-fields-t
+   u many-fields-u
+   v many-fields-v
+   w many-fields-w
+   x many-fields-x
+   y many-fields-y
+   z many-fields-z])
+
+(deftest more-than-20-fields-test
+  (let [the-record (make-many-fields 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)]
+    (is (= [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]
+           (map #(% the-record)
+                [many-fields-a
+                 many-fields-b
+                 many-fields-c
+                 many-fields-d
+                 many-fields-e
+                 many-fields-f
+                 many-fields-g
+                 many-fields-h
+                 many-fields-i
+                 many-fields-j
+                 many-fields-k
+                 many-fields-l
+                 many-fields-m
+                 many-fields-n
+                 many-fields-o
+                 many-fields-p
+                 many-fields-q
+                 many-fields-r
+                 many-fields-s
+                 many-fields-t
+                 many-fields-u
+                 many-fields-v
+                 many-fields-w
+                 many-fields-x
+                 many-fields-y
+                 many-fields-z])))
+    (is (many-fields? the-record)))
+
+  #?(:clj (is (thrown? Exception
+                       (make-many-fields 1 2 3))))
+  #?(:clj (is (thrown? Exception
+                       (make-many-fields 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))

@@ -271,17 +271,29 @@
      "Defines a constructor based on a record-constructor-fn. This function takes one argument, a list of field symbols."
      [type make-record constructor-symbol constructor-args-symbols field-tuples meta-data]
      (let [sym-with-meta+doc (-> constructor-symbol
-                               (add-constructor-doc constructor-args-symbols type field-tuples)
-                               (add-meta meta-data))]
+                                 (add-constructor-doc constructor-args-symbols type field-tuples)
+                                 (add-meta meta-data))]
 
        `(def ~sym-with-meta+doc
-          (fn [~@constructor-args-symbols]
-            (~make-record
-              ~@(map (fn [[field _]]
-                       (if (contains? (set constructor-args-symbols) field)
-                         `~field
-                         nil))
-                  field-tuples)))))))
+          ~(if (> (count constructor-args-symbols) 20)
+             `(fn [~'& many-args#]
+                (when (not= ~(count constructor-args-symbols)
+                            (count many-args#))
+                  (throw (Exception. (str ~constructor-symbol " takes "
+                                          ~(count constructor-args-symbols)
+                                          " arguments. Got: "
+                                          (count many-args#) "."))))
+                (apply ~make-record
+                       many-args#))
+             `(fn [~@constructor-args-symbols]
+                (~make-record
+                 ~@(map (fn [[field _]]
+                          (if (contains? (set constructor-args-symbols) field)
+                            `~field
+                            nil))
+                        field-tuples))))))))
+
+
 
 
 #_(defn define-accessors [type internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data]
@@ -289,7 +301,6 @@
       (get-accessor-from-field-tuple-no-java-class type
         internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data)
       field-tuples))
-
 
 #?(:clj
    (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]

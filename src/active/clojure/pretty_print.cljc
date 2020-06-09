@@ -2,7 +2,8 @@
   (:require #?(:clj [active.clojure.record :as r]
                :cljs [active.clojure.cljs.record :as r :include-macros true])
             [active.clojure.sum-type :as st]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.core :exclude [flatten empty]]))
 
 (defmacro defrec
   [name vec-of-fields]
@@ -94,3 +95,54 @@
    (make-Line i doc) (str (apply str "\n"(repeat i " "))
                           (layout doc))))
 
+
+;;; Convenience functions
+
+(defn <+> [x y]
+  (<> x
+      (<> (text " ") y)))
+
+
+;; In the paper, this combinator is called `</>`,
+;; but this is not a possible variable name in Clojure
+(defn <-> [x y]
+  (<> x
+      (<> (line) y)))
+
+(defn folddoc [f docs]
+  (if-let [[x & xs] docs]
+    (if (empty? xs)
+      x
+      (f x (folddoc f xs)))
+    (empty)))
+
+(defn spread [ds] (folddoc <+> ds))
+
+(defn stack [ds] (folddoc <-> ds))
+
+(defn bracket [l x r] (<> (group (<> (text l)
+                                     (nest 2 (<> (line)
+                                                 x))))
+                          (<> (line)
+                              (text r))))
+
+(defn <+-> [x y]
+  (<> x
+      (<> (make-UNION (text " ")
+                      (line))
+          y)))
+
+(def fillwords
+  (comp (partial folddoc <+->)
+        (partial map text)
+        #(string/split % #" ")))
+
+(defn fill [docs]
+  (if-let [[x & ds] docs]
+    (if-let [[y & zs] ds]
+      (make-UNION (<+> (flatten x)
+                       (fill (cons (flatten y) zs)))
+                  (<-> x
+                       (fill ds)))
+      x)
+    (empty)))

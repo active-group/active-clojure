@@ -1,9 +1,47 @@
 (ns active.clojure.pretty-print-test
-  (:require [active.clojure.pretty-print :as pp :refer [<> nest text group line layout pretty empty]]
+  (:require [active.clojure.pretty-print :as pp :refer [<> nest text group line layout pretty empty
+                                                        bracket <+> <-> spread stack <+-> fillwords fill]]
             #?(:clj [active.clojure.record :as r]
                :cljs [active.clojure.cljs.record :as r :include-macros true])
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])))
+
+;; <+> example
+(println (layout (pretty 20 (<+> (text "Hallo")
+                                 (text "Du!")))))
+
+;; <-> example
+(println (layout (pretty 20 (<-> (text "Hallo")
+                                 (text "Du!")))))
+
+;; spread example
+(println (layout (pretty 20 (spread [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
+
+;; stack example
+(println (layout (pretty 20 (stack [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
+
+;; bracket example
+(println (layout (pretty 5 (bracket "[" (<> (text "Hallo")
+                                            (<> (line)
+                                                (text  "Hallo"))) "]"))))
+
+;; <+-> examples
+(println (layout (pretty 20 (<+-> (text "Hallo")
+                                  (text "Du!")))))
+(println (layout (pretty 5 (<+-> (text "Hallo")
+                                 (text "Du!")))))
+
+;; fillwords example
+(println (layout (pretty 12 (fillwords "Hallo Du wie gehts"))))
+
+;; fill example
+(println (layout (pretty 15 (fill [(fillwords "Hallo Du wie gehts")
+                                   (fillwords "Gut!")
+                                   (fillwords "Mir auch")]))))
+
+
+
+
 
 ;;; Example for maps
 (declare show-map)

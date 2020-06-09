@@ -878,9 +878,10 @@
   rtdr??2
   [])
 
-(deftest rtd-record?-test
-  (is (r/rtd-record? (make-rtdr?)))
+#?(:clj
+   (deftest rtd-record?-test
+     (is (r/rtd-record? (make-rtdr?)))
 
-  (is (not (r/rtd-record? (make-rtdr?2))))
-  (is (not (r/rtd-record? 3)))
-  (is (not (r/rtd-record? nil))))
+     (is (not (r/rtd-record? (make-rtdr?2))))
+     (is (not (r/rtd-record? 3)))
+     (is (not (r/rtd-record? nil)))))

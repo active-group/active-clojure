@@ -1,6 +1,7 @@
 (ns active.clojure.record
   (:require [active.clojure.record-helper :as r-help]
-            [active.clojure.record-clj-internals :refer [emit-java-record-definition]]))
+            [active.clojure.record-clj-internals :refer [emit-java-record-definition]]
+            [active.clojure.record-runtime :as runtime]))
 
 (defmacro define-record-type
   [?type ?second & ?params]
@@ -22,6 +23,14 @@
 (defmacro record-type-meta
   [rt]
   `(~rt :meta))
+
+(defn get-field-tuples-from-record
+  [record]
+  (:field-tuples (eval (:name (runtime/record-rtd record)))))
+
+(defn get-type-from-record
+  [record]
+  (:name (runtime/record-rtd record)))
 
 ;; (defn predicate->record-meta [predicate]
 ;;   ;; Expects a namespace resolved predicate

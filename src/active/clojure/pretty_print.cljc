@@ -59,10 +59,14 @@
      (make-Text s x) (fits? (- w (count s)) x)
      Line?           true)))
 
-(defn better [w k x y]
-  (if (fits? (- w k) x)
-    x
-    y))
+
+;; better has to be a macro for efficiency
+;; the second doc does not have to be evaluated, if the first is better
+(defmacro better [w k x y]
+  `(let [x# ~x]
+     (if (fits? (- ~w ~k) x#)
+       x#
+       ~y)))
 
 (defn be [w k list-of-pairs]
   (if-let [[[i d] & z] list-of-pairs]

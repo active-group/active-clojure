@@ -34,6 +34,10 @@
   [record]
   (:name (runtime/record-rtd record)))
 
+(defn rtd-record?
+  [something]
+  (runtime/record? something))
+
 ;; (defn predicate->record-meta [predicate]
 ;;   ;; Expects a namespace resolved predicate
 ;;   ;; if the predicate meta contains UnresolvedRecordMeta it returns a RecordMeta

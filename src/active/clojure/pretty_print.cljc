@@ -69,24 +69,23 @@
        ~y)))
 
 (defn be [w k list-of-pairs]
-  (if-let [[[i d] & z] list-of-pairs]
-    (st/match
-     DOC d
-     NIL?              (be w k z)
-     (make-CONCAT x y) (be w k (apply list [i x] [i y] z))
-     (make-NEST j x)   (be w k (cons [(+ i j) x] z))
-     (make-TEXT s)     (make-Text s (be w (+ k (count s)) z))
-     LINE?             (make-Line i (be w i z))
-     (make-UNION x y)  (better w k
-                               (be w k (cons [i x] z))
-                               (be w k (cons [i y] z))))
-    ;; No document left in list-of-pairs
-    (make-Nil)))
+  (if (empty? list-of-pairs)
+    (make-Nil)
+
+    (let [[[i d] & z] list-of-pairs]
+      (st/match
+       DOC d
+       NIL?              (be w k z)
+       (make-CONCAT x y) (be w k (apply list [i x] [i y] z))
+       (make-NEST j x)   (be w k (cons [(+ i j) x] z))
+       (make-TEXT s)     (make-Text s (be w (+ k (count s)) z))
+       LINE?             (make-Line i (be w i z))
+       (make-UNION x y)  (better w k
+                                 (be w k (cons [i x] z))
+                                 (be w k (cons [i y] z)))))))
 
 (defn best [w k x]
   (be w k [[0 x]]))
-
-
 
 (defn pretty [w x]
   (best w 0 x))

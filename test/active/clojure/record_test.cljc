@@ -860,7 +860,7 @@
          (r/get-type-from-record (make-gsfr 2 3)))))
 
 (deftest get-field-tuples-from-record-test
-  (is (= [["a" "active.clojure.record-test/gsfr-a"]
-          ["b" "active.clojure.record-test/gsfr-b"]]
+  (is (= [['a gsfr-a]
+          ['b gsfr-b]]
          (r/get-field-tuples-from-record (make-gsfr 0 0)))))
 

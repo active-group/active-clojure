@@ -96,30 +96,47 @@
 
 (def ex2 (make-der-gute-record ex1 ex1 ex1))
 
+(declare show-rtd-record)
+
 (defn show-fields
   [r field-tuples]
   (if-let [[tuple & tuples] field-tuples]
     (<> (text (str (first tuple)))
         (<> (text " ")
             (<>
-             (text (pr-str ((second tuple) r)))
+             (let [value ((second tuple) r)]
+               (if (r/rtd-record? value)
+                 (show-rtd-record value)
+                 (nest (+ 2 (count (str (first tuple))))
+                       (fillwords (pr-str ((second tuple) r))))))
              (if tuples
-               (<> (text ", ")
-                   (<> (line)
+               (<> (text ",")
+                   (<> (group (line))
                        (show-fields r tuples)))
                (empty)))))
     (empty)))
 
+
 (defn show-rtd-record
   [r]
-  (<> (text (str (r/get-type-from-record r)))
-      (<> (text "{")
-          (<> (show-fields r (r/get-field-tuples-from-record r))
-              (text "}")))))
+  (nest 2(<> (text (str (r/get-type-from-record r)))
+             (<> (text "{")
+                 (<> (group (line))
+                     (<> (show-fields r (r/get-field-tuples-from-record r))
+                         (text "}")))))))
+
+(r/define-record-type Auto
+  {:java-class? false
+   :rtd-record? true}
+  make-auto
+  auto?
+  [farbe auto-farbe
+   ps auto-ps
+   flup auto-flup])
 
 
-(show-rtd-record ex1)
+(def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele} (make-auto "yellow" 100 :xxyz)))
 
-(println (layout (pretty 10 (show-rtd-record ex1))))
+(println (layout (pretty 30 (show-rtd-record a1))))
 
 

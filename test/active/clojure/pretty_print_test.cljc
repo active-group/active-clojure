@@ -73,9 +73,19 @@
                (zipmap [:a :b :c :d :e]
                        (take 5 (range))))))
 
-(def l (show-map m))
+(def my-big-map
+  {:a {:a 0 :b 1 :c 2 :d 3}
+   :b {:a 0 :b 1 :c 2 :d 3}
+   :c {:a 0 :b 1 :c 2 :d 3}
+   :d {:f 3}})
 
-(println (layout (pretty 20 l)))
+(def l (show-map my-big-map))
+
+l
+
+(println (layout (pretty 10 (show-map my-big-map))))
+#_(println (layout (pretty 10 (show-map big-map))))
+
 
 #_(clojure.pprint/pprint big-map)
 

@@ -855,12 +855,32 @@
   [a gsfr-a
    b gsfr-b])
 
-(deftest get-type-from-record-test
-  (is (= 'active.clojure.record-test/GetStuffFromRecord
-         (r/get-type-from-record (make-gsfr 2 3)))))
+#?(:clj
+   (deftest get-type-from-record-test
+         (is (= 'active.clojure.record-test/GetStuffFromRecord
+                (r/get-type-from-record (make-gsfr 2 3))))))
 
-(deftest get-field-tuples-from-record-test
-  (is (= [['a gsfr-a]
-          ['b gsfr-b]]
-         (r/get-field-tuples-from-record (make-gsfr 0 0)))))
+#?(:clj
+   (deftest get-field-tuples-from-record-test
+     (is (= [['a gsfr-a]
+             ['b gsfr-b]]
+            (r/get-field-tuples-from-record (make-gsfr 0 0))))))
 
+(define-record-type RTDRecord?
+  {:rtd-record? true
+   :java-class? false}
+  make-rtdr?
+  rtdr??
+  [])
+
+(define-record-type RTDRecord?2
+  make-rtdr?2
+  rtdr??2
+  [])
+
+(deftest rtd-record?-test
+  (is (r/rtd-record? (make-rtdr?)))
+
+  (is (not (r/rtd-record? (make-rtdr?2))))
+  (is (not (r/rtd-record? 3)))
+  (is (not (r/rtd-record? nil))))

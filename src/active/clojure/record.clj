@@ -24,19 +24,27 @@
   [rt]
   `(~rt :meta))
 
-(defn get-field-tuples-from-record
-  [record]
-  (map (fn [[field accessor]]
-         [(symbol field) (eval (symbol accessor))])
-       (:field-tuples (eval (:name (runtime/record-rtd record))))))
+#?(:clj
+   (defn get-field-tuples-from-record
+     "Returns field-tuples of record.
+  Currently only works with Clojure."
+     [record]
+     (map (fn [[field accessor]]
+            [(symbol field) (eval (symbol accessor))])
+          (:field-tuples (eval (:name (runtime/record-rtd record)))))))
 
-(defn get-type-from-record
-  [record]
-  (:name (runtime/record-rtd record)))
+#?(:clj
+   (defn get-type-from-record
+     "Returns type of record.
+  Currently only works with Clojure."
+     [record]
+     (:name (runtime/record-rtd record))))
 
-(defn rtd-record?
-  [something]
-  (runtime/record? something))
+#?(:clj
+   (defn rtd-record?
+     "Returns true, if the thing is an rtd-record."
+     [something]
+     (runtime/record? something)))
 
 ;; (defn predicate->record-meta [predicate]
 ;;   ;; Expects a namespace resolved predicate

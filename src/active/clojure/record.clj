@@ -26,7 +26,7 @@
 
 (defn get-field-tuples-from-record
   [record]
-  (:field-tuples (eval (:name (runtime/record-rtd record)))))
+  (:field-tuples (resolve (:name (runtime/record-rtd record)))))
 
 (defn get-type-from-record
   [record]

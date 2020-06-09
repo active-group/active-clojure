@@ -249,8 +249,8 @@
 
 #?(:clj
    (defn define-type-function [meta-data type rtd-symbol predicate constructor args field-tuples]
-     (let [sym-fn (fn [a] (symbol (str *ns* "/" a)))
-           field-tuples-sym (mapv (fn [[name accessor]] [`'~name (sym-fn accessor)]) field-tuples)
+     (let [sym-fn (fn [a] (str *ns* "/" a))
+           field-tuples-sym (mapv (fn [[name accessor]] [(str name) (sym-fn accessor)]) field-tuples)
            additional-meta {:meta         (meta type)
                             :t            record-identifier
                             :rtd          (sym-fn rtd-symbol)

@@ -2,7 +2,7 @@
   (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
             #?(:clj [clojure.spec.alpha :as spec])
-            #?(:clj [active.clojure.record :refer [define-record-type]])
+            #?(:clj [active.clojure.record :as r :refer [define-record-type]])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [active.clojure.record-runtime :as rrun])
@@ -845,3 +845,22 @@
                        (make-many-fields 1 2 3))))
   #?(:clj (is (thrown? Exception
                        (make-many-fields 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
+
+
+(define-record-type GetStuffFromRecord
+  {:java-class? false
+   :rtd-record? true}
+  make-gsfr
+  gsfr?
+  [a gsfr-a
+   b gsfr-b])
+
+(deftest get-type-from-record-test
+  (is (= 'active.clojure.record-test/GetStuffFromRecord
+         (r/get-type-from-record (make-gsfr 2 3)))))
+
+(deftest get-field-tuples-from-record-test
+  (is (= [["a" "active.clojure.record-test/gsfr-a"]
+          ["b" "active.clojure.record-test/gsfr-b"]]
+         (r/get-field-tuples-from-record (make-gsfr 0 0)))))
+

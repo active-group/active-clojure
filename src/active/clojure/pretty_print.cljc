@@ -6,6 +6,19 @@
             [clojure.core :exclude [flatten empty]]))
 
 (defmacro defrec
+  "Convenience macro that allows fast definition of rtd-records.
+
+  Usage:
+
+    (defrec car [ps color])
+
+  evaluates to
+
+    (define-record-type car
+      make-car
+      car?
+      [ps car-ps
+       color car-color])"
   [name vec-of-fields]
   `(r/define-record-type ~name
      {:rtd-record? true
@@ -38,7 +51,9 @@
 (st/define-sum-type Doc Doc? [Nil Text Line])
 
 
-(defn flatten [d]
+(defn flatten
+  "Flattens a document to a document of one line."
+  [d]
   (st/match DOC d
             NIL?              (make-NIL)
             (make-CONCAT x y) (make-CONCAT (flatten x) (flatten y))
@@ -47,7 +62,13 @@
             LINE?             (make-TEXT " ")
             (make-UNION x y)  (flatten x)))
 
-(defn group [x] (make-UNION (flatten x) x))
+(defn group
+  "Creates a union of the given document and its flatten form.
+
+  Useful when the document can have but doesnt have to have a line break.
+  Ex.: (group (line)) inserts a line when necessary."
+  [x]
+  (make-UNION (flatten x) x))
 
 
 (defn fits? [w d]
@@ -84,13 +105,22 @@
                                  (be w k (cons [i x] z))
                                  (be w k (cons [i y] z)))))))
 
-(defn best [w k x]
+(defn best
+  "Returns the best fitting document for a given doc.
+`w` is the maximum width and `k` is the count of characters already placed on
+the current line."
+  [w k x]
   (be w k [[0 x]]))
 
-(defn pretty [w x]
+(defn pretty
+  "Returns the best fitting document for a given doc.
+  `w` is the maximum width."
+  [w x]
   (best w 0 x))
 
-(defn layout [d]
+(defn layout
+  "Converts a document to a string."
+  [d]
   (st/match
    Doc d
    Nil? ""
@@ -101,46 +131,66 @@
 
 ;;; Convenience functions
 
-(defn <+> [x y]
+(defn <+>
+  "Concats two documents with a space inbetween."
+  [x y]
   (<> x
       (<> (text " ") y)))
 
 
 ;; In the paper, this combinator is called `</>`,
 ;; but this is not a possible variable name in Clojure
-(defn <-> [x y]
+(defn <->
+  "Concats two documents with a linebreak inbetween."
+  [x y]
   (<> x
       (<> (line) y)))
 
-(defn folddoc [f docs]
+(defn folddoc
+  "Folds a list of documents with given function f."
+  [f docs]
   (if-let [[x & xs] docs]
     (if (empty? xs)
       x
       (f x (folddoc f xs)))
     (empty)))
 
-(defn spread [ds] (folddoc <+> ds))
+(defn spread
+  "Concats all docs of `ds` with space inbetween"
+  [ds]
+  (folddoc <+> ds))
 
-(defn stack [ds] (folddoc <-> ds))
+(defn stack
+  "Concats all docs of `ds` with linbreak inbetween"
+  [ds]
+  (folddoc <-> ds))
 
-(defn bracket [l x r] (<> (group (<> (text l)
-                                     (nest 2 (<> (line)
-                                                 x))))
-                          (<> (line)
-                              (text r))))
+(defn bracket
+  "Puts brackets `l` and `r` around document `x`.
+  Indents the document `x` by 2 characters."
+  [l x r]
+  (<> (group (<> (text l)
+                 (nest 2 (<> (line)
+                             x))))
+      (<> (line)
+          (text r))))
 
-(defn <+-> [x y]
+(defn <+->
+  "Concats two documents with linbreak or space."
+  [x y]
   (<> x
-      (<> (make-UNION (text " ")
-                      (line))
+      (<> (group (line))
           y)))
 
 (def fillwords
+  "Takes a string of words and concats them (via `<+->`) as `TEXT`s."
   (comp (partial folddoc <+->)
         (partial map text)
         #(string/split % #" ")))
 
-(defn fill [docs]
+(defn fill
+  "Concats a list of documents with linbreaks or spaces inbetween"
+  [docs]
   (if-let [[x & ds] docs]
     (if-let [[y & zs] ds]
       (make-UNION (<+> (flatten x)

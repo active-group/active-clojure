@@ -151,7 +151,7 @@ the current line."
 (defn folddoc
   "Folds a list of documents with given function f."
   [f docs]
-  (if-let [[x & xs] docs]
+  (if-let [[x & xs] (not-empty docs)]
     (if (empty? xs)
       x
       (f x (folddoc f xs)))
@@ -174,7 +174,7 @@ the current line."
   (<> (group (<> (text l)
                  (nest 2 (<> (line)
                              x))))
-      (<> (line)
+      (<> (group (line))
           (text r))))
 
 (defn <+->
@@ -193,8 +193,8 @@ the current line."
 (defn fill
   "Concats a list of documents with linbreaks or spaces inbetween"
   [docs]
-  (if-let [[x & ds] docs]
-    (if-let [[y & zs] ds]
+  (if-let [[x & ds] (not-empty docs)]
+    (if-let [[y & zs] (not-empty ds)]
       (make-UNION (<+> (flatten x)
                        (fill (cons (flatten y) zs)))
                   (<-> x

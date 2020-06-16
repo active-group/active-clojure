@@ -4,7 +4,8 @@
             #?(:clj [active.clojure.record :as r]
                :cljs [active.clojure.cljs.record :as r :include-macros true])
             #?(:clj [clojure.test :as t]
-               :cljs [cljs.test :as t :include-macros true])))
+               :cljs [cljs.test :as t :include-macros true])
+            [active.clojure.sum-type :as st]))
 
 ;; <+> example
 (println (layout (pretty 20 (<+> (text "Hallo")
@@ -53,42 +54,47 @@
     (<> (text (str (first ks)))
         (<> (text ":")
             (<> (if (map? (first vs))
-                  (nest (+ 1 (count (str (first ks)))) (show-map (first vs)))
+                  (<> (line)
+                      (nest (+ 1 (count (str (first ks)))) (show-map (first vs))))
                   (text (str (first vs))))
                 (<> (group (line))
                     (show-tuples (rest ks) (rest vs))))))))
 
 (defn show-map [m]
   (<> (text "{" )
-      (<> (nest 1 (show-tuples (keys m) (vals m)))
+      (<> (nest 1
+                (<> (group (line))
+                    (show-tuples (keys m) (vals m))))
           (text "}"))))
 
 
-
-(def m {"aaa" {"bb" 1 "cccc" {"aa" 12}} "ddd" 24 "eeeee" 122 "ff" 12})
-
-(def big-map (zipmap
-              [:a :b :c :d :e]
-              (repeat
-               (zipmap [:a :b :c :d :e]
-                       (take 5 (range))))))
+(def big-map (let [l [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t]
+                   size (count l)]
+               (zipmap
+                l
+                (repeat
+                 (zipmap l
+                         (take size (range)))))))
 
 (def my-big-map
-  {:a {:a 0 :b 1 :c 2 :d 3}
+  {:a {:a {:a 0 :b 1 :c 2 :d 3}
+       :b {:a 0 :b 1 :c 2 :d 3}
+       :c {:a 0 :b 1 :c 2 :d 3}}
    :b {:a 0 :b 1 :c 2 :d 3}
-   :c {:a 0 :b 1 :c 2 :d 3}
-   :d {:f 3}})
+   :c {:a 0 :b 1 :c 2 :d {:a {:a 0 :b 1 :c 2 :d 3}
+                          :b {:a 0 :b 1 :c 2 :d 3}
+                          :c {:a 0 :b 1 :c 2 :d 3}}}})
 
-(def l (show-map my-big-map))
-
-l
-
-(println (layout (pretty 10 (show-map my-big-map))))
-#_(println (layout (pretty 10 (show-map big-map))))
+;; Teste laziness
+(do (reset! pp/zähler 0)
+    (println (layout (pretty 50 (show-map my-big-map))))
+    (println "Anzahl Durchgänge " @pp/zähler))
 
 
-#_(clojure.pprint/pprint big-map)
-
+;; Vergleiche mit eingebautem pretty-print
+(do
+  (time (clojure.pprint/pprint big-map))
+  (time (println (layout (pretty 50 (show-map big-map))))))
 
 ;;; Example for RTD-Records
 
@@ -110,7 +116,7 @@ l
 
 (defn show-fields
   [r field-tuples]
-  (if-let [[tuple & tuples] field-tuples]
+  (if-let [[tuple & tuples] (not-empty field-tuples)]
     (<> (text (str (first tuple)))
         (<> (text " ")
             (<>

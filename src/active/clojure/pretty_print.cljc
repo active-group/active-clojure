@@ -87,10 +87,13 @@
     (force x)
     (force y)))
 
+(def zähler (atom 0))
+
 
 
 
 (defn be [w k list-of-pairs]
+  (swap! zähler inc)
   (if (empty? list-of-pairs)
     (make-Nil)
 

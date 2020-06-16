@@ -144,9 +144,76 @@ l
    ps auto-ps
    flup auto-flup])
 
+(pp/defrec auto [farbe ps flup])
 
-(def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele} (make-auto "yellow" 100 :xxyz)))
+(def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele}
+                   (make-auto "yellow" 100 :xxyz)))
 
-(println (layout (pretty 30 (show-rtd-record a1))))
+(println (layout (pretty 80 (show-rtd-record a1))))
+
+;;; XML Example
+
+(pp/defrec Elt [s atts xmls])
+(pp/defrec Txt [s])
+(pp/defrec Att [k v])
+(st/define-sum-type XML XML? [Elt Txt])
+
+(defn quoted
+  [v]
+  (<> (text "\"")
+      (<> (text v)
+          (text "\""))))
+
+(defn show-att
+  [att]
+  [(<>
+    (text (Att-k att))
+    (<> (text "=")
+        (quoted (Att-v att))))])
+
+(defn show-fill
+  [f ds]
+  (if (empty? ds)
+      (empty)
+      (bracket "" (fill (apply concat (map f ds))) "")))
+
+(defn show-tag
+  [s atts]
+  (<> (text s)
+      (show-fill show-att atts)))
+
+(defn show-XMLs
+  [x]
+  (st/match XML x
+            (make-Elt s atts xmls) (if (empty? xmls)
+                                     [(<+-> (<> (text "<")
+                                                (show-tag s atts))
+                                            (text "/>"))]
+                                     [(<> (text "<")
+                                          (<> (show-tag s atts)
+                                              (<> (text ">")
+                                                  (<> (show-fill show-XMLs xmls)
+                                                      (<> (text "</")
+                                                          (<> (text s)
+                                                              (text ">")))))))])
+            (make-Txt s) (map text (clojure.string/split s #" "))))
+
+(defn show-XML
+  [x]
+  (pp/folddoc pp/<> (show-XMLs x)))
 
 
+(def the-xml
+  (make-Elt "p"
+            [(make-Att "color" "red")
+             (make-Att "font" "Times")
+             (make-Att "size" "10")]
+            [(make-Txt "Here is some")
+             (make-Elt "em" [] [(make-Txt "emphasized")])
+             (make-Txt "text. Here is a")
+             (make-Elt "a"
+                       [(make-Att "href" "http://ww.eg.com")]
+                       [(make-Txt "link")])
+             (make-Txt "elsewhere")]) )
+
+(println (layout (pretty 60 (show-XML the-xml))))

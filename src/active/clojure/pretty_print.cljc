@@ -70,24 +70,25 @@
   [x]
   (make-UNION (flatten x) x))
 
-
 (defn fits? [w d]
-  (if (< w 0)
-    false
-    (st/match
-     Doc d
-     Nil?            true
-     (make-Text s x) (fits? (- w (count s)) x)
-     Line?           true)))
+  (let [d (if (delay? d) (force d) d)]
+    (if (< w 0)
+      false
+      (st/match
+       Doc d
+       Nil?            true
+       (make-Text s x) (fits? (- w (count s)) x)
+       Line?           true))))
 
 
-;; better has to be a macro for efficiency
-;; the second doc does not have to be evaluated, if the first is better
-(defmacro better [w k x y]
-  `(let [x# ~x]
-     (if (fits? (- ~w ~k) x#)
-       x#
-       ~y)))
+;; x and y are delayed for efficiency reasons
+(defn better [w k x y]
+  (if (fits? (- w k) (force x))
+    (force x)
+    (force y)))
+
+
+
 
 (defn be [w k list-of-pairs]
   (if (empty? list-of-pairs)
@@ -99,11 +100,11 @@
        NIL?              (be w k z)
        (make-CONCAT x y) (be w k (apply list [i x] [i y] z))
        (make-NEST j x)   (be w k (cons [(+ i j) x] z))
-       (make-TEXT s)     (make-Text s (be w (+ k (count s)) z))
+       (make-TEXT s)     (make-Text s (delay (be w (+ k (count s)) z)))
        LINE?             (make-Line i (be w i z))
        (make-UNION x y)  (better w k
-                                 (be w k (cons [i x] z))
-                                 (be w k (cons [i y] z)))))))
+                                 (delay (be w k (cons [i x] z)))
+                                 (delay (be w k (cons [i y] z))))))))
 
 (defn best
   "Returns the best fitting document for a given doc.
@@ -121,12 +122,13 @@ the current line."
 (defn layout
   "Converts a document to a string."
   [d]
-  (st/match
-   Doc d
-   Nil? ""
-   (make-Text s doc) (str s (layout doc))
-   (make-Line i doc) (str (apply str "\n"(repeat i " "))
-                          (layout doc))))
+  (let [d (if (delay? d) (force d) d)]
+    (st/match
+     Doc d
+     Nil? ""
+     (make-Text s doc) (str s (layout doc))
+     (make-Line i doc) (str (apply str "\n"(repeat i " "))
+                            (layout doc)))))
 
 
 ;;; Convenience functions

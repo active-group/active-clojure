@@ -55,7 +55,7 @@
           (<> (<> (group (line))
                   (<> (show-object (first vs))
                       (if (not-empty (rest ks))
-                        (text ", ")
+                        (text ",")
                         (empty))))
               (<> (group (line))
                   (show-tuples (rest ks) (rest vs)))))))
@@ -97,36 +97,21 @@
   (time (println (layout (pretty 50 (show-map big-map))))))
 
 ;;; Example for RTD-Records
-
-(r/define-record-type DerGuteRecord
-  {:rtd-record? true
-   :java-class? false}
-  make-der-gute-record
-  der-gute-record?
-  [eins der-gute-record-eins
-   zwei der-gute-record-zwei
-   drei der-gute-record-drei])
-
-
-(def ex1 (make-der-gute-record "Hallo" "Na" "Was geht!?"))
-
-(def ex2 (make-der-gute-record ex1 ex1 ex1))
-
 (declare show-rtd-record)
 
 (defn show-fields
   [r field-tuples]
   (if-let [[tuple & tuples] (not-empty field-tuples)]
-    (<> (text (str (first tuple)))
-        (<> (text " ")
-            (<>
-             (let [value ((second tuple) r)]
-               (nest 2 (show-object value)))
-             (if tuples
-               (<> (text ",")
-                   (<> (group (line))
-                       (show-fields r tuples)))
-               (empty)))))
+    (let [field-name (str (first tuple))
+          value      ((second tuple) r)]
+      (<+> (text field-name)
+           (<> (nest (count field-name)
+                     (show-object value))
+               (if tuples
+                 (<> (text ",")
+                     (<> (group (line))
+                         (show-fields r tuples)))
+                 (empty)))))
     (empty)))
 
 
@@ -135,24 +120,15 @@
   (nest 2(<> (text (str (r/get-type-from-record r)))
              (<> (text "{")
                  (<> (group (line))
-                     (<> (show-fields r (r/get-field-tuples-from-record r))
+                     (<+-> (show-fields r (r/get-field-tuples-from-record r))
                          (text "}")))))))
-
-(r/define-record-type Auto
-  {:java-class? false
-   :rtd-record? true}
-  make-auto
-  auto?
-  [farbe auto-farbe
-   ps auto-ps
-   flup auto-flup])
 
 (pp/defrec auto [farbe ps flup])
 
 (def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele}
                    (make-auto "yellow" 100 :xxyz)))
 
-(println (layout (pretty 80 (show-rtd-record a1))))
+(println (layout (pretty 12 (show-object a1))))
 
 ;;; show any Clojure object
 
@@ -171,7 +147,7 @@
 
 (println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
                                           :diedup "hello"
-                                          :rtd (make-auto "lol" nil 3)}))))
+                                          :rtd (make-auto "lol" {:this "is" :a "Map"} 3)}))))
 
 
 ;;; ------------

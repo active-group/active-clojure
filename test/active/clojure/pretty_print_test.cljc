@@ -162,6 +162,8 @@
 
     (string? obj) (show-string obj)
 
+    (keyword? obj) (text (str obj))
+
     (map? obj) (show-map obj)
 
     (list? obj) (show-list obj)
@@ -170,7 +172,9 @@
 
     (r/rtd-record? obj) (show-rtd-record obj)
 
-    :else (text (str obj))))
+    :else (do (println "This object has no own show-obj implementation.\n"
+                       "Object: " obj " type: " (type obj))
+              (text (str obj)))))
 
 (println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
                                           :diedup "hello how you doin? this is gonna be split up"

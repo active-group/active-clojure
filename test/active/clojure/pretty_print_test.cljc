@@ -94,7 +94,7 @@
 ;; Vergleiche mit eingebautem pretty-print
 (do
   (time (clojure.pprint/pprint big-map))
-  (time (println (layout (pretty 50 (show-map big-map))))))
+  (time (println (layout (pretty 50 (show-object big-map))))))
 
 ;;; Example for RTD-Records
 (declare show-rtd-record)
@@ -137,6 +137,15 @@
       (<> (fillwords s)
           (text "\""))))
 
+
+;;; show list
+
+(defn show-list
+  [l]
+  (fill (concat [(text "(")]
+                (map show-object l)
+                [(text ")")])))
+
 ;;; show any Clojure object
 
 (defn show-object
@@ -148,13 +157,15 @@
 
     (map? obj) (show-map obj)
 
+    (list? obj) (show-list obj)
+
     (r/rtd-record? obj) (show-rtd-record obj)
 
     :else (text (str obj))))
 
 (println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
                                           :diedup "hello how you doin? this is gonna be split up"
-                                          :rtd (make-auto "lol" {:this "is" :a "Map"} 3)}))))
+                                          :rtd (make-auto "lol" {:this "is" :a "Map"} (list "asdfane" 2 3 {:bdam 3} "einhundert"))}))))
 
 
 ;;; ------------

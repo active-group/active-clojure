@@ -42,7 +42,7 @@
 
 
 
-
+(declare show-object)
 
 ;;; Example for maps
 (declare show-map)
@@ -51,18 +51,18 @@
   [ks vs]
   (if (empty? ks)
     (empty)
-    (<> (text (str (first ks)))
-        (<> (text ":")
-            (<> (if (map? (first vs))
-                  (<> (line)
-                      (nest (+ 1 (count (str (first ks)))) (show-map (first vs))))
-                  (text (str (first vs))))
-                (<> (group (line))
-                    (show-tuples (rest ks) (rest vs))))))))
+    (<> (show-object (first ks))
+          (<> (<> (group (line))
+                  (<> (show-object (first vs))
+                      (if (not-empty (rest ks))
+                        (text ", ")
+                        (empty))))
+              (<> (group (line))
+                  (show-tuples (rest ks) (rest vs)))))))
 
 (defn show-map [m]
   (<> (text "{" )
-      (<> (nest 1
+      (<> (nest 2
                 (<> (group (line))
                     (show-tuples (keys m) (vals m))))
           (text "}"))))
@@ -121,10 +121,7 @@
         (<> (text " ")
             (<>
              (let [value ((second tuple) r)]
-               (if (r/rtd-record? value)
-                 (show-rtd-record value)
-                 (nest (+ 2 (count (str (first tuple))))
-                       (fillwords (pr-str ((second tuple) r))))))
+               (nest 2 (show-object value)))
              (if tuples
                (<> (text ",")
                    (<> (group (line))
@@ -156,6 +153,28 @@
                    (make-auto "yellow" 100 :xxyz)))
 
 (println (layout (pretty 80 (show-rtd-record a1))))
+
+;;; show any Clojure object
+
+(defn show-object
+  [obj]
+  (cond
+    (number? obj) (text (str obj))
+
+    (string? obj) (text obj)
+
+    (map? obj) (show-map obj)
+
+    (r/rtd-record? obj) (show-rtd-record obj)
+
+    :else (text (str obj))))
+
+(println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
+                                          :diedup "hello"
+                                          :rtd (make-auto "lol" nil 3)}))))
+
+
+;;; ------------
 
 ;;; XML Example
 

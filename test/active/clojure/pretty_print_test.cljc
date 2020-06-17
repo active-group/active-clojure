@@ -130,6 +130,13 @@
 
 (println (layout (pretty 12 (show-object a1))))
 
+;;; show-string
+(defn show-string
+  [s]
+  (<> (text "\"")
+      (<> (fillwords s)
+          (text "\""))))
+
 ;;; show any Clojure object
 
 (defn show-object
@@ -137,7 +144,7 @@
   (cond
     (number? obj) (text (str obj))
 
-    (string? obj) (text obj)
+    (string? obj) (show-string obj)
 
     (map? obj) (show-map obj)
 
@@ -146,7 +153,7 @@
     :else (text (str obj))))
 
 (println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
-                                          :diedup "hello"
+                                          :diedup "hello how you doin? this is gonna be split up"
                                           :rtd (make-auto "lol" {:this "is" :a "Map"} 3)}))))
 
 

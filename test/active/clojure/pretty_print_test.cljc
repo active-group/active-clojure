@@ -105,7 +105,7 @@
     (let [field-name (str (first tuple))
           value      ((second tuple) r)]
       (<+> (text field-name)
-           (<> (nest (count field-name)
+           (<> (nest (+ 1 (count field-name))
                      (show-object value))
                (if tuples
                  (<> (text ",")
@@ -158,6 +158,8 @@
 (defn show-object
   [obj]
   (cond
+    (r/rtd-record? obj) (show-rtd-record obj)
+
     (number? obj) (text (str obj))
 
     (string? obj) (show-string obj)
@@ -169,8 +171,6 @@
     (list? obj) (show-list obj)
 
     (vector? obj) (show-vector obj)
-
-    (r/rtd-record? obj) (show-rtd-record obj)
 
     :else (do (println "This object has no own show-obj implementation.\n"
                        "Object: " obj " type: " (type obj))

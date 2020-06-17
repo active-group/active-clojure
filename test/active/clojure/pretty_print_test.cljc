@@ -146,6 +146,13 @@
                 (map show-object l)
                 [(text ")")])))
 
+;;; show vector
+(defn show-vector
+  [v]
+  (fill (concat [(text "[")]
+                (map show-object v)
+                [(text "]")])))
+
 ;;; show any Clojure object
 
 (defn show-object
@@ -158,6 +165,8 @@
     (map? obj) (show-map obj)
 
     (list? obj) (show-list obj)
+
+    (vector? obj) (show-vector obj)
 
     (r/rtd-record? obj) (show-rtd-record obj)
 

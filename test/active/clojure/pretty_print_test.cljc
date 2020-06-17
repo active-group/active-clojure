@@ -67,35 +67,6 @@
                     (show-tuples (keys m) (vals m))))
           (text "}"))))
 
-
-(def big-map (let [l [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t]
-                   size (count l)]
-               (zipmap
-                l
-                (repeat
-                 (zipmap l
-                         (take size (range)))))))
-
-(def my-big-map
-  {:a {:a {:a 0 :b 1 :c 2 :d 3}
-       :b {:a 0 :b 1 :c 2 :d 3}
-       :c {:a 0 :b 1 :c 2 :d 3}}
-   :b {:a 0 :b 1 :c 2 :d 3}
-   :c {:a 0 :b 1 :c 2 :d {:a {:a 0 :b 1 :c 2 :d 3}
-                          :b {:a 0 :b 1 :c 2 :d 3}
-                          :c {:a 0 :b 1 :c 2 :d 3}}}})
-
-;; Teste laziness
-(do (reset! pp/zähler 0)
-    (println (layout (pretty 50 (show-map my-big-map))))
-    (println "Anzahl Durchgänge " @pp/zähler))
-
-
-;; Vergleiche mit eingebautem pretty-print
-(do
-  (time (clojure.pprint/pprint big-map))
-  (time (println (layout (pretty 50 (show-object big-map))))))
-
 ;;; Example for RTD-Records
 (declare show-rtd-record)
 
@@ -122,13 +93,6 @@
                  (<> (group (line))
                      (<+-> (show-fields r (r/get-field-tuples-from-record r))
                          (text "}")))))))
-
-(pp/defrec auto [farbe ps flup])
-
-(def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele}
-                   (make-auto "yellow" 100 :xxyz)))
-
-(println (layout (pretty 12 (show-object a1))))
 
 ;;; show-string
 (defn show-string
@@ -176,10 +140,56 @@
                        "Object: " obj " type: " (type obj))
               (text (str obj)))))
 
-(println (layout (pretty 30 (show-object {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
-                                          :diedup "hello how you doin? this is gonna be split up"
-                                          :rtd (make-auto "lol" {:this "is" :a "Map"} (list "asdfane" 2 3 {:bdam 3} "einhundert"))}))))
+;;; Tests
 
+;; Maps
+(def big-map (let [l [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t]
+                   size (count l)]
+               (zipmap
+                l
+                (repeat
+                 (zipmap l
+                         (take size (range)))))))
+
+(def my-big-map
+  {:a {:a {:a 0 :b 1 :c 2 :d 3}
+       :b {:a 0 :b 1 :c 2 :d 3}
+       :c {:a 0 :b 1 :c 2 :d 3}}
+   :b {:a 0 :b 1 :c 2 :d 3}
+   :c {:a 0 :b 1 :c 2 :d {:a {:a 0 :b 1 :c 2 :d 3}
+                          :b {:a 0 :b 1 :c 2 :d 3}
+                          :c {:a 0 :b 1 :c 2 :d 3}}}})
+;; Teste laziness
+(do (reset! pp/zähler 0)
+    (println (layout (pretty 50 (show-map my-big-map))))
+    (println "Anzahl Durchgänge " @pp/zähler))
+
+;; Vergleiche mit eingebautem pretty-print
+(do
+  (time (clojure.pprint/pprint big-map))
+  (time (println (layout (pretty 50 (show-object big-map))))))
+
+;; RTD Record
+(pp/defrec auto [farbe ps flup])
+
+(def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele}
+                   (make-auto "yellow" 100 :xxyz)))
+
+(println (layout (pretty 12 (show-object a1))))
+
+
+(def ob {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
+         :diedup "hello how you doin? this is gonna be split up"
+         :rtd (make-auto "lol" {:this "is" :a "Map"} (list "asdfane" 2 3 {:bdam 3} "einhundert"))})
+
+(println (layout (pretty 30 (show-object ob))))
+
+
+(do
+  (println "\nPPRINT:")
+  (time (clojure.pprint/pprint ob))
+  (println "\n Prettier Printer")
+  (time (println (layout (pretty 50 (show-object ob))))))
 
 ;;; ------------
 

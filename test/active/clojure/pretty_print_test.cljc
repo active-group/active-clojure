@@ -8,35 +8,35 @@
             [active.clojure.sum-type :as st]))
 
 ;; <+> example
-(println (layout (pretty 20 (<+> (text "Hallo")
+#_(println (layout (pretty 20 (<+> (text "Hallo")
                                  (text "Du!")))))
 
 ;; <-> example
-(println (layout (pretty 20 (<-> (text "Hallo")
+#_(println (layout (pretty 20 (<-> (text "Hallo")
                                  (text "Du!")))))
 
 ;; spread example
-(println (layout (pretty 20 (spread [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
+#_(println (layout (pretty 20 (spread [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
 
 ;; stack example
-(println (layout (pretty 20 (stack [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
+#_(println (layout (pretty 20 (stack [(text "Hallo") (text "Du,") (text "wie") (text "gehts?")]))))
 
 ;; bracket example
-(println (layout (pretty 5 (bracket "[" (<> (text "Hallo")
+#_(println (layout (pretty 5 (bracket "[" (<> (text "Hallo")
                                             (<> (line)
                                                 (text  "Hallo"))) "]"))))
 
 ;; <+-> examples
-(println (layout (pretty 20 (<+-> (text "Hallo")
+#_(println (layout (pretty 20 (<+-> (text "Hallo")
                                   (text "Du!")))))
-(println (layout (pretty 5 (<+-> (text "Hallo")
+#_(println (layout (pretty 5 (<+-> (text "Hallo")
                                  (text "Du!")))))
 
 ;; fillwords example
-(println (layout (pretty 12 (fillwords "Hallo Du wie gehts"))))
+#_(println (layout (pretty 12 (fillwords "Hallo Du wie gehts"))))
 
 ;; fill example
-(println (layout (pretty 15 (fill [(fillwords "Hallo Du wie gehts")
+#_(println (layout (pretty 15 (fill [(fillwords "Hallo Du wie gehts")
                                    (fillwords "Gut!")
                                    (fillwords "Mir auch")]))))
 
@@ -136,6 +136,10 @@
 
     (vector? obj) (show-vector obj)
 
+    (nil? obj) (text "nil")
+
+    (boolean? obj) (text (str obj))
+
     :else (do (println "This object has no own show-obj implementation.\n"
                        "Object: " obj " type: " (type obj))
               (text (str obj)))))
@@ -160,12 +164,12 @@
                           :b {:a 0 :b 1 :c 2 :d 3}
                           :c {:a 0 :b 1 :c 2 :d 3}}}})
 ;; Teste laziness
-(do (reset! pp/zähler 0)
+#_(do (reset! pp/zähler 0)
     (println (layout (pretty 50 (show-map my-big-map))))
     (println "Anzahl Durchgänge " @pp/zähler))
 
 ;; Vergleiche mit eingebautem pretty-print
-(do
+#_(do
   (time (clojure.pprint/pprint big-map))
   (time (println (layout (pretty 50 (show-object big-map))))))
 
@@ -175,17 +179,17 @@
 (def a1 (make-auto "blau" {:die :ps :sind :ja :krass :viele}
                    (make-auto "yellow" 100 :xxyz)))
 
-(println (layout (pretty 12 (show-object a1))))
+#_(println (layout (pretty 12 (show-object a1))))
 
 
 (def ob {:flup [1 2 3 4 5 2 3 4 3 3 3 3 3 3]
          :diedup "hello how you doin? this is gonna be split up"
          :rtd (make-auto "lol" {:this "is" :a "Map"} (list "asdfane" 2 3 {:bdam 3} "einhundert"))})
 
-(println (layout (pretty 30 (show-object ob))))
+#_(println (layout (pretty 30 (show-object ob))))
 
 
-(do
+#_(do
   (println "\nPPRINT:")
   (time (clojure.pprint/pprint ob))
   (println "\n Prettier Printer")
@@ -258,4 +262,4 @@
                        [(make-Txt "link")])
              (make-Txt "elsewhere")]) )
 
-(println (layout (pretty 60 (show-XML the-xml))))
+#_(println (layout (pretty 60 (show-XML the-xml))))

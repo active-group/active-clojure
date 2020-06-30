@@ -30,59 +30,59 @@
                    vec-of-fields))))
 
 (defrec NIL [])
-(defrec CONCAT [doc1 doc2])
-(defrec NEST [i doc])
-(defrec TEXT [s])
+(defrec CONCAT [DOC1 DOC2])
+(defrec NEST [indent DOC])
+(defrec TEXT [string])
 (defrec LINE [])
-(defrec UNION [doc1 doc2])
+(defrec UNION [DOC1 DOC2])
 (st/define-sum-type DOC DOC? [NIL CONCAT NEST TEXT LINE UNION])
 
 
-(defn <> [x y] (make-CONCAT x y))
-(defn nest [i x] (make-NEST i x))
-(defn text [s] (make-TEXT s))
+(defn <> [DOC1 DOC2] (make-CONCAT DOC1 DOC2))
+(defn nest [indent DOC] (make-NEST indent DOC))
+(defn text [string] (make-TEXT string))
 (defn line [] (make-LINE))
 
 (defn empty [] (make-NIL))
 
 (defrec Nil [])
-(defrec Text [s doc])
-(defrec Line [i doc])
+(defrec Text [string Doc])
+(defrec Line [indent Doc])
 (st/define-sum-type Doc Doc? [Nil Text Line])
 
 
 (defn flatten
   "Flattens a document to a document of one line."
-  [d]
-  (st/match DOC d
-            NIL?              (make-NIL)
-            (make-CONCAT x y) (make-CONCAT (flatten x) (flatten y))
-            (make-NEST i x)   (make-NEST i (flatten x))
-            (make-TEXT x)     (make-TEXT x)
-            LINE?             (make-TEXT " ")
-            (make-UNION x y)  (flatten x)))
+  [doc]
+  (st/match DOC doc
+            NIL?                    (make-NIL)
+            (make-CONCAT doc1 doc2) (make-CONCAT (flatten doc1) (flatten doc2))
+            (make-NEST indent doc)  (make-NEST indent (flatten doc))
+            (make-TEXT string)      (make-TEXT string)
+            LINE?                   (make-TEXT " ")
+            (make-UNION doc1 doc2)  (flatten doc1)))
 
 (defn group
   "Creates a union of the given document and its flatten form.
 
   Useful when the document can have but doesnt have to have a line break.
   Ex.: (group (line)) inserts a line when necessary."
-  [x]
-  (make-UNION (flatten x) x))
+  [doc]
+  (make-UNION (flatten doc) doc))
 
-(defn fits? [w delayed-doc]
+(defn fits? [width delayed-doc]
   (let [doc (force delayed-doc)]
-    (if (< w 0)
+    (if (< width 0)
       false
       (st/match Doc doc
-       Nil?                  true
-       (make-Text s delayed) (fits? (- w (count s)) delayed)
-       Line?                 true))))
+       Nil?                       true
+       (make-Text string delayed) (fits? (- width (count string)) delayed)
+       Line?                      true))))
 
 
 ;; The two docs are delayed for efficiency reasons
-(defn better [w k delayed-doc1 delayed-doc2]
-  (if (fits? (- w k) delayed-doc1)
+(defn better [width chars-on-line delayed-doc1 delayed-doc2]
+  (if (fits? (- width chars-on-line) delayed-doc1)
     (force delayed-doc1)
     (force delayed-doc2)))
 
@@ -91,35 +91,35 @@
 
 
 
-(defn be [w k list-of-pairs]
+(defn be [width chars-on-line list-of-pairs]
   (swap! zähler inc)
   (if (empty? list-of-pairs)
     (make-Nil)
 
-    (let [[[i d] & z] list-of-pairs]
+    (let [[[indent doc] & rest] list-of-pairs]
       (st/match
-       DOC d
-       NIL?              (be w k z)
-       (make-CONCAT x y) (be w k (apply list [i x] [i y] z))
-       (make-NEST j x)   (be w k (cons [(+ i j) x] z))
-       (make-TEXT s)     (make-Text s (delay (be w (+ k (count s)) z)))
-       LINE?             (make-Line i (be w i z))
-       (make-UNION x y)  (better w k
-                                 (delay (be w k (cons [i x] z)))
-                                 (delay (be w k (cons [i y] z))))))))
+       DOC doc
+       NIL?                     (be width chars-on-line rest)
+       (make-CONCAT doc1 doc2)  (be width chars-on-line (apply list [indent doc1] [indent doc2] rest))
+       (make-NEST indent-2 doc) (be width chars-on-line (cons [(+ indent indent-2) doc] rest))
+       (make-TEXT string)       (make-Text string (delay (be width (+ chars-on-line (count string)) rest)))
+       LINE?                    (make-Line indent (be width indent rest))
+       (make-UNION doc1 doc2)   (better width chars-on-line
+                                        (delay (be width chars-on-line (cons [indent doc1] rest)))
+                                        (delay (be width chars-on-line (cons [indent doc2] rest))))))))
 
 (defn best
   "Returns the best fitting document for a given doc.
-`w` is the maximum width and `k` is the count of characters already placed on
-the current line."
-  [w k x]
-  (be w k [[0 x]]))
+  `width` is the maximum width and `chars-on-line` is the count of characters already placed on
+  the current line."
+  [width chars-on-line doc]
+  (be width chars-on-line [[0 doc]]))
 
 (defn pretty
   "Returns the best fitting document for a given doc.
-  `w` is the maximum width."
-  [w x]
-  (best w 0 x))
+  `width` is the maximum width."
+  [width doc]
+  (best width 0 doc))
 
 (defn layout
   "Converts a document to a string."
@@ -137,54 +137,54 @@ the current line."
 
 (defn <+>
   "Concats two documents with a space inbetween."
-  [x y]
-  (<> x
-      (<> (text " ") y)))
+  [doc1 doc2]
+  (<> doc1
+      (<> (text " ") doc2)))
 
 
 ;; In the paper, this combinator is called `</>`,
 ;; but this is not a possible variable name in Clojure
 (defn <->
   "Concats two documents with a linebreak inbetween."
-  [x y]
-  (<> x
-      (<> (line) y)))
+  [doc1 doc2]
+  (<> doc1
+      (<> (line) doc2)))
 
 (defn folddoc
   "Folds a list of documents with given function f."
   [f docs]
-  (if-let [[x & xs] (not-empty docs)]
-    (if (empty? xs)
-      x
-      (f x (folddoc f xs)))
+  (if-let [[doc & rest] (not-empty docs)]
+    (if (empty? rest)
+      doc
+      (f doc (folddoc f rest)))
     (empty)))
 
 (defn spread
-  "Concats all docs of `ds` with space inbetween"
-  [ds]
-  (folddoc <+> ds))
+  "Concats all docs of the `docs` list with space inbetween to one doc."
+  [docs]
+  (folddoc <+> docs))
 
 (defn stack
-  "Concats all docs of `ds` with linbreak inbetween"
-  [ds]
-  (folddoc <-> ds))
+  "Concats all docs of the `docs` list with linbreak inbetween to one doc."
+  [docs]
+  (folddoc <-> docs))
 
 (defn bracket
-  "Puts brackets `l` and `r` around document `x`.
-  Indents the document `x` by 2 characters."
-  [l x r]
-  (<> (group (<> (text l)
+  "Puts brackets `left` and `rght` around document `doc`.
+  Indents the document `doc` by 2 characters."
+  [left doc right]
+  (<> (group (<> (text left)
                  (nest 2 (<> (line)
-                             x))))
+                             doc))))
       (<> (group (line))
-          (text r))))
+          (text right))))
 
 (defn <+->
   "Concats two documents with linbreak or space."
-  [x y]
-  (<> x
+  [doc1 doc2]
+  (<> doc1
       (<> (group (line))
-          y)))
+          doc2)))
 
 (def fillwords
   "Takes a string of words and concats them (via `<+->`) as `TEXT`s."
@@ -195,11 +195,11 @@ the current line."
 (defn fill
   "Concats a list of documents with linbreaks or spaces inbetween"
   [docs]
-  (if-let [[x & ds] (not-empty docs)]
-    (if-let [[y & zs] (not-empty ds)]
-      (make-UNION (<+> (flatten x)
-                       (fill (cons (flatten y) zs)))
-                  (<-> x
-                       (fill ds)))
-      x)
+  (if-let [[doc1 & rest] (not-empty docs)]
+    (if-let [[doc2 & rest-2] (not-empty rest)]
+      (make-UNION (<+> (flatten doc1)
+                       (fill (cons (flatten doc2) rest-2)))
+                  (<-> doc1
+                       (fill rest)))
+      doc1)
     (empty)))

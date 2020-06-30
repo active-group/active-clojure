@@ -416,6 +416,7 @@
 
      The resulting form throws at runtime if the passed argument is not of type `sum-type`"
 
+     {:style/indent :defn}
      [sum-type arg & clauses]
 
      (let [debug                         (debug-info &form *ns*)

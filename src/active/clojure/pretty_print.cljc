@@ -29,12 +29,38 @@
                      [field-name (symbol (str name "-" field-name))])
                    vec-of-fields))))
 
-(defrec NIL [])
-(defrec CONCAT [DOC1 DOC2])
-(defrec NEST [indent DOC])
-(defrec TEXT [string])
-(defrec LINE [])
-(defrec UNION [DOC1 DOC2])
+
+(r/define-record-type NIL
+  {:rtd-record? true
+   :java-class? false}
+  make-NIL NIL? [])
+(r/define-record-type CONCAT
+  {:rtd-record? true
+   :java-class? false}
+  make-CONCAT CONCAT?
+  [DOC1 CONCAT-DOC1
+   DOC2 CONCAT-DOC2])
+(r/define-record-type NEST
+  {:rtd-record? true
+   :java-class? false}
+  make-NEST NEST?
+  [indent NEST-indent
+   DOC NEST-DOC])
+(r/define-record-type TEXT
+  {:rtd-record? true
+   :java-class? false}
+  make-TEXT TEXT?
+  [string TEXT-string])
+(r/define-record-type LINE
+  {:rtd-record? true
+   :java-class? false}
+  make-LINE LINE? [])
+(r/define-record-type UNION
+  {:rtd-record? true
+   :java-class? false}
+  make-UNION UNION?
+  [DOC1 UNION-DOC1
+   DOC2 UNION-DOC2])
 (st/define-sum-type DOC DOC? [NIL CONCAT NEST TEXT LINE UNION])
 
 
@@ -45,9 +71,22 @@
 
 (defn empty [] (make-NIL))
 
-(defrec Nil [])
-(defrec Text [string Doc])
-(defrec Line [indent Doc])
+(r/define-record-type Nil
+  {:rtd-record? true
+   :java-class? false}
+  make-Nil Nil? [])
+(r/define-record-type Text
+  {:rtd-record? true
+   :java-class? false}
+  make-Text Text?
+  [string Text-string
+   Doc Text-Doc])
+(r/define-record-type Line
+  {:rtd-record? true
+   :java-class? false}
+  make-Line Line?
+  [indent Line-indent
+   Doc Line-Doc])
 (st/define-sum-type Doc Doc? [Nil Text Line])
 
 

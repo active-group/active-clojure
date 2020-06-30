@@ -123,14 +123,12 @@
 
 (defn layout
   "Converts a document to a string."
-  [d]
-  (let [d (if (delay? d) (force d) d)]
-    (st/match
-     Doc d
-     Nil? ""
-     (make-Text s doc) (str s (layout doc))
-     (make-Line i doc) (str (apply str "\n"(repeat i " "))
-                            (layout doc)))))
+  [doc]
+  (st/match Doc doc
+   Nil?  ""
+   (make-Text string delayed-doc) (str string (layout (force delayed-doc)))
+   (make-Line indent doc) (str (apply str "\n"(repeat indent " "))
+                               (layout doc))))
 
 
 ;;; Convenience functions

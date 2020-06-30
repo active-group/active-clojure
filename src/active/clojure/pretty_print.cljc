@@ -94,12 +94,12 @@
   "Flattens a document to a document of one line."
   [doc]
   (st/match DOC doc
-            NIL?                    (make-NIL)
-            (make-CONCAT doc1 doc2) (make-CONCAT (flatten doc1) (flatten doc2))
-            (make-NEST indent doc)  (make-NEST indent (flatten doc))
-            (make-TEXT string)      (make-TEXT string)
-            LINE?                   (make-TEXT " ")
-            (make-UNION doc1 doc2)  (flatten doc1)))
+    NIL?                    (make-NIL)
+    (make-CONCAT doc1 doc2) (make-CONCAT (flatten doc1) (flatten doc2))
+    (make-NEST indent doc)  (make-NEST indent (flatten doc))
+    (make-TEXT string)      (make-TEXT string)
+    LINE?                   (make-TEXT " ")
+    (make-UNION doc1 doc2)  (flatten doc1)))
 
 (defn group
   "Creates a union of the given document and its flatten form.
@@ -114,9 +114,9 @@
     (if (< width 0)
       false
       (st/match Doc doc
-       Nil?                       true
-       (make-Text string delayed) (fits? (- width (count string)) delayed)
-       Line?                      true))))
+        Nil?                       true
+        (make-Text string delayed) (fits? (- width (count string)) delayed)
+        Line?                      true))))
 
 
 ;; The two docs are delayed for efficiency reasons
@@ -136,16 +136,15 @@
     (make-Nil)
 
     (let [[[indent doc] & rest] list-of-pairs]
-      (st/match
-       DOC doc
-       NIL?                     (be width chars-on-line rest)
-       (make-CONCAT doc1 doc2)  (be width chars-on-line (apply list [indent doc1] [indent doc2] rest))
-       (make-NEST indent-2 doc) (be width chars-on-line (cons [(+ indent indent-2) doc] rest))
-       (make-TEXT string)       (make-Text string (delay (be width (+ chars-on-line (count string)) rest)))
-       LINE?                    (make-Line indent (be width indent rest))
-       (make-UNION doc1 doc2)   (better width chars-on-line
-                                        (delay (be width chars-on-line (cons [indent doc1] rest)))
-                                        (delay (be width chars-on-line (cons [indent doc2] rest))))))))
+      (st/match DOC doc
+        NIL?                     (be width chars-on-line rest)
+        (make-CONCAT doc1 doc2)  (be width chars-on-line (apply list [indent doc1] [indent doc2] rest))
+        (make-NEST indent-2 doc) (be width chars-on-line (cons [(+ indent indent-2) doc] rest))
+        (make-TEXT string)       (make-Text string (delay (be width (+ chars-on-line (count string)) rest)))
+        LINE?                    (make-Line indent (be width indent rest))
+        (make-UNION doc1 doc2)   (better width chars-on-line
+                                         (delay (be width chars-on-line (cons [indent doc1] rest)))
+                                         (delay (be width chars-on-line (cons [indent doc2] rest))))))))
 
 (defn best
   "Returns the best fitting document for a given doc.
@@ -164,10 +163,10 @@
   "Converts a document to a string."
   [doc]
   (st/match Doc doc
-   Nil?  ""
-   (make-Text string delayed-doc) (str string (layout (force delayed-doc)))
-   (make-Line indent doc) (str (apply str "\n"(repeat indent " "))
-                               (layout doc))))
+    Nil?  ""
+    (make-Text string delayed-doc) (str string (layout (force delayed-doc)))
+    (make-Line indent doc) (str (apply str "\n"(repeat indent " "))
+                                (layout doc))))
 
 
 ;;; Convenience functions

@@ -124,25 +124,28 @@
   (cond
     (r/rtd-record? obj) (show-rtd-record obj)
 
-    (number? obj) (text (str obj))
+    ;; (number? obj) (text (str obj))
 
-    (string? obj) (show-string obj)
+    ;; (string? obj) (show-string obj)
 
-    (keyword? obj) (text (str obj))
+    ;; (keyword? obj) (text (str obj))
 
     (map? obj) (show-map obj)
 
-    (list? obj) (show-list obj)
+     (list? obj) (show-list obj)
 
-    (vector? obj) (show-vector obj)
+     (vector? obj) (show-vector obj)
 
-    (nil? obj) (text "nil")
+    ;; (nil? obj) (text "nil")
 
-    (boolean? obj) (text (str obj))
+    ;; (boolean? obj) (text (str obj))
 
-    :else (do (println "This object has no own show-obj implementation.\n"
-                       "Object: " obj " type: " (type obj))
-              (text (str obj)))))
+    :else (text (str obj))
+
+    ;; :else (do (println "This object has no own show-obj implementation.\n"
+    ;;                    "Object: " obj " type: " (type obj))
+    ;;           (text (str obj)))
+    ))
 
 ;;; Tests
 
@@ -189,11 +192,15 @@
 #_(println (layout (pretty 30 (show-object ob))))
 
 
-#_(do
-  (println "\nPPRINT:")
-  (time (clojure.pprint/pprint ob))
+(do
+  #_(println "\nPPRINT:")
+  #_(time (clojure.pprint/pprint ob))
   (println "\n Prettier Printer")
-  (time (println (layout (pretty 50 (show-object ob))))))
+  (reset! pp/zähler 0)
+  (time (println (layout (pretty 30 (show-object ob)))))
+  (println "Anzahl Durchgänge " @pp/zähler))
+
+
 
 ;;; ------------
 

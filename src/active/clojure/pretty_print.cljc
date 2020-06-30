@@ -70,22 +70,21 @@
   [x]
   (make-UNION (flatten x) x))
 
-(defn fits? [w d]
-  (let [d (if (delay? d) (force d) d)]
+(defn fits? [w delayed-doc]
+  (let [doc (force delayed-doc)]
     (if (< w 0)
       false
-      (st/match
-       Doc d
-       Nil?            true
-       (make-Text s x) (fits? (- w (count s)) x)
-       Line?           true))))
+      (st/match Doc doc
+       Nil?                  true
+       (make-Text s delayed) (fits? (- w (count s)) delayed)
+       Line?                 true))))
 
 
-;; x and y are delayed for efficiency reasons
-(defn better [w k x y]
-  (if (fits? (- w k) (force x))
-    (force x)
-    (force y)))
+;; The two docs are delayed for efficiency reasons
+(defn better [w k delayed-doc1 delayed-doc2]
+  (if (fits? (- w k) delayed-doc1)
+    (force delayed-doc1)
+    (force delayed-doc2)))
 
 (def zähler (atom 0))
 

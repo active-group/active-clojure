@@ -143,8 +143,8 @@
         (make-TEXT string)       (make-Text string (delay (be width (+ chars-on-line (count string)) rest)))
         LINE?                    (make-Line indent (be width indent rest))
         (make-UNION doc1 doc2)   (better width chars-on-line
-                                         (delay (be width chars-on-line (cons [indent doc1] rest)))
-                                         (delay (be width chars-on-line (cons [indent doc2] rest))))))))
+                                         (delay (be width chars-on-line (cons [indent (force doc1)] rest)))
+                                         (delay (be width chars-on-line (cons [indent (force doc2)] rest))))))))
 
 (defn best
   "Returns the best fitting document for a given doc.
@@ -233,9 +233,9 @@
   [docs]
   (if-let [[doc1 & rest] (not-empty docs)]
     (if-let [[doc2 & rest-2] (not-empty rest)]
-      (make-UNION (<+> (flatten doc1)
-                       (fill (cons (flatten doc2) rest-2)))
-                  (<-> doc1
-                       (fill rest)))
+      (make-UNION (delay (<+> (flatten doc1)
+                              (fill (cons (flatten doc2) rest-2))))
+                  (delay (<-> doc1
+                              (fill rest))))
       doc1)
     (empty)))

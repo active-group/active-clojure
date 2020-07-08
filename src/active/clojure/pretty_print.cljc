@@ -93,13 +93,14 @@
 (defn flatten
   "Flattens a document to a document of one line."
   [doc]
-  (st/match DOC doc
-    NIL?                    (make-NIL)
-    (make-CONCAT doc1 doc2) (make-CONCAT (flatten doc1) (flatten doc2))
-    (make-NEST indent doc)  (make-NEST indent (flatten doc))
-    (make-TEXT string)      (make-TEXT string)
-    LINE?                   (make-TEXT " ")
-    (make-UNION doc1 doc2)  (flatten doc1)))
+  (let [doc (force doc)]
+    (st/match DOC doc
+      NIL?                    (make-NIL)
+      (make-CONCAT doc1 doc2) (make-CONCAT (flatten doc1) (flatten doc2))
+      (make-NEST indent doc)  (make-NEST indent (flatten doc))
+      (make-TEXT string)      (make-TEXT string)
+      LINE?                   (make-TEXT " ")
+      (make-UNION doc1 doc2)  (flatten doc1))))
 
 (defn group
   "Creates a union of the given document and its flatten form.

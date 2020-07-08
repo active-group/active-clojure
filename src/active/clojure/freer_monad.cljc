@@ -5,7 +5,8 @@
   representation for bind.
   
   See http://okmij.org/ftp/Haskell/extensible/index.html for details."
-  (:require [active.clojure.condition :as c]
+  (:require [taoensso.tufte :as tufte :refer (defnp p profiled profile)]
+            [active.clojure.condition :as c]
             #?(:clj [active.clojure.record :refer [define-record-type]])
             #?(:cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
             #?(:clj [clojure.core :as core])
@@ -90,7 +91,7 @@
           nil)))
     queue))
 
-(defn bind
+(defnp bind
   "Bind/flatMap for the free monad."
   [first-action continuation]
   (cond

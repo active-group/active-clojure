@@ -209,11 +209,11 @@
   "Puts brackets `left` and `rght` around document `doc`.
   Indents the document `doc` by 2 characters."
   [left doc right]
-  (<> (group (<> (text left)
+  (group (<> (<> (text left)
                  (nest 2 (<> (line)
-                             doc))))
-      (<> (group (line))
-          (text right))))
+                             doc)))
+             (<> (line)
+                 (text right)))))
 
 (defn <+->
   "Concats two documents with linbreak or space."

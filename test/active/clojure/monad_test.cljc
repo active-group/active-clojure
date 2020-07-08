@@ -20,9 +20,15 @@
                                                    monad-command-config-run-command
                                                    reify-command reify-as
                                                    put-state-component!)])
+            [taoensso.tufte :as tufte :refer (defnp p profiled profile)]
             [active.clojure.condition :as c]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))
+
+(use-fixtures :once (fn [f]
+                      (tufte/add-basic-println-handler!
+                       {})
+                      (profile {} (f))))
 
 (defrecord Ask [prompt])
 (defn ask [prompt] (Ask. prompt))

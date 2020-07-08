@@ -7,7 +7,8 @@
                  [org.clojure/clojurescript "1.10.238" :scope "provided"]
                  [io.aviso/pretty "0.1.34"]
                  [org.clojure/core.match "1.0.0"]
-                 [org.clojure/test.check "0.10.0-alpha4"]]
+                 [org.clojure/test.check "0.10.0-alpha4"]
+                 [com.taoensso/tufte "2.1.0"]]
 
   :generated-paths ["target"]
 

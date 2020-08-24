@@ -177,7 +177,7 @@
     (is (= [nil 42] ;; ??
            (lens/shove nil l 42)))))
 
-(deftest at-index
+(deftest at-index-test
   (lens-laws-hold (lens/at-index 0) [12 42] 7 65)
   (lens-laws-hold (lens/at-index 1) '(12 42) 7 65)
 

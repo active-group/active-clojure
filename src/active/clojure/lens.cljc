@@ -318,9 +318,11 @@
     (let [s (concat front
                     (list v)
                     (rest back))]
-      (if (seq? coll)
-        s
-        (into (empty coll) s)))))
+      (if (list? coll)
+        (apply list s)
+        (if (seq? coll)
+          s
+          (into (empty coll) s))))))
 
 (defn at-index
   "Returns a lens that focuses on the value at index n in a collection.

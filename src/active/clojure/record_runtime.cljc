@@ -13,7 +13,7 @@
 
 (defn make-record-type-descriptor
   [name uid fields]
-  (RecordTypeDescriptor. name uid (to-array fields)))
+  (RecordTypeDescriptor. name uid (vec fields)))
 
 (defn record-type-descriptor?
   [x]
@@ -33,6 +33,11 @@
           (recur (inc i)
                  (rest fields)))))))
 
+(defn ^:no-doc rtd= [this-rtd other-rtd]
+  ;; Note: this assures that record-type definitions can be reloaded and still 'work' (non-generative)
+  #?(:clj (.equals ^RecordTypeDescriptor this-rtd ^RecordTypeDescriptor other-rtd))
+  #?(:cljs (= this-rtd other-rtd)))
+
 (deftype Record
     [^RecordTypeDescriptor rtd
      ^{:tag #?(:clj "[Ljava.lang.Object;"
@@ -45,7 +50,7 @@
                        this-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record this)
                        other-rtd ^RecordTypeDescriptor (.rtd ^Record other)
                        other-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record other)]
-                   (and (.equals ^RecordTypeDescriptor this-rtd ^RecordTypeDescriptor other-rtd)
+                   (and (rtd= this-rtd other-rtd)
                         (java.util.Arrays/deepEquals this-slots other-slots)))
                  false))] ; must be `false`, `nil` is no Java value
       :cljs
@@ -145,7 +150,7 @@
 (defn record-of-type?
   [^Record r ^RecordTypeDescriptor rtd]
   (and (record? r)
-       (identical? rtd (.-rtd r))))
+       (rtd= rtd (.-rtd r))))
 
 ; assumes that ?r, ?rtd are identifiers alerady
 (defmacro record-check-rtd!
@@ -164,7 +169,7 @@
       `(do
          (when-not (and (record? ~?r)
                         (let [~record ~?r]
-                          (identical? ~?rtd (.-rtd ~record))))
+                          (rtd= ~?rtd (.-rtd ~record))))
            (throw ~error)))
       `(throw ~error))))
 

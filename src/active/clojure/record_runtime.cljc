@@ -1,4 +1,4 @@
-(ns active.clojure.record-runtime
+(ns ^:no-doc active.clojure.record-runtime
   (:refer-clojure :exclude [record?])
   #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!
                                                                    record-type-meta record-type-rtd]])))

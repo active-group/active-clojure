@@ -15,11 +15,11 @@
         predicate field-triples opt+specs))))
 
 
-(defmacro record-type-rtd
+(defmacro ^:no-doc record-type-rtd
    [rt]
    `(~rt :rtd))
 
-(defmacro record-type-meta
+(defmacro ^:no-doc record-type-meta
   [rt]
   `(~rt :meta))
 

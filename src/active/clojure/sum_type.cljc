@@ -7,13 +7,13 @@
       :cljs [active.clojure.lens :as lens :include-macros true])))
 
 
-(def sum-type-identifier ::sum-type)
+(def ^:private sum-type-identifier ::sum-type)
 
-(defn debug-info-str [debug-info]
+(defn- debug-info-str [debug-info]
   (str "in " (:ns debug-info) ", line: " (:line debug-info) ", column: " (:column debug-info)))
 
 #?(:clj
-   (defn throw-illegal-argument-exception [^java.lang.String msg]
+   (defn- throw-illegal-argument-exception [^java.lang.String msg]
      (throw (new java.lang.IllegalArgumentException msg))))
 
 #?(:clj
@@ -47,16 +47,16 @@
 ;; - DefaultClause, describing a matching clause based on the special form :default
 ;; - ClauseWithExtraction, describing a matching clause based on a constructor
 
-(record/define-record-type ClauseWithPredicate
+(record/define-record-type ^:private ClauseWithPredicate
   (make-clause-with-predicate predicate body) clause-with-predicate?
   [predicate clause-with-predicate-predicate
    body clause-with-predicate-body])
 
-(record/define-record-type DefaultClause
+(record/define-record-type ^:private DefaultClause
   (make-default-clause body) default-clause?
   [body default-clause-body])
 
-(record/define-record-type ClauseWithExtraction
+(record/define-record-type ^:private ClauseWithExtraction
   (make-clause-with-extraction constructor-symbol named-params body) clause-with-extraction?
   [constructor-symbol clause-with-extraction-constructor-symbol
    named-params clause-with-extraction-named-params
@@ -248,10 +248,10 @@
 
 
 #?(:clj
-   (def runtime-error throw-illegal-argument-exception)
+   (def ^:no-doc runtime-error throw-illegal-argument-exception)
 
    :cljs
-   (defn runtime-error [msg]
+   (defn ^:no-doc runtime-error [msg]
      (throw (js/Error. msg))))
 
 
@@ -292,19 +292,19 @@
 
 
 #?(:clj
-   (defn throw-non-type-functions! [t st debug]
+   (defn- throw-non-type-functions! [t st debug]
      (throw-illegal-argument-exception
        (apply str "The following functions don't belong to records or sum-types of type `"
          st "`: " (clojure.string/join ", " t)
          " " (debug-info-str debug)))))
 
 
-(defn find-non-type-functions [tree symbols]
+(defn- find-non-type-functions [tree symbols]
   (filter #(not (or (filter-constructor % tree) (filter-predicate % tree))) symbols))
 
 
 #?(:clj
-   (defn throw-when-non-type-functions!
+   (defn- throw-when-non-type-functions!
      "Throws if fun-symbols contains functions that are neither
       a predicate nor a constructor in the type-tree"
      [tree fun-symbols t debug]
@@ -313,14 +313,14 @@
          (throw-non-type-functions! non-type-functions t debug)))))
 
 
-(defn constr-or-pred?-fn [sym]
+(defn- constr-or-pred?-fn [sym]
   (fn [tree]
     (or
       (= sym (:constructor tree))
       (= sym (:predicate tree)))))
 
 
-(defn colorize
+(defn- colorize
   "Colorizes a node if pred matches (that is, setting colored? to `true`"
   [pred tree]
   (let [t        (if (pred tree)
@@ -332,7 +332,7 @@
       t)))
 
 
-(defn find-non-colored-leafs
+(defn- find-non-colored-leafs
   "Finds non-colored leafs by recursion. Stops descending if colored intermediate node occurs"
   [tree]
   (cond
@@ -341,7 +341,7 @@
     :default          [tree]))
 
 
-(defn find-not-covered
+(defn- find-not-covered
   "Finds all predicates in the type-tree that are not covered by symbols"
   [tree symbols]
   (->> symbols
@@ -387,7 +387,7 @@
        (throw-illegal-argument-exception (str ?sym " must be a symbol " (debug-info-str debug))))))
 
 #?(:clj
-   (defn debug-info [form ns]
+   (defn- debug-info [form ns]
      (assoc (meta form) :ns (str ns))))
 
 

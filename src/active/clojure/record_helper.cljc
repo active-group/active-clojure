@@ -1,4 +1,4 @@
-(ns active.clojure.record-helper
+(ns ^:no-doc active.clojure.record-helper
   (:require [active.clojure.lens :as lens]
             [active.clojure.condition :as c]
             [clojure.spec.alpha :as spec]

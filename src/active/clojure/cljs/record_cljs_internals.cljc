@@ -171,7 +171,7 @@
                ksym (gensym "k")
                default-interfaces+methods
                {'IEquiv
-                [(core/let [this (gensym 'this) other (gensym 'other)]
+                [(core/let [this (gensym 'this) other (with-meta (gensym 'other) {:tag '`~rname})]
                     `(~'-equiv [~this ~other]
                       (and (some? ~other)
                            (identical? (.-constructor ~this)

@@ -45,9 +45,10 @@
     (assoc data lens v)
     (lens data v)))
 
-(defn- throw-invalid-number-of-arguments-error [n]
-  (let [error-msg (str "invalid number of arguments (" n ") to lens")]
-    (throw (java.lang.IllegalArgumentException. error-msg))))
+#?(:clj
+   (defn- throw-invalid-number-of-arguments-error [n]
+     (let [error-msg (str "invalid number of arguments (" n ") to lens")]
+       (throw (java.lang.IllegalArgumentException. error-msg)))))
 
 (defrecord ExplicitLens
     ^{:private true}

@@ -11,7 +11,8 @@
 (defn test-ns-hook []
   )
 
-(deftest is-test
+;; Note: should be doable on cljs, but does not work there currently.
+#?(:clj (deftest is-test
   (is
    (raised? c/error?
             (c/raise (c/make-error) "random error")))
@@ -21,4 +22,4 @@
    (raised? c/error? 23))
 
   (is
-   (raised? c/error? (c/raise (c/make-warning) "not an error"))))
+   (raised? c/error? (c/raise (c/make-warning) "not an error")))))

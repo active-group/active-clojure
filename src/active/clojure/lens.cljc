@@ -377,28 +377,58 @@ right-most element where they were before."}  merge
                       (rest result))
                 (into (empty structs)))))))))
 
-(let [map-f (fn
-              ([mp outer]
-               (reduce-kv (fn [inner k lens]
-                            (assoc inner k (yank outer lens)))
-                          mp mp))
-              ([mp outer inner]
-               (reduce-kv (fn [outer k lens]
-                            (shove outer lens (get inner k)))
-                          outer
-                          mp)))
-      vec-f (fn
-              ([v outer]
-               (mapv (fn [lens]
-                       (yank outer lens))
-                     v))
-              ([v outer inner]
-               (reduce (fn [outer i]
-                         (shove outer (get v i) (get inner i)))
-                       outer
-                       (range (count v)))))]
-  (defn pattern [p]
-    (cond
-      (map? p) (f/partial map-f p)
-      (vector? p) (f/partial vec-f p)
-      :else (assert false "Pattern must be a map or a vector."))))
+(let [f (fn
+          ([empty fields in]
+           (reduce (fn [r [f lens]]
+                     (shove r f (yank in lens)))
+                   empty
+                   fields))
+          ([empty fields out v]
+           (reduce (fn [r [f lens]]
+                     (shove r lens (yank v f)))
+                   out
+                   fields)))]
+  (defn- projection
+    "A lens that projects multiple derived values into a new value,
+  with `empty` being an initial new value, and `fields` a map or
+  sequence of tuples, of a lens on the new value and lens over the
+  'outer' value the lens is used on.
+
+  As an example, this can be used to map between to record types like this:
+
+```
+  (projection (make-inner-record nil)
+              {inner-record-field outer-record-field})
+```
+  
+  The returned lens can then be used on a value of type
+  'outer-record', to see it as a value of type 'inner-record'."
+    [empty fields]
+    (f/partial f empty fields)))
+
+(defn pattern
+  "A lens over any value yielding to a map or a vector, depending on the given pattern.
+  
+  For example
+
+```
+  (pattern {:bar (at-index 0) :foo (at-index 2)})
+```
+
+  will focus on the first and third elements of a sequence, as a map with the given keys.
+
+  Similarly, you can create a lens that yield a vector, given some fields of a map:
+
+```
+  (pattern [:bar :foo])
+```
+
+"
+  [p]
+  (cond
+    ;; TODO: optimize projection by using transient ? (generally, make a :keyword use assoc! on trantients?
+    (map? p) (projection {} p)
+    (vector? p) (projection [] (map-indexed (fn [idx f]
+                                              [(at-index idx) f])
+                                            p))
+    :else (assert false "Pattern must be a map or a vector.")))

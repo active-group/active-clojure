@@ -8,6 +8,7 @@
             [active.clojure.record-test]
             [active.clojure.record-spec-test]
             [active.clojure.match-test]
+            [active.clojure.pattern-test]
             [active.clojure.sum-type-test]
             [active.clojure.config-test]
             [active.clojure.macro-test]

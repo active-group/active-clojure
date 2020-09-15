@@ -1,4 +1,4 @@
-(ns active.clojure.match-test
+(ns active.clojure.pattern-test
   (:require [active.clojure.pattern :as p]
             #?(:clj  [clojure.test :as t :refer :all]
                :cljs [cljs.test :as t :include-macros true])))
@@ -30,12 +30,12 @@
    :z "z"
    :w "w"})
 
-(def one
-  [(:kind #"one")
-   (:x "x" :as x)
-   (:y "y")
-   (:z :as z)
-   :w])
+;; (def one
+;;   [(:kind #"one")
+;;    (:x "x" :as x)
+;;    (:y "y")
+;;    (:z :as z)
+;;    :w])
 
 (def one-pattern
   (p/pattern 'one
@@ -73,19 +73,19 @@
 
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
-    (t/is (= (p/make-key-exists-clause :k 'k)
+    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
              (p/parse-clause :k))))
 
   (t/testing "key exists with binding clause"
-    (t/is (= (p/make-key-exists-clause :k 'Binding)
+    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'Binding)
              (p/parse-clause (list :k :as 'Binding)))))
 
   (t/testing "path exists clause"
-    (t/is (= (p/make-path-exists-clause [:k 'V] 'V)
+    (t/is (= (p/make-path-exists-clause [:k 'V] p/the-existence-matcher 'V)
              (p/parse-clause [:k 'V]))))
 
   (t/testing "path exists clause with binding"
-    (t/is (= (p/make-path-exists-clause [:k 'V] 'Binding)
+    (t/is (= (p/make-path-exists-clause [:k 'V] p/the-existence-matcher 'Binding)
              (p/parse-clause (list [:k 'V] :as 'Binding)))))
 
   (t/testing "key matches clause"

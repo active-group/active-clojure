@@ -127,31 +127,33 @@
 ;; 3.
 (define-record-type KeyExistsClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
-  (make-key-exists-clause key binding)
+  (make-key-exists-clause key matcher binding)
   key-exists-clause?
   [key key-exists-clause-key
+   matcher key-exists-clause-matcher
    binding key-exists-clause-binding])
 
 (defn key-exists-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `key` to `(key->sym key)`."
   [key]
-  (make-key-exists-clause key (key->sym key)))
+  (make-key-exists-clause key the-existence-matcher (key->sym key)))
 
 ;; 4.
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
   PathExistsClause
-  (make-path-exists-clause path binding)
+  (make-path-exists-clause path matcher binding)
   path-exists-clause?
   [path path-exists-clause-key
+   matcher path-exists-clause-matcher
    binding path-exists-clause-binding])
 
 (defn path-exists-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `path` to `(key->sym (last path))`."
   [path]
-  (make-path-exists-clause path ((comp key->sym last) path)))
+  (make-path-exists-clause path the-existence-matcher ((comp key->sym last) path)))
 
 ;; 5.
 (define-record-type
@@ -193,6 +195,14 @@
                key-exists-clause-binding
                path-exists-clause-binding))
 
+(def matcher-lens
+  "Returns a function that when applied to a clause, returns a lens focusing on
+  the matcher of the clause."
+  (clause-lens key-matches-clause-matcher
+               path-matches-clause-matcher
+               key-exists-clause-matcher
+               path-exists-clause-matcher))
+
 (defn bind-match
   "Takes a clause and replaces it's binding with `binding`."
   [clause binding]
@@ -220,16 +230,13 @@
 (s/def ::binding-key #{:as})
 (s/def ::binding symbol?)
 
-
 (s/def ::key-exists ::key)
 (s/def ::key-exists-with-binding
-  (s/cat :key ::key :binding-key ::binding-key :binding ::binding)
-  #_(s/tuple ::key ::binding-key ::binding))
+  (s/cat :key ::key :binding-key ::binding-key :binding ::binding))
 
 (s/def ::path-exists ::path)
 (s/def ::path-exists-with-binding
-  (s/cat :path ::path :binding-key ::binding-key :binding ::binding)
-  #_(s/tuple ::path ::binding-key ::binding))
+  (s/cat :path ::path :binding-key ::binding-key :binding ::binding))
 
 (s/def ::key-matches (s/cat :key ::key :match-value ::match-value))
 (s/def ::key-matches-with-binding
@@ -249,7 +256,7 @@
         :path-matches ::path-matches
         :path-matches-with-binding ::path-matches-with-binding))
 
-(defn- match-value->matcher
+(defn match-value->matcher
   [[kind match-value]]
   (if (= :regex kind)
     (match-regex match-value)

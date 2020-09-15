@@ -1,41 +1,41 @@
-(ns active.clojure.match-test
+(ns active.clojure.pattern-test
   (:require [active.clojure.pattern :as p]
             #?(:clj  [clojure.test :as t :refer :all]
                :cljs [cljs.test :as t :include-macros true])))
 
 ;; Tests from `active.clojure.match-test`
 
-(def one-data {:kind "one"
-               :x    "x"
-               :y    "y"
-               :z    "z"
-               :w    "w"})
+(def one-data (quote {:kind "one"
+                      :x    "x"
+                      :y    "y"
+                      :z    "z"
+                      :w    "w"}))
 
 (def two-data
-  {:kind "two"
-   :a    "a"
-   :b    "b"
-   :c    "c"
-   :d    {"Z" 42
-          "Y" 23
-          "X" 65
-          "W" {"foo"
-               "bar"}}})
+  (quote {:kind "two"
+          :a    "a"
+          :b    "b"
+          :c    "c"
+          :d    {"Z" 42
+                 "Y" 23
+                 "X" 65
+                 "W" {"foo"
+                      "bar"}}}))
 
 (def three-data
-  {:different-kind
-   "one"
-   :x "x"
-   :y "y"
-   :z "z"
-   :w "w"})
+  (quote {:different-kind
+          "one"
+          :x "x"
+          :y "y"
+          :z "z"
+          :w "w"}))
 
 (def one
-  [(:kind #"one")
-   (:x "x" :as x)
-   (:y "y")
-   (:z :as z)
-   :w])
+  (quote [(:kind #"one")
+          (:x "x" :as x)
+          (:y "y")
+          (:z :as z)
+          :w]))
 
 (def one-pattern
   (p/pattern 'one

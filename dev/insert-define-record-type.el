@@ -39,7 +39,7 @@ index in STRING."
   (interactive)
   (let* ((type-name (read-string "type-name: "))
          (name (un-camelcase-string type-name))
-         (fields (split-string (read-string "fields: ") " "))
+         (fields (seq-filter (lambda (elt) (not (string= "" elt))) (split-string (read-string "fields: ") " ")))
          (field-tuples (create-field-tuples fields name)))
     (insert (concat "(define-record-type " type-name
                   "\n  "

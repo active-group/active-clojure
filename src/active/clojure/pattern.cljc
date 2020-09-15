@@ -249,19 +249,7 @@
         :path-matches ::path-matches
         :path-matches-with-binding ::path-matches-with-binding))
 
-(s/conform ::clause :kind)
-(s/conform ::clause (list :kind :as 'K))
-
-(s/conform ::clause [:a 'B])
-(s/conform ::clause (list [:a 'B] :as 'B))
-
-(s/conform ::clause (list :kind "a"))
-(s/conform ::clause (list :kind "a" :as 'Foo))
-
-(s/conform ::clause (list [:kind 'Y "D"] #"a"))
-(s/conform ::clause (list [:kind 'Y "D"] "a" :as 'Foo))
-
-(defn match-value->matcher
+(defn- match-value->matcher
   [[kind match-value]]
   (if (= :regex kind)
     (match-regex match-value)

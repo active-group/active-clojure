@@ -2,7 +2,9 @@
   (:require #?(:clj  [active.clojure.record :refer [define-record-type]]
                :cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
             [active.clojure.condition :as c]
-            [active.clojure.lens :as lens]))
+            [active.clojure.lens :as lens]
+
+            [clojure.spec.alpha :as s]))
 
 (define-record-type Pattern
   (make-pattern name clauses) pattern?
@@ -181,7 +183,7 @@
       (key-exists-clause? clause)   key-exists-lens
       (path-exists-clause? clause)  path-exists-lens
       :else
-      (c/assertion-violation "not a valid clause" clause))))
+      (c/assertion-violation `clause-lens "not a valid clause" clause))))
 
 (def binding-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
@@ -196,3 +198,121 @@
   [clause binding]
   {:pre [(and (clause? clause) (symbol? binding))]}
   (lens/shove clause (binding-lens clause) binding))
+
+;; Translate pattern expressions for `active.clojure.match` to clauses
+
+(s/def ::key (s/or :keyword keyword? :symbol symbol? :string string?))
+(s/def ::path (s/coll-of ::key :kind vector?))
+
+(defn regex?
+  "Is a `thing` a regex."
+  [thing]
+  #?(:clj  (instance? java.util.regex.Pattern thing)
+     :cljs (instance? js/RegExp thing)))
+
+(defn any-but
+  [& exclusions]
+  (complement (apply some-fn exclusions)))
+
+(s/def ::match-value (s/or :regex regex?
+                           :any (any-but regex?)))
+
+(s/def ::binding-key #{:as})
+(s/def ::binding symbol?)
+
+
+(s/def ::key-exists ::key)
+(s/def ::key-exists-with-binding
+  (s/cat :key ::key :binding-key ::binding-key :binding ::binding)
+  #_(s/tuple ::key ::binding-key ::binding))
+
+(s/def ::path-exists ::path)
+(s/def ::path-exists-with-binding
+  (s/cat :path ::path :binding-key ::binding-key :binding ::binding)
+  #_(s/tuple ::path ::binding-key ::binding))
+
+(s/def ::key-matches (s/cat :key ::key :match-value ::match-value))
+(s/def ::key-matches-with-binding
+  (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding))
+
+(s/def ::path-matches (s/cat :path ::path :match-value ::match-value))
+(s/def ::path-matches-with-binding
+  (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding))
+
+(s/def ::clause
+  (s/or :key-exists ::key-exists
+        :key-exists-with-binding ::key-exists-with-binding
+        :path-exists ::path-exists
+        :path-exists-with-binding ::path-exists-with-binding
+        :key-matches ::key-matches
+        :key-matches-with-binding ::key-matches-with-binding
+        :path-matches ::path-matches
+        :path-matches-with-binding ::path-matches-with-binding))
+
+(s/conform ::clause :kind)
+(s/conform ::clause (list :kind :as 'K))
+
+(s/conform ::clause [:a 'B])
+(s/conform ::clause (list [:a 'B] :as 'B))
+
+(s/conform ::clause (list :kind "a"))
+(s/conform ::clause (list :kind "a" :as 'Foo))
+
+(s/conform ::clause (list [:kind 'Y "D"] #"a"))
+(s/conform ::clause (list [:kind 'Y "D"] "a" :as 'Foo))
+
+(defn match-value->matcher
+  [[kind match-value]]
+  (if (= :regex kind)
+    (match-regex match-value)
+    (match-const match-value)))
+
+(defn parse-clause
+  [p]
+  (let [parse (s/conform ::clause p)]
+    (if (s/invalid? parse)
+      (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
+      (case (first parse)
+        :key-exists
+        (let [[_ [_ k]] parse]
+          (key-exists-clause k))
+
+        :key-exists-with-binding
+        (let [[_ {:keys [key binding]}] parse
+              [_ k]                     key]
+          (bind-match (key-exists-clause k) binding))
+
+        :path-exists
+        (let [[_ path] parse
+              components (mapv second path)]
+          (path-exists-clause components))
+
+        :path-exists-with-binding
+        (let [[_ {:keys [path binding]}] parse
+              components (mapv second path)]
+          (bind-match (path-exists-clause components) binding))
+
+        :key-matches
+        (let [[_ {:keys [key match-value]}] parse
+              [_ k] key]
+          (key-matches-clause k (match-value->matcher match-value)))
+
+        :key-matches-with-binding
+        (let [[_ {:keys [key match-value binding]}] parse
+              [_ k] key]
+          (bind-match (key-matches-clause k (match-value->matcher match-value)) binding))
+
+        :path-matches
+        (let [[_ {:keys [path match-value]}] parse
+              components (mapv second path)]
+          (path-matches-clause components (match-value->matcher  match-value)))
+
+        :path-matches-with-binding
+        (let [[_ {:keys [path match-value binding]}] parse
+              components (mapv second path)]
+          (bind-match (path-matches-clause components (match-value->matcher match-value)) binding))))))
+
+(defn parse-pattern
+  "Parse the argument to `defpattern` as a [[Pattern]]"
+  [name p]
+  (make-pattern name (mapv parse-clause p)))

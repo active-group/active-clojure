@@ -4,6 +4,7 @@
             [active.clojure.condition :as c]
             [active.clojure.lens :as lens]
 
+            [clojure.core.match :as match]
             [clojure.spec.alpha :as s]))
 
 (define-record-type Pattern
@@ -145,7 +146,7 @@
   PathExistsClause
   (make-path-exists-clause path matcher binding)
   path-exists-clause?
-  [path path-exists-clause-key
+  [path path-exists-clause-path
    matcher path-exists-clause-matcher
    binding path-exists-clause-binding])
 
@@ -203,12 +204,21 @@
                key-exists-clause-matcher
                path-exists-clause-matcher))
 
+(def path-lens
+  "Returns a function that when applied to a clause, returns a lens focusing on
+  the matcher of the clause."
+  (clause-lens key-matches-clause-key
+               path-matches-clause-path
+               key-exists-clause-key
+               path-exists-clause-path))
+
 (defn bind-match
   "Takes a clause and replaces it's binding with `binding`."
   [clause binding]
   {:pre [(and (clause? clause) (symbol? binding))]}
   (lens/shove clause (binding-lens clause) binding))
 
+;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
 
 (s/def ::key (s/or :keyword keyword? :symbol symbol? :string string?))
@@ -311,3 +321,111 @@
   "Parse the argument to `defpattern` as a [[Pattern]]"
   [name p]
   (make-pattern name (mapv parse-clause p)))
+
+;; Match
+
+(defn convert-path-element
+  [path-element]
+  (if (symbol? path-element) (str path-element) path-element))
+
+(defn key-exists-clause->match
+  [clause]
+  (let [key     (key-exists-clause-key clause)
+        binding (key-exists-clause-binding clause)]
+    ;; ignore the binding if it is the same as the key
+    {(convert-path-element key) binding}))
+
+(defn path-exists-clause->match
+  [clause]
+  (let [path    (path-exists-clause-path clause)
+        binding (path-exists-clause-binding clause)]
+    (assoc-in {} (map convert-path-element path) binding)))
+
+(defn key-matches-clause->lhs-match
+  [clause]
+  (let [key         (key-matches-clause-key clause)
+        match-value (matcher->value (key-matches-clause-matcher clause))]
+    {key match-value}))
+
+(defn key-matches-clause->rhs-match
+  [message clause rhs]
+  (let [key         (key-matches-clause-key clause)
+        match-value (matcher->value (key-matches-clause-matcher clause))
+        binding     (key-matches-clause-binding clause)]
+    `[~binding (get-in ~message [~(convert-path-element key)] ~match-value)]))
+
+(defn path-matches-clause->lhs-match
+  [clause]
+  (let [path        (path-matches-clause-path clause)
+        match-value (matcher->value (path-matches-clause-matcher clause))]
+    (assoc-in {} (map convert-path-element path) match-value)))
+
+(defn path-matches-clause->rhs-match
+  [message clause rhs]
+  (let [path         (path-matches-clause-path clause)
+        match-value (matcher->value (path-matches-clause-matcher clause))
+        binding     (path-matches-clause-binding clause)]
+    `[~binding (get-in ~message ~(map convert-path-element path) ~match-value)]))
+
+(defn deep-merge-with
+  "Like merge-with, but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level.
+  (deep-merge-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
+                     {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
+  -> {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
+  [f & maps]
+  (apply
+   (fn m [& maps]
+     (if (every? map? maps)
+       (apply merge-with m maps)
+       (apply f maps)))
+   maps))
+
+(defn pattern->lhs
+  [pattern]
+  (let [clauses (pattern-clauses pattern)]
+    (apply deep-merge-with merge
+           (mapv (fn [clause]
+                   (cond
+                     (key-exists-clause? clause)   (key-exists-clause->match clause)
+                     (path-exists-clause? clause)  (path-exists-clause->match clause)
+                     (key-matches-clause? clause)  (key-matches-clause->lhs-match clause)
+                     (path-matches-clause? clause) (path-matches-clause->lhs-match clause)))
+                 clauses))))
+
+(defn pattern->rhs
+  [message pattern rhs]
+  (let [clauses (pattern-clauses pattern)
+        bindings
+        (reduce (fn [bindings clause]
+                  (cond
+                    (or (key-exists-clause? clause)
+                        (path-exists-clause? clause))
+                    bindings
+
+                    (key-matches-clause? clause)
+                    (conj bindings (key-matches-clause->rhs-match message clause rhs))
+
+                    (path-matches-clause? clause)
+                    (conj bindings (path-matches-clause->rhs-match message clause rhs))))
+                []
+                clauses)]
+    `(let ~(into [] (apply concat bindings))
+       ~rhs)))
+
+#?(:clj
+   (defmacro map-matcher
+     [& args]
+     (let [message              `message#
+           patterns+consequents (reduce
+                                 (fn [code [lhs* rhs]]
+                                   (let [lhs (if (symbol? lhs*) (eval lhs*) lhs*)]
+                                     (let [pattern (parse-pattern "pattern" lhs)]
+                                       (concat code
+                                               [(pattern->lhs pattern)
+                                                (pattern->rhs message pattern rhs)]))))
+                                 nil
+                                 (partition 2 args))]
+
+       `(fn [~message]
+          (match/match ~message ~@patterns+consequents)))))

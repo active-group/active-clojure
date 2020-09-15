@@ -3,74 +3,6 @@
             #?(:clj  [clojure.test :as t :refer :all]
                :cljs [cljs.test :as t :include-macros true])))
 
-;; Tests from `active.clojure.match-test`
-
-(def one-data {:kind "one"
-               :x    "x"
-               :y    "y"
-               :z    "z"
-               :w    "w"})
-
-(def two-data
-  {:kind "two"
-   :a    "a"
-   :b    "b"
-   :c    "c"
-   :d    {"Z" 42
-          "Y" 23
-          "X" 65
-          "W" {"foo"
-               "bar"}}})
-
-(def three-data
-  {:different-kind
-   "one"
-   :x "x"
-   :y "y"
-   :z "z"
-   :w "w"})
-
-;; (def one
-;;   [(:kind #"one")
-;;    (:x "x" :as x)
-;;    (:y "y")
-;;    (:z :as z)
-;;    :w])
-
-(def one-pattern
-  (p/pattern 'one
-             (p/key-matches-clause :kind (p/match-regex #"one"))
-             (-> (p/key-matches-clause :x (p/match-const "x"))
-                 (p/bind-match 'x))
-             (p/key-matches-clause :y (p/match-const "y"))
-             (-> (p/key-exists-clause :z)
-                 (p/bind-match 'z))
-             (p/key-exists-clause :w)))
-
-;; (defpattern two
-;;   [(:kind #"two")
-;;    (:a "a" :as a)
-;;    (:b "b")
-;;    (:c :as c)
-;;    ([:d Z] 42 :as Z)
-;;    ([:d Y] :as Y)
-;;    ([:d X] 65)
-;;    [:d W foo]])
-(def two
-  (p/pattern 'two
-             (p/key-matches-clause :kind (p/match-regex #"two"))
-             (-> (p/key-matches-clause :a (p/match-const "a"))
-                 (p/bind-match 'a))
-             (p/key-matches-clause :b (p/match-const "b"))
-             (-> (p/key-exists-clause :c)
-                 (p/bind-match 'c))
-             (-> (p/path-matches-clause [:d 'Z] (p/match-const 42))
-                 (p/bind-match 'Z))
-             (-> (p/path-exists-clause [:d 'Y])
-                 (p/bind-match 'Y))
-             (p/path-matches-clause [:d 'X] (p/match-const 65))
-             (p/path-exists-clause [:d 'W 'foo])))
-
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
     (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
@@ -129,3 +61,110 @@
 
 (t/deftest parse-pattern-test
   (t/is (= three-pattern (p/parse-pattern 'three three))))
+
+(t/deftest key-exists-clause->match-test
+  (t/is (= {:x 'x} (p/key-exists-clause->match (p/key-exists-clause :x))))
+  (t/is (= {:x 'rebind}
+           (p/key-exists-clause->match (-> (p/key-exists-clause :x)
+                                           (p/bind-match 'rebind))))))
+
+(t/deftest path-exists-clause->match-test
+  (t/is (= {:x {"b" {"c" 'c}}}
+           (p/path-exists-clause->match (p/path-exists-clause [:x "b" "c"]))))
+  (t/is (= {:x {"b" {"c" 'rebind}}}
+           (p/path-exists-clause->match (-> (p/path-exists-clause [:x "b" "c"])
+                                            (p/bind-match 'rebind))))))
+
+(t/deftest key-matches-clause->lhs-match-test
+  (t/is (= {:x "b"} (p/key-matches-clause->lhs-match (p/key-matches-clause :x (p/match-const "b")))))
+  (t/testing "lhs doesn't care abound bindings"
+    (t/is (= {:x "b"} (p/key-matches-clause->lhs-match (-> (p/key-matches-clause :x (p/match-const "b"))
+                                                           (p/bind-match 'rebind)))))))
+
+(t/deftest key-matches-clause->rhs-match-test
+  (t/is (= `(let [~(symbol "x") (get-in {:x "b"} [:x] "b")]
+              ~(symbol "x"))
+           (p/key-matches-clause->rhs-match {:x "b"}
+                                            (p/key-matches-clause :x (p/match-const "b"))
+                                            'x)))
+  (t/is (= `(let [~(symbol "rebind") (get-in {:x "b"} [:x] "b")]
+              ~(symbol "rebind"))
+           (p/key-matches-clause->rhs-match {:x "b"}
+                                            (-> (p/key-matches-clause :x (p/match-const "b"))
+                                                (p/bind-match 'rebind))
+                                            'rebind))))
+
+(t/deftest path-matches-clause->lhs-match-test
+  (t/is (= {:x {:y {:z "b"}}} (p/path-matches-clause->lhs-match (p/path-matches-clause [:x :y :z] (p/match-const "b")))))
+  (t/testing "lhs doesn't care abound bindings"
+    (t/is (= {:x {:y {:z "b"}}}
+             (p/path-matches-clause->lhs-match (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
+                                                   (p/bind-match 'rebind)))))))
+
+(t/deftest path-matches-clause->rhs-match-test
+  (t/is (= `(let [~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
+              ~(symbol "z"))
+           (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
+                                             (p/path-matches-clause [:x :y :z] (p/match-const "b"))
+                                             'z)))
+  (t/is (= `(let [~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
+              ~(symbol "rebind"))
+           (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
+                                             (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
+                                                 (p/bind-match 'rebind))
+                                             'rebind))))
+
+;; Imported test from [[active.clojure.match-test]
+(def one-data
+  {:kind "one" :x "x" :y "y" :z "z" :w "w"})
+
+(def two-data
+  {:kind "two" :a "a" :b "b" :c "c"
+   :d {"Z" 42 "Y" 23 "X" 65
+       "W" {"foo" "bar"}}})
+
+(def three-data
+  {:different-kind "one" :x "x" :y "y" :z "z" :w "w"})
+
+(def one
+  '[(:kind #"one")
+    (:x "x" :as x)
+    (:y "y")
+    (:z :as z)
+    :w])
+
+(def two
+  '[(:kind #"two")
+    (:a "a" :as a)
+    (:b "b")
+    (:c :as c)
+    ([:d Z] 42 :as Z)
+    ([:d Y] :as Y)
+    ([:d X] 65)
+    [:d W foo]])
+
+
+;; (macroexpand-1 '(p/map-matcher
+
+;;                  one [x y z w]
+
+;;                  two [a b c Z Y X foo]))
+
+;; (def matcher-new (p/map-matcher
+
+;;                   one [x y z w]
+
+;;                   two [a b c Z Y X foo])
+;;   )
+
+;; (def matcher-old (active.clojure.match/map-matcher
+
+;;                   one [x y z w]
+
+;;                   two [a b c Z Y X foo]))
+
+;; (= (matcher-new one-data)
+;;    (matcher-old one-data))
+
+;; [(matcher-new two-data)
+;;  (matcher-old two-data)]

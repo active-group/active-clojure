@@ -92,7 +92,8 @@
     (t/testing "with regex"
       (let [c (p/parse-clause (list :k #"foo"))]
         (t/is (= :k (p/key-matches-clause-key c)))
-        (t/is (= "foo" (.pattern (p/regex-matcher-regex (p/key-matches-clause-matcher c)))))
+        (t/is (= "foo" #?(:clj (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-clause-matcher c)))
+                          :cljs (.-source (p/regex-matcher-regex (p/key-matches-clause-matcher c))))))
         (t/is (= 'k  (p/key-matches-clause-binding c)))))
     (t/testing "with any other value"
       (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") 'k)

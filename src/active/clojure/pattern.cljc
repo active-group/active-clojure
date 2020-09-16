@@ -266,56 +266,72 @@
         :path-matches ::path-matches
         :path-matches-with-binding ::path-matches-with-binding))
 
+(s/def ::qmark #{'?})
+(s/def ::optional-clause (s/cat :qmark ::qmark :clause ::clause))
+
+(s/def ::any-clause (s/or :optional     ::optional-clause
+                          :non-optional ::clause))
+
 (defn match-value->matcher
   [[kind match-value]]
   (if (= :regex kind)
     (match-regex match-value)
     (match-const match-value)))
 
+(s/conform ::any-clause (list '? :k))
+
 (defn parse-clause
   [p]
-  (let [parse (s/conform ::clause p)]
+  (let [parse (s/conform ::any-clause p)]
     (if (s/invalid? parse)
       (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
-      (case (first parse)
-        :key-exists
-        (let [[_ [_ k]] parse]
-          (key-exists-clause k))
 
-        :key-exists-with-binding
-        (let [[_ {:keys [key binding]}] parse
-              [_ k]                     key]
-          (bind-match (key-exists-clause k) binding))
+      (let [optional?    (= :optional (first parse))
+            parse        (if optional?
+                           (:clause (second parse))
+                           (second parse))
+            inner-clause (case (first parse)
+                           :key-exists
+                           (let [[_ [_ k]] parse]
+                             (key-exists-clause k))
 
-        :path-exists
-        (let [[_ path] parse
-              components (mapv second path)]
-          (path-exists-clause components))
+                           :key-exists-with-binding
+                           (let [[_ {:keys [key binding]}] parse
+                                 [_ k]                     key]
+                             (bind-match (key-exists-clause k) binding))
 
-        :path-exists-with-binding
-        (let [[_ {:keys [path binding]}] parse
-              components (mapv second path)]
-          (bind-match (path-exists-clause components) binding))
+                           :path-exists
+                           (let [[_ path]   parse
+                                 components (mapv second path)]
+                             (path-exists-clause components))
 
-        :key-matches
-        (let [[_ {:keys [key match-value]}] parse
-              [_ k] key]
-          (key-matches-clause k (match-value->matcher match-value)))
+                           :path-exists-with-binding
+                           (let [[_ {:keys [path binding]}] parse
+                                 components                 (mapv second path)]
+                             (bind-match (path-exists-clause components) binding))
 
-        :key-matches-with-binding
-        (let [[_ {:keys [key match-value binding]}] parse
-              [_ k] key]
-          (bind-match (key-matches-clause k (match-value->matcher match-value)) binding))
+                           :key-matches
+                           (let [[_ {:keys [key match-value]}] parse
+                                 [_ k]                         key]
+                             (key-matches-clause k (match-value->matcher match-value)))
 
-        :path-matches
-        (let [[_ {:keys [path match-value]}] parse
-              components (mapv second path)]
-          (path-matches-clause components (match-value->matcher  match-value)))
+                           :key-matches-with-binding
+                           (let [[_ {:keys [key match-value binding]}] parse
+                                 [_ k]                                 key]
+                             (bind-match (key-matches-clause k (match-value->matcher match-value)) binding))
 
-        :path-matches-with-binding
-        (let [[_ {:keys [path match-value binding]}] parse
-              components (mapv second path)]
-          (bind-match (path-matches-clause components (match-value->matcher match-value)) binding))))))
+                           :path-matches
+                           (let [[_ {:keys [path match-value]}] parse
+                                 components                     (mapv second path)]
+                             (path-matches-clause components (match-value->matcher  match-value)))
+
+                           :path-matches-with-binding
+                           (let [[_ {:keys [path match-value binding]}] parse
+                                 components                             (mapv second path)]
+                             (bind-match (path-matches-clause components (match-value->matcher match-value)) binding)))]
+        (if optional?
+          (make-optional-clause inner-clause)
+          inner-clause)))))
 
 (defn parse-pattern
   "Parse the argument to `defpattern` as a [[Pattern]]"

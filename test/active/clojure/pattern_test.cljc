@@ -26,7 +26,7 @@
         (t/is (= :k (p/key-matches-clause-key c)))
         (t/is (= "foo" #?(:clj (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-clause-matcher c)))
                           :cljs (.-source (p/regex-matcher-regex (p/key-matches-clause-matcher c))))))
-        (t/is (= 'k  (p/key-matches-clause-binding c)))))
+        (t/is (= 'k (p/key-matches-clause-binding c)))))
     (t/testing "with any other value"
       (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") 'k)
                (p/parse-clause (list :k "foo"))))))
@@ -41,7 +41,15 @@
 
   (t/testing "path matches clause with binding"
     (t/is (= (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding)
-             (p/parse-clause (list [:k 'bar 'baz] "foo" :as 'Binding))))))
+             (p/parse-clause (list [:k 'bar 'baz] "foo" :as 'Binding)))))
+
+  (t/testing "optional clauses"
+    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
+             (p/parse-clause (list '? :k))))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'Binding))
+             (p/parse-clause (list '? (list :k :as 'Binding)))))
+    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding))
+             (p/parse-clause (list '? (list [:k 'bar 'baz] "foo" :as 'Binding)))))))
 
 (def three
   (quote [(:kind "three")

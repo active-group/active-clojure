@@ -1,6 +1,8 @@
 (ns active.clojure.pattern-test
-  (:require [active.clojure.pattern :as p]
-            #?(:clj  [clojure.test :as t :refer :all]
+  (:require #?(:clj  [active.clojure.pattern :as p]
+               :cljs [active.clojure.pattern :as p :include-macros true])
+            #?(:clj  [clojure.core.match.regex])
+            #?(:clj  [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])))
 
 (t/deftest parse-clause-test
@@ -42,6 +44,10 @@
   (t/testing "path matches clause with binding"
     (t/is (= (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding)
              (p/parse-clause (list [:k 'bar 'baz] "foo" :as 'Binding)))))
+
+  (t/testing "with an options matcher"
+    (t/is (= (p/make-key-matches-clause :k (p/make-options-matcher [1 2 3]) 'Binding)
+             (p/parse-clause (list :k (list :or 1 2 3) :as 'Binding)))))
 
   (t/testing "optional clauses"
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
@@ -89,17 +95,16 @@
   (t/testing "lhs doesn't care abound bindings"
     (t/is (= {:x "b"} (p/key-matches-clause->lhs-match (-> (p/key-matches-clause :x (p/match-const "b"))
                                                            (p/bind-match 'rebind)))))))
-
+(p/key-matches-clause->rhs-match {:x "b"}
+                                 (p/key-matches-clause :x (p/match-const "b")))
 (t/deftest key-matches-clause->rhs-match-test
   (t/is (= `[~(symbol "x") (get-in {:x "b"} [:x] "b")]
            (p/key-matches-clause->rhs-match {:x "b"}
-                                            (p/key-matches-clause :x (p/match-const "b"))
-                                            'x)))
+                                            (p/key-matches-clause :x (p/match-const "b")))))
   (t/is (= `[~(symbol "rebind") (get-in {:x "b"} [:x] "b")]
            (p/key-matches-clause->rhs-match {:x "b"}
                                             (-> (p/key-matches-clause :x (p/match-const "b"))
-                                                (p/bind-match 'rebind))
-                                            'rebind))))
+                                                (p/bind-match 'rebind))))))
 
 (t/deftest path-matches-clause->lhs-match-test
   (t/is (= {:x {:y {:z "b"}}} (p/path-matches-clause->lhs-match (p/path-matches-clause [:x :y :z] (p/match-const "b")))))
@@ -111,15 +116,13 @@
 (t/deftest path-matches-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
-                                             (p/path-matches-clause [:x :y :z] (p/match-const "b"))
-                                             'z)))
+                                             (p/path-matches-clause [:x :y :z] (p/match-const "b")))))
   (t/is (= `[~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
                                              (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
-                                                 (p/bind-match 'rebind))
-                                             'rebind))))
+                                                 (p/bind-match 'rebind))))))
 
-;; Imported test from [[active.clojure.match-test]
+;; Imported test from active.clojure.match-test
 (def one-data
   {:kind "one" :x "x" :y "y" :z "z" :w "w"})
 
@@ -131,27 +134,27 @@
 (def three-data
   {:different-kind "one" :x "x" :y "y" :z "z" :w "w"})
 
-(def one
-  '[(:kind #"one")
-    (:x "x" :as x)
-    (:y "y")
-    (:z :as z)
-    :w])
+(p/defpattern one
+  [(:kind #"one")
+   (:x "x" :as x)
+   (:y "y")
+   (:z :as z)
+   :w])
 
-(def two
-  '[(:kind #"two")
-    (:a "a" :as a)
-    (:b "b")
-    (:c :as c)
-    ([:d Z] 42 :as Z)
-    ([:d Y] :as Y)
-    ([:d X] 65)
-    [:d W foo]])
+(p/defpattern two
+  [(:kind #"two")
+   (:a "a" :as a)
+   (:b "b")
+   (:c :as c)
+   ([:d Z] 42 :as Z)
+   ([:d Y] :as Y)
+   ([:d X] 65)
+   [:d W foo]])
 
 (def example-matcher
   (p/map-matcher
-   one [x y z w]
-   two [a b c Z Y X foo]
+   one   [x y z w]
+   two   [a b c Z Y X foo]
    :else false))
 
 (t/deftest map-matcher-test
@@ -159,4 +162,41 @@
            (example-matcher one-data)))
   (t/is (= ["a" "b" "c" 42 23 65 "bar"]
            (example-matcher two-data)))
+  (t/is (= false (example-matcher {:kind "none"}))))
+
+(t/deftest map-matcher-optional-test
+  (t/is (= ["a" "b" "c" "C" 42 23 nil]
+           ((p/map-matcher [(:kind #"two")
+                            (? :a :as a)
+                            (? :b)
+                            (? :c "C" :as c)
+                            (? :C "C" :as C)
+                            (? [:d Z] :as Z)
+                            (? [:d Y] "y")
+                            (? [:d U])]
+                           [a b c C Z Y U])
+            two-data))))
+
+(t/deftest map-matcher-regex-key-not-found-t
+  (t/is (= false
+           (example-matcher three-data))))
+
+(p/defpattern one-or
+  [(:kind #"one")
+   (:x (:or "a" "b" "c" "x") :as x)
+   (:y (:or "x" "y" "z"))
+   (:z :as z)
+   :w])
+
+(def example-or-matcher
+  (p/map-matcher
+   one-or [x y z w]
+   two [a b c Z Y X foo]
+   :else false))
+
+(t/deftest map-matcher-or-test
+  (t/is (= ["x" "y" "z" "w"]
+           (example-or-matcher one-data)))
+  (t/is (= ["a" "b" "c" 42 23 65 "bar"]
+           (example-or-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))

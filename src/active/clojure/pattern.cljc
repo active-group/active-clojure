@@ -63,6 +63,10 @@
   ;; TODO Perhaps this should allow for matchers recursively?
   [options options-matcher-options])
 
+(defn match-options
+  [options]
+  (make-options-matcher options))
+
 (def matcher? (some-fn constant-matcher? regex-matcher? existence-matcher? options-matcher?))
 
 (defn matcher->value
@@ -77,10 +81,22 @@
     (regex-matcher-regex matcher)
 
     (options-matcher? matcher)
-    (options-matcher-options matcher)
+    (cons :or (options-matcher-options matcher))
 
     (existence-matcher? matcher)  ; matches on everything.
     ::not-nil))
+
+(defn matcher-default-value
+  [matcher]
+  (cond
+    (constant-matcher? matcher)
+    (constant-matcher-value matcher)
+
+    (regex-matcher? matcher)
+    (regex-matcher-regex matcher)
+
+    (or (options-matcher? matcher) (existence-matcher? matcher))
+    nil))
 
 ;;    There are four kinds of clauses
 ;; 1. Match a key in a map to some specific value.
@@ -234,7 +250,15 @@
   [& exclusions]
   (complement (apply some-fn exclusions)))
 
+
+(s/def ::regex regex?)
+
+(s/def ::or-token #{:or})
+
+(s/def ::options (s/cat :or ::or-token :options (s/* any?)))
+
 (s/def ::match-value (s/or :regex regex?
+                           :options ::options
                            :any (any-but regex?)))
 
 (s/def ::binding-key #{:as})
@@ -286,9 +310,10 @@
 
 (defn match-value->matcher
   [[kind match-value]]
-  (if (= :regex kind)
-    (match-regex match-value)
-    (match-const match-value)))
+  (cond
+    (= :regex kind)   (match-regex match-value)
+    (= :options kind) (match-options (:options match-value))
+    :else             (match-const match-value)))
 
 (defn parse-clause
   [p]
@@ -369,11 +394,23 @@
     ;; ignore the binding if it is the same as the key
     {(convert-path-element key) binding}))
 
+(defn key-exists-clause->rhs-match
+  [message clause]
+  (let [key         (key-exists-clause-key clause)
+        binding     (key-exists-clause-binding clause)]
+    `[~binding (get-in ~message [~(convert-path-element key)])]))
+
 (defn path-exists-clause->match
   [clause]
   (let [path    (path-exists-clause-path clause)
         binding (path-exists-clause-binding clause)]
     (assoc-in {} (map convert-path-element path) binding)))
+
+(defn path-exists-clause->rhs-match
+  [message clause]
+  (let [key         (path-exists-clause-path clause)
+        binding     (path-exists-clause-binding clause)]
+    `[~binding (get-in ~message ~(mapv convert-path-element key))]))
 
 (defn key-matches-clause->lhs-match
   [clause]
@@ -382,9 +419,9 @@
     {key match-value}))
 
 (defn key-matches-clause->rhs-match
-  [message clause rhs]
+  [message clause]
   (let [key         (key-matches-clause-key clause)
-        match-value (matcher->value (key-matches-clause-matcher clause))
+        match-value (matcher-default-value (key-matches-clause-matcher clause))
         binding     (key-matches-clause-binding clause)]
     `[~binding (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
@@ -395,9 +432,9 @@
     (assoc-in {} (map convert-path-element path) match-value)))
 
 (defn path-matches-clause->rhs-match
-  [message clause rhs]
-  (let [path         (path-matches-clause-path clause)
-        match-value (matcher->value (path-matches-clause-matcher clause))
+  [message clause]
+  (let [path        (path-matches-clause-path clause)
+        match-value (matcher-default-value (path-matches-clause-matcher clause))
         binding     (path-matches-clause-binding clause)]
     `[~binding (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
 
@@ -424,24 +461,33 @@
                      (key-exists-clause? clause)   (key-exists-clause->match clause)
                      (path-exists-clause? clause)  (path-exists-clause->match clause)
                      (key-matches-clause? clause)  (key-matches-clause->lhs-match clause)
-                     (path-matches-clause? clause) (path-matches-clause->lhs-match clause)))
+                     (path-matches-clause? clause) (path-matches-clause->lhs-match clause)
+                     (optional-clause? clause)     {}))
                  clauses))))
+
+(defn clause->rhs
+  [message bindings clause]
+  (cond
+    (key-exists-clause? clause)
+    (conj bindings (key-exists-clause->rhs-match message clause))
+
+    (path-exists-clause? clause)
+    (conj bindings (path-exists-clause->rhs-match message clause))
+
+    (key-matches-clause? clause)
+    (conj bindings (key-matches-clause->rhs-match message clause))
+
+    (path-matches-clause? clause)
+    (conj bindings (path-matches-clause->rhs-match message clause))
+
+    (optional-clause? clause)
+    (clause->rhs message bindings (optional-clause-clause clause))))
 
 (defn pattern->rhs
   [message pattern rhs]
   (let [clauses (pattern-clauses pattern)
         bindings
-        (reduce (fn [bindings clause]
-                  (cond
-                    (or (key-exists-clause? clause)
-                        (path-exists-clause? clause))
-                    bindings
-
-                    (key-matches-clause? clause)
-                    (conj bindings (key-matches-clause->rhs-match message clause rhs))
-
-                    (path-matches-clause? clause)
-                    (conj bindings (path-matches-clause->rhs-match message clause rhs))))
+        (reduce (partial clause->rhs message)
                 []
                 clauses)]
     `(let ~(into [] (apply concat bindings))
@@ -465,3 +511,80 @@
 
        `(fn [~message]
           (match/match ~message ~@patterns+consequents)))))
+
+#?(:clj
+   (defmacro defpattern
+     [binding pattern]
+     `(def ~binding (quote ~pattern))))
+
+(define-record-type Dependency
+  (make-dependency path matcher for-pattern) dependency?
+  [^{:doc "The path that this [[Dependency]] has a restriction on."}
+   path dependency-path
+   ^{:doc "The matcher that must be successful for the `path`."}
+   matcher dependency-matcher
+   ^{:doc "The [[Pattern]] that depends on this."}
+   for-pattern dependency-for-pattern])
+
+(defn clause->dependency
+  [pattern clause]
+  (make-dependency
+   (lens/yank clause (path-lens clause))
+   (lens/yank clause (matcher-lens clause))
+   pattern))
+
+(defn pattern->dependencies
+  [pattern]
+  (mapv (partial clause->dependency pattern) (pattern-clauses pattern)))
+
+(defn dependencies->graph
+  [dependencies]
+  (reduce (fn [acc dependency]
+            (update acc
+                    [(dependency-path dependency)
+                         (dependency-matcher dependency)]
+                    conj
+                    (dependency-for-pattern dependency)))
+
+          {}
+          dependencies))
+
+;;;; Compose patterns. A composition of patterns is one of the following
+;; - A pattern
+;; - A conjunction of two compositions
+;; - A disjunction of two compositions
+
+(define-record-type Conjunction
+  (make-conjunction comp-1 comp-2) conjunction?
+  [comp-1 conjunction-comp-1
+   comp-2 conjunction-comp-2])
+
+(defn conjunction
+  [composition & compositions]
+  (reduce make-conjunction composition compositions))
+
+(define-record-type Disjunction
+  (make-disjunction comp-1 comp-2) disjunction?
+  [comp-1 disjunction-comp-1
+   comp-2 disjunction-comp-2])
+
+(defn disjuction
+  [composition & compositions]
+  (reduce make-disjunction composition compositions))
+
+(defn composition->dependencies
+  [composition]
+  (println "composition" composition)
+  (cond
+    (pattern? composition)
+    (pattern->dependencies composition)
+
+    (conjunction? composition)
+    (concat (composition->dependencies (conjunction-comp-1 composition))
+            (composition->dependencies (conjunction-comp-2 composition)))
+
+    (conjunction? composition)
+    (concat (composition->dependencies (disjunction-comp-1 composition))
+            (composition->dependencies (disjunction-comp-2 composition)))
+
+    :else (c/assertion-violation `composition->dependencies "not a composition" composition)))

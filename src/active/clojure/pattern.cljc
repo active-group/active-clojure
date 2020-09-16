@@ -365,7 +365,7 @@
   (let [path         (path-matches-clause-path clause)
         match-value (matcher->value (path-matches-clause-matcher clause))
         binding     (path-matches-clause-binding clause)]
-    `[~binding (get-in ~message ~(map convert-path-element path) ~match-value)]))
+    `[~binding (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
 
 (defn deep-merge-with
   "Like merge-with, but merges maps recursively, applying the given fn
@@ -420,10 +420,12 @@
            patterns+consequents (reduce
                                  (fn [code [lhs* rhs]]
                                    (let [lhs (if (symbol? lhs*) (eval lhs*) lhs*)]
-                                     (let [pattern (parse-pattern "pattern" lhs)]
-                                       (concat code
-                                               [(pattern->lhs pattern)
-                                                (pattern->rhs message pattern rhs)]))))
+                                     (if (= lhs :else)
+                                       (concat code [lhs rhs])
+                                       (let [pattern (parse-pattern "pattern" lhs)]
+                                         (concat code
+                                                 [(pattern->lhs pattern)
+                                                  (pattern->rhs message pattern rhs)])))))
                                  nil
                                  (partition 2 args))]
 

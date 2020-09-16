@@ -83,13 +83,11 @@
                                                            (p/bind-match 'rebind)))))))
 
 (t/deftest key-matches-clause->rhs-match-test
-  (t/is (= `(let [~(symbol "x") (get-in {:x "b"} [:x] "b")]
-              ~(symbol "x"))
+  (t/is (= `[~(symbol "x") (get-in {:x "b"} [:x] "b")]
            (p/key-matches-clause->rhs-match {:x "b"}
                                             (p/key-matches-clause :x (p/match-const "b"))
                                             'x)))
-  (t/is (= `(let [~(symbol "rebind") (get-in {:x "b"} [:x] "b")]
-              ~(symbol "rebind"))
+  (t/is (= `[~(symbol "rebind") (get-in {:x "b"} [:x] "b")]
            (p/key-matches-clause->rhs-match {:x "b"}
                                             (-> (p/key-matches-clause :x (p/match-const "b"))
                                                 (p/bind-match 'rebind))
@@ -103,13 +101,11 @@
                                                    (p/bind-match 'rebind)))))))
 
 (t/deftest path-matches-clause->rhs-match-test
-  (t/is (= `(let [~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
-              ~(symbol "z"))
+  (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
                                              (p/path-matches-clause [:x :y :z] (p/match-const "b"))
                                              'z)))
-  (t/is (= `(let [~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
-              ~(symbol "rebind"))
+  (t/is (= `[~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
                                              (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
                                                  (p/bind-match 'rebind))
@@ -144,28 +140,15 @@
     ([:d X] 65)
     [:d W foo]])
 
+(def example-matcher
+  (p/map-matcher
+   one [x y z w]
+   two [a b c Z Y X foo]
+   :else false))
 
-;; (macroexpand-1 '(p/map-matcher
-
-;;                  one [x y z w]
-
-;;                  two [a b c Z Y X foo]))
-
-;; (def matcher-new (p/map-matcher
-
-;;                   one [x y z w]
-
-;;                   two [a b c Z Y X foo])
-;;   )
-
-;; (def matcher-old (active.clojure.match/map-matcher
-
-;;                   one [x y z w]
-
-;;                   two [a b c Z Y X foo]))
-
-;; (= (matcher-new one-data)
-;;    (matcher-old one-data))
-
-;; [(matcher-new two-data)
-;;  (matcher-old two-data)]
+(t/deftest map-matcher-test
+  (t/is (= ["x" "y" "z" "w"]
+           (example-matcher one-data)))
+  (t/is (= ["a" "b" "c" 42 23 65 "bar"]
+           (example-matcher two-data)))
+  (t/is (= false (example-matcher {:kind "none"}))))

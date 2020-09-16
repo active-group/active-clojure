@@ -1,5 +1,5 @@
-(ns active.clojure.pattern-test
-  (:require [active.clojure.pattern :as p]
+(ns active.clojure.match-test
+  (:require [active.clojure.match :as p]
             [active.clojure.functions :as f]
             [clojure.core.match.regex]
             [clojure.test :as t]))

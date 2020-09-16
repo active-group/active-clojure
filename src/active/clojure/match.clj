@@ -1,4 +1,5 @@
-(ns active.clojure.pattern
+(ns active.clojure.match
+  "Syntactic sugar for map matching around `core.match`."
   (:require [active.clojure.condition :as c]
             [active.clojure.functions :as f]
             [active.clojure.lens :as lens]
@@ -7,6 +8,10 @@
             [clojure.spec.alpha :as s]
             [clojure.core.match :as match]
             [clojure.core.match.regex]))
+
+(defmethod match/to-source ::match/regex
+  [pat ocr]
+  `(and (not= ~ocr ::match/not-found) (re-matches ~(:regex pat) ~ocr)))
 
 (define-record-type Pattern
   (make-pattern name clauses) pattern?
@@ -521,7 +526,105 @@
        ~rhs)))
 
 (defmacro map-matcher
+  "Construct a map matcher. Syntactic sugar for `core.match`.
+
+  `map-matcher´ accepts two kinds of inputs:
+
+  1. A sequence of alternating patterns and consequents (see below).
+  2. A sequence of alternating Pattern objects and consequents.
+
+  The syntax is `(map-matcher <pattern> <consequent> ... :else <alternative>)` where
+  `<pattern>` is a vector of clauses `[<clause>+]` where `clause` is one of the following:
+
+  - `(<key> <value> :as <name>)` which requires the key `<key>` to be
+    mapped to `<value>` in the map and binds `<name>` to `<value>`.
+
+  - `(<key-and-name> <value>)` which requires the key `<key-and-name>`
+    to be mapped to `<value>` in the map and binds `<key-and-name>` to
+    `<value>`.
+
+  - `(<key> :as <name>)` which requires `<key>` to be present in the map
+    and binds `<name>` to its value.
+
+  - `<key-and-name>` which requires `<key-and-name>` to be present in
+    the map and binds `<key-and-name>` to its value
+
+  The map matcher also supports optional keys:
+
+  - `(? <key> <default> :as <name>)` binds `<name>` to to the value of
+    `<key>` in the map or to `<default>` if `<key>` is not in the map.
+
+  - `(? <key-and-name> <default>)` binds `<key-and-name>` to the value of
+    `<key-and-name>` in the map or to `<default>` if `<key-and-name>` is not
+    in the map.
+
+  - `(? <key> :as <name>)` binds `<name>` to to the value of `<key>`
+    in the map or to `nil` if `<key>` is not in the map.
+
+  - `(? <key-and-name>)` binds `<key-and-name>` to the value of
+    `<key-and-name>` in the map or to `nil` if `<key-and-name>` is not
+    in the map.
+
+  Access to nested values is also possible.  Use `[<key>+]` to access
+  a nested value, where `[<key>+]` is a sequence of keys.  When no
+  `:as <name>` clause is given, the last `<key>` of the sequence of
+  keys is used as a name to bind the value.
+
+  `<key>` and `<key-and-name>` can be either a symbol or a keyword.
+  If `<key-and-name>` is a symbol, it is converted to a string when
+  used as a key (and used as symbol for binding the value).  If
+  `<key-and-name>` is a keyword, it is converted to a name for binding
+  the value (and usesd as keyword when used as a key).
+
+  `<value>` can be:
+
+  - any value, regular expressions are also possible (only in Clojure, though,
+    `core.match` does not support regex matching in ClojureScript).
+
+  - a list of alternative values in the form of: `(:or <value> <value>*)`.
+
+  - a custom compare function in the form of:
+    `(:compare-fn <compare-fn>)` where `<compare-fn>` accepts the value that
+    is mapped to `<key>` or `<key-and-name>`.
+
+  `<value>` also can be a list of alternative values in the form of:
+  `(:or <value> <value>*)`.
+
+  `map-matcher` returns a function that accepts a map and evaluates
+  `<consequent>` with all the `<name>`s bound when the message matches
+  the given `<clause>`s, otherwise it evaluates `<alternative>`. or
+  throws `IllegalArgumentException` if `<clause>` matches and no
+  `<alternative>` is given.
+
+  Example:
+
+        (def example-map-matcher
+          (map-matcher
+            [(:x \"x\" :as x)
+             (:y \"y\")
+             (:z :as z)
+             :w]
+            (println x y z w)
+            [(:a \"a\" :as a)
+             (:b \"b\")
+             (:c :as c)
+             ([:d Z] 42 :as Z)
+             ([:d Y] :as Y)
+             ([:d X] 65)
+             [:d W foo]]
+            (println a b c Z Y X foo)
+            :else false))
+
+        (example-map-matcher {:a \"a\" :b \"b\" :c \"c\"
+                              :d {\"Z\" 42 \"Y\" 23 \"X\" 65
+                                  \"W\" {\"foo\" \"bar\"}}})
+
+    prints
+
+     \"a b c d 42 23 65 bar\""
   [& args]
+  (when-not (even? (count args))
+    (throw (IllegalArgumentException. (str "expecting an even number of arguments " *ns* " " (meta &form)))))
   (let [message              `message#
         patterns+consequents (reduce
                               (fn [code [lhs* rhs]]
@@ -543,6 +646,16 @@
 (defmacro defpattern
   [binding pattern]
   `(def ~binding ~(parse-pattern (gensym) pattern)))
+
+(defmacro matcher
+  [& args]
+  (let [event `event#]
+    `(fn [~event]
+       ((map-matcher ~@args) ~event))))
+
+(defmacro match
+  [event & args]
+  `((matcher ~@args) ~event))
 
 (define-record-type Dependency
   (make-dependency path matcher for-pattern) dependency?

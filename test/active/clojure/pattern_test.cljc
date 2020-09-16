@@ -47,9 +47,9 @@
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
              (p/parse-clause (list '? :k))))
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'Binding))
-             (p/parse-clause (list '? (list :k :as 'Binding)))))
+             (p/parse-clause (list '? :k :as 'Binding))))
     (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding))
-             (p/parse-clause (list '? (list [:k 'bar 'baz] "foo" :as 'Binding)))))))
+             (p/parse-clause (list '? [:k 'bar 'baz] "foo" :as 'Binding))))))
 
 (def three
   (quote [(:kind "three")

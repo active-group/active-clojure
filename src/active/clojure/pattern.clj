@@ -1,12 +1,12 @@
 (ns active.clojure.pattern
-  (:require #?(:clj  [active.clojure.record :refer [define-record-type]]
-               :cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
-            [active.clojure.condition :as c]
+  (:require [active.clojure.condition :as c]
             [active.clojure.functions :as f]
             [active.clojure.lens :as lens]
+            [active.clojure.record :refer [define-record-type]]
 
+            [clojure.spec.alpha :as s]
             [clojure.core.match :as match]
-            [clojure.spec.alpha :as s]))
+            [clojure.core.match.regex]))
 
 (define-record-type Pattern
   (make-pattern name clauses) pattern?
@@ -264,8 +264,7 @@
 (defn regex?
   "Is a `thing` a regex."
   [thing]
-  #?(:clj  (instance? java.util.regex.Pattern thing)
-     :cljs (instance? js/RegExp thing)))
+  (instance? java.util.regex.Pattern thing))
 
 (defn any-but
   [& exclusions]
@@ -274,7 +273,7 @@
 
 (s/def ::regex regex?)
 (s/def ::compare-fn-token #{:compare-fn})
-(s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ifn?))
+(s/def ::compare-fn (s/cat :binding symbol? :compare-fn ::compare-fn-token :fn ifn?))
 
 (s/def ::or-token #{:or})
 
@@ -521,29 +520,29 @@
     `(let ~(into [] (apply concat bindings))
        ~rhs)))
 
-#?(:clj
-   (defmacro map-matcher
-     [& args]
-     (let [message              `message#
-           patterns+consequents (reduce
-                                 (fn [code [lhs* rhs]]
-                                   (let [lhs (if (symbol? lhs*) (eval lhs*) lhs*)]
-                                     (if (= lhs :else)
-                                       (concat code [lhs rhs])
-                                       (let [pattern (parse-pattern "pattern" lhs)]
-                                         (concat code
-                                                 [(pattern->lhs pattern)
-                                                  (pattern->rhs message pattern rhs)])))))
-                                 nil
-                                 (partition 2 args))]
+(defmacro map-matcher
+  [& args]
+  (let [message              `message#
+        patterns+consequents (reduce
+                              (fn [code [lhs* rhs]]
+                                (let [lhs (if (symbol? lhs*) (eval lhs*) lhs*)]
+                                  (if (= lhs :else)
+                                    (concat code [lhs rhs])
+                                    (let [pattern (if (vector? lhs)
+                                                    (parse-pattern (gensym) lhs)
+                                                    lhs)]
+                                      (concat code
+                                              [(pattern->lhs pattern)
+                                               (pattern->rhs message pattern rhs)])))))
+                              nil
+                              (partition 2 args))]
 
-       `(fn [~message]
-          (match/match ~message ~@patterns+consequents)))))
+    `(fn [~message]
+       (match/match ~message ~@patterns+consequents))))
 
-#?(:clj
-   (defmacro defpattern
-     [binding pattern]
-     `(def ~binding (quote ~pattern))))
+(defmacro defpattern
+  [binding pattern]
+  `(def ~binding ~(parse-pattern (gensym) pattern)))
 
 (define-record-type Dependency
   (make-dependency path matcher for-pattern) dependency?
@@ -602,7 +601,6 @@
 
 (defn composition->dependencies
   [composition]
-  (println "composition" composition)
   (cond
     (pattern? composition)
     (pattern->dependencies composition)

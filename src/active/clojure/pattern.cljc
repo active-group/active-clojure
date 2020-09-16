@@ -2,6 +2,7 @@
   (:require #?(:clj  [active.clojure.record :refer [define-record-type]]
                :cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
             [active.clojure.condition :as c]
+            [active.clojure.functions :as f]
             [active.clojure.lens :as lens]
 
             [clojure.core.match :as match]
@@ -22,6 +23,7 @@
 ;; 2. Regex: Match on a regex. The value must be a String.
 ;; 3. Existence: Match on the existence. That is, not nil.
 ;; 4. Options: Match on any of a selection of values.
+;; 5. Predicate: A function from a to bool.
 
 (define-record-type
   ^{:doc "A matcher that matches on exactly one value."}
@@ -67,26 +69,45 @@
   [options]
   (make-options-matcher options))
 
-(def matcher? (some-fn constant-matcher? regex-matcher? existence-matcher? options-matcher?))
+(define-record-type
+  ^{:doc "A matcher that matches by applying a function (a -> Bool) to a value."}
+  PredicateMatcher
+  (make-predicate-matcher pred)
+  predicate-matcher?
+  [pred predicate-matcher-predicate])
+
+(defn match-predicate
+  [p]
+  (make-predicate-matcher p))
+
+(def matcher? (some-fn constant-matcher? regex-matcher? existence-matcher? options-matcher? predicate-matcher?))
 
 (defn matcher->value
   "Takes a `matcher` and returns the value/s it matches on.
   `::not-nil` symbolizes the existence matcher."
   [matcher]
-  (cond
-    (constant-matcher? matcher)
-    (constant-matcher-value matcher)
+  (fn [binding]
+    (cond
+      (constant-matcher? matcher)
+      (constant-matcher-value matcher)
 
-    (regex-matcher? matcher)
-    (regex-matcher-regex matcher)
+      (regex-matcher? matcher)
+      (regex-matcher-regex matcher)
 
-    (options-matcher? matcher)
-    (cons :or (options-matcher-options matcher))
+      (options-matcher? matcher)
+      (cons :or (options-matcher-options matcher))
 
-    (existence-matcher? matcher)  ; matches on everything.
-    ::not-nil))
+      (existence-matcher? matcher)  ; matches on everything.
+      ::not-nil
+
+      (predicate-matcher? matcher)
+      (list binding :guard (predicate-matcher-predicate matcher))
+
+      :else
+      (c/assertion-violation `matcher->value "not a matcher" matcher))))
 
 (defn matcher-default-value
+  "Returns the default value of a matcher, if any."
   [matcher]
   (cond
     (constant-matcher? matcher)
@@ -95,7 +116,7 @@
     (regex-matcher? matcher)
     (regex-matcher-regex matcher)
 
-    (or (options-matcher? matcher) (existence-matcher? matcher))
+    (or (options-matcher? matcher) (existence-matcher? matcher) (predicate-matcher? matcher))
     nil))
 
 ;;    There are four kinds of clauses
@@ -252,6 +273,8 @@
 
 
 (s/def ::regex regex?)
+(s/def ::compare-fn-token #{:compare-fn})
+(s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ifn?))
 
 (s/def ::or-token #{:or})
 
@@ -259,6 +282,7 @@
 
 (s/def ::match-value (s/or :regex regex?
                            :options ::options
+                           :compare-fn ::compare-fn
                            :any (any-but regex?)))
 
 (s/def ::binding-key #{:as})
@@ -307,13 +331,15 @@
         :key-matches-with-binding ::key-matches-with-binding
         :path-matches ::path-matches
         :path-matches-with-binding ::path-matches-with-binding))
+(s/conform ::clause (list :k (list :compare-fn even?)))
 
 (defn match-value->matcher
   [[kind match-value]]
   (cond
-    (= :regex kind)   (match-regex match-value)
-    (= :options kind) (match-options (:options match-value))
-    :else             (match-const match-value)))
+    (= :regex kind)      (match-regex match-value)
+    (= :options kind)    (match-options (:options match-value))
+    (= :compare-fn kind) (match-predicate (:fn match-value))
+    :else                (match-const match-value)))
 
 (defn parse-clause
   [p]
@@ -396,8 +422,8 @@
 
 (defn key-exists-clause->rhs-match
   [message clause]
-  (let [key         (key-exists-clause-key clause)
-        binding     (key-exists-clause-binding clause)]
+  (let [key     (key-exists-clause-key clause)
+        binding (key-exists-clause-binding clause)]
     `[~binding (get-in ~message [~(convert-path-element key)])]))
 
 (defn path-exists-clause->match
@@ -415,8 +441,9 @@
 (defn key-matches-clause->lhs-match
   [clause]
   (let [key         (key-matches-clause-key clause)
-        match-value (matcher->value (key-matches-clause-matcher clause))]
-    {key match-value}))
+        match-value (matcher->value (key-matches-clause-matcher clause))
+        binding     (key-matches-clause-binding clause)]
+    {key (match-value binding)}))
 
 (defn key-matches-clause->rhs-match
   [message clause]
@@ -428,8 +455,9 @@
 (defn path-matches-clause->lhs-match
   [clause]
   (let [path        (path-matches-clause-path clause)
-        match-value (matcher->value (path-matches-clause-matcher clause))]
-    (assoc-in {} (map convert-path-element path) match-value)))
+        match-value (matcher->value (path-matches-clause-matcher clause))
+        binding     (path-matches-clause-binding clause)]
+    (assoc-in {} (map convert-path-element path) (match-value binding))))
 
 (defn path-matches-clause->rhs-match
   [message clause]

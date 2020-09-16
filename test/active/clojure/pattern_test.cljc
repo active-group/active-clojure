@@ -1,6 +1,7 @@
 (ns active.clojure.pattern-test
   (:require #?(:clj  [active.clojure.pattern :as p]
                :cljs [active.clojure.pattern :as p :include-macros true])
+            [active.clojure.functions :as f]
             #?(:clj  [clojure.core.match.regex])
             #?(:clj  [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])))
@@ -49,6 +50,12 @@
     (t/is (= (p/make-key-matches-clause :k (p/make-options-matcher [1 2 3]) 'Binding)
              (p/parse-clause (list :k (list :or 1 2 3) :as 'Binding)))))
 
+  (t/testing "with a predicate matcher"
+    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher even?) 'Binding)
+             (p/parse-clause (list :k (list :compare-fn even?) :as 'Binding))))
+    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher (f/partial = 42)) 'Binding)
+             (p/parse-clause (list :k (list :compare-fn (f/partial = 42)) :as 'Binding)))))
+
   (t/testing "optional clauses"
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
              (p/parse-clause (list '? :k))))
@@ -57,25 +64,21 @@
     (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding))
              (p/parse-clause (list '? [:k 'bar 'baz] "foo" :as 'Binding))))))
 
-(def three
-  (quote [(:kind "three")
-          (:x "x" :as x)
-          (:y "y")
-          (:z :as z)
-          :w]))
-
-(def three-pattern
-  (p/pattern 'three
-             (p/key-matches-clause :kind (p/match-const "three"))
-             (-> (p/key-matches-clause :x (p/match-const "x"))
-                 (p/bind-match 'x))
-             (p/key-matches-clause :y (p/match-const "y"))
-             (-> (p/key-exists-clause :z)
-                 (p/bind-match 'z))
-             (p/key-exists-clause :w)))
-
 (t/deftest parse-pattern-test
-  (t/is (= three-pattern (p/parse-pattern 'three three))))
+  (let [three '[(:kind "three")
+                (:x "x" :as x)
+                (:y "y")
+                (:z :as z)
+                :w]
+        three-pattern (p/pattern 'three
+                                 (p/key-matches-clause :kind (p/match-const "three"))
+                                 (-> (p/key-matches-clause :x (p/match-const "x"))
+                                     (p/bind-match 'x))
+                                 (p/key-matches-clause :y (p/match-const "y"))
+                                 (-> (p/key-exists-clause :z)
+                                     (p/bind-match 'z))
+                                 (p/key-exists-clause :w))]
+    (t/is (= three-pattern (p/parse-pattern 'three three)))))
 
 (t/deftest key-exists-clause->match-test
   (t/is (= {:x 'x} (p/key-exists-clause->match (p/key-exists-clause :x))))
@@ -95,8 +98,7 @@
   (t/testing "lhs doesn't care abound bindings"
     (t/is (= {:x "b"} (p/key-matches-clause->lhs-match (-> (p/key-matches-clause :x (p/match-const "b"))
                                                            (p/bind-match 'rebind)))))))
-(p/key-matches-clause->rhs-match {:x "b"}
-                                 (p/key-matches-clause :x (p/match-const "b")))
+
 (t/deftest key-matches-clause->rhs-match-test
   (t/is (= `[~(symbol "x") (get-in {:x "b"} [:x] "b")]
            (p/key-matches-clause->rhs-match {:x "b"}
@@ -200,3 +202,14 @@
   (t/is (= ["a" "b" "c" 42 23 65 "bar"]
            (example-or-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
+
+(def predicate-matcher
+  (p/map-matcher
+   [(:x (:compare-fn even?))] ::even
+   [(:x (:compare-fn odd?))] ::odd))
+
+(t/deftest map-matcher-predicate-test
+  (t/is (= ::even (predicate-matcher {:x 42})))
+  (t/is (= ::odd (predicate-matcher {:x 41}))))
+
+

@@ -6,16 +6,24 @@
 
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
-    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
-             (p/parse-clause :k))))
+    (t/testing "flat"
+      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
+               (p/parse-clause :k))))
+    (t/testing "list"
+      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
+               (p/parse-clause (list :k))))))
 
   (t/testing "key exists with binding clause"
     (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'Binding)
              (p/parse-clause (list :k :as 'Binding)))))
 
   (t/testing "path exists clause"
-    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
-             (p/parse-clause [:k 'V]))))
+    (t/testing "flat"
+      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
+               (p/parse-clause [:k 'V]))))
+    (t/testing "list"
+      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
+               (p/parse-clause (list [:k 'V]))))))
 
   (t/testing "path exists clause with binding"
     (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'Binding)

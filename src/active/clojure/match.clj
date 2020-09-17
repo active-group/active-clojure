@@ -297,7 +297,8 @@
 (s/def ::qmark #{'?})
 
 (s/def ::key-exists
-  (s/or :required ::key
+  (s/or :required (s/or :flat ::key
+                        :list (s/cat :key ::key))
         :optional (s/cat :qmark ::qmark :key ::key)))
 
 (s/def ::key-exists-with-binding
@@ -305,7 +306,8 @@
         :optional (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-exists
-  (s/or :required ::path
+  (s/or :required (s/or :flat ::path
+                        :list (s/cat :path ::path))
         :optional (s/cat :qmark ::qmark :path ::path)))
 
 (s/def ::path-exists-with-binding
@@ -351,6 +353,8 @@
   [[kind k]]
   (if (= :symbol kind) (str k) k))
 
+(def flat? (partial = :flat))
+
 (defn parse-clause
   [p]
   (letfn [(optional? [k]
@@ -367,7 +371,10 @@
             :key-exists
             (if (optional? mode)
               (opt (key-exists-clause (make-key (:key body))))
-              (key-exists-clause (make-key body)))
+              (let [[mode body] body]
+                (if (flat? mode)
+                  (key-exists-clause (make-key body))
+                  (key-exists-clause (make-key (:key body))))))
 
             :key-exists-with-binding
             (let [clause (-> (key-exists-clause (make-key (:key body)))
@@ -377,7 +384,10 @@
             :path-exists
             (if (optional? mode)
               (opt (path-exists-clause (mapv make-key (:path body))))
-              (path-exists-clause (mapv make-key body)))
+              (let [[mode body] body]
+                (if (flat? mode)
+                  (path-exists-clause (mapv make-key body))
+                  (path-exists-clause (mapv make-key (:path body))))))
 
             :path-exists-with-binding
             (let [{:keys [path binding]} body

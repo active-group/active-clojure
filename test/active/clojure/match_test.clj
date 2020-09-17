@@ -57,9 +57,9 @@
 
   (t/testing "with a predicate matcher"
     (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher even?) 'Binding)
-             (p/parse-clause (list :k (list 'k :compare-fn even?) :as 'Binding))))
+             (p/parse-clause (list :k (list :compare-fn even?) :as 'Binding))))
     (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher (f/partial = 42)) 'Binding)
-             (p/parse-clause (list :k (list 'k :compare-fn (f/partial = 42)) :as 'Binding)))))
+             (p/parse-clause (list :k (list :compare-fn (f/partial = 42)) :as 'Binding)))))
 
   (t/testing "optional clauses"
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
@@ -210,15 +210,15 @@
 
 (def predicate-matcher
   (p/map-matcher
-   [(:x (x :compare-fn even?))] ::even
-   [(:x (x :compare-fn odd?))] ::odd))
+   [(:x (:compare-fn even?))] ::even
+   [(:x (:compare-fn odd?))] ::odd))
 
 (t/deftest map-matcher-predicate-test
   (t/is (= ::even (predicate-matcher {:x 42})))
   (t/is (= ::odd (predicate-matcher {:x 41}))))
 
 (p/defpattern predicate-pattern
-  [(:x (x :compare-fn even?))])
+  [(:x (:compare-fn even?))])
 
 (t/deftest map-matcher-polymorphism-test
   (t/testing "works with a pattern record"
@@ -228,5 +228,5 @@
 
   (t/testing "works with pattern syntax"
     (t/is (= ::even
-             ((p/map-matcher [(:x (x :compare-fn even?))] ::even)
+             ((p/map-matcher [(:x (:compare-fn even?))] ::even)
               {:x 42})))))

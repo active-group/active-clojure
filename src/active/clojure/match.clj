@@ -280,7 +280,7 @@
 
 (s/def ::regex regex?)
 (s/def ::compare-fn-token #{:compare-fn})
-(s/def ::compare-fn (s/cat :binding symbol? :compare-fn ::compare-fn-token :fn ifn?))
+(s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ifn?))
 
 (s/def ::or-token #{:or})
 

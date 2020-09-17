@@ -87,30 +87,6 @@
 
 (def matcher? (some-fn constant-matcher? regex-matcher? existence-matcher? options-matcher? predicate-matcher?))
 
-(defn matcher->value
-  "Takes a `matcher` and returns the value/s it matches on.
-  `::not-nil` symbolizes the existence matcher."
-  [matcher]
-  (fn [binding]
-    (cond
-      (constant-matcher? matcher)
-      (constant-matcher-value matcher)
-
-      (regex-matcher? matcher)
-      (regex-matcher-regex matcher)
-
-      (options-matcher? matcher)
-      (cons :or (options-matcher-options matcher))
-
-      (existence-matcher? matcher)  ; matches on everything.
-      ::not-nil
-
-      (predicate-matcher? matcher)
-      (list binding :guard (predicate-matcher-predicate matcher))
-
-      :else
-      (c/assertion-violation `matcher->value "not a matcher" matcher))))
-
 (defn matcher-default-value
   "Returns the default value of a matcher, if any."
   [matcher]
@@ -280,7 +256,8 @@
 
 (s/def ::regex regex?)
 (s/def ::compare-fn-token #{:compare-fn})
-(s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ifn?))
+(s/def ::fn? #(or (ifn? %) (ifn? (eval %))))
+(s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ::fn?))
 
 (s/def ::or-token #{:or})
 
@@ -423,11 +400,15 @@
               (if (optional? mode) (opt clause) clause))))))))
 
 (defn parse-pattern
-  "Parse the argument to `defpattern` as a [[Pattern]]"
-  [name p]
-  (if (pattern? p)
-    p
-    (make-pattern name (mapv parse-clause p))))
+  "Parse the argument to `defpattern` as a [[Pattern]].
+  Optionally accepts a `name` (String) that names the pattern. If none is
+  provided, automatically assigns a name."
+  ([p]
+   (parse-pattern (str "pattern-" (gensym)) p))
+  ([name p]
+   (if (pattern? p)
+     p
+     (make-pattern name (mapv parse-clause p)))))
 
 ;; Match
 
@@ -435,37 +416,17 @@
   [path-element]
   (if (symbol? path-element) (str path-element) path-element))
 
-(defn key-exists-clause->match
-  [clause]
-  (let [key     (key-exists-clause-key clause)
-        binding (key-exists-clause-binding clause)]
-    ;; ignore the binding if it is the same as the key
-    {(convert-path-element key) binding}))
-
 (defn key-exists-clause->rhs-match
   [message clause]
   (let [key     (key-exists-clause-key clause)
         binding (key-exists-clause-binding clause)]
     `[~binding (get-in ~message [~(convert-path-element key)])]))
 
-(defn path-exists-clause->match
-  [clause]
-  (let [path    (path-exists-clause-path clause)
-        binding (path-exists-clause-binding clause)]
-    (assoc-in {} (map convert-path-element path) binding)))
-
 (defn path-exists-clause->rhs-match
   [message clause]
   (let [key         (path-exists-clause-path clause)
         binding     (path-exists-clause-binding clause)]
     `[~binding (get-in ~message ~(mapv convert-path-element key))]))
-
-(defn key-matches-clause->lhs-match
-  [clause]
-  (let [key         (key-matches-clause-key clause)
-        match-value (matcher->value (key-matches-clause-matcher clause))
-        binding     (key-matches-clause-binding clause)]
-    {key (match-value binding)}))
 
 (defn key-matches-clause->rhs-match
   [message clause]
@@ -474,19 +435,80 @@
         binding     (key-matches-clause-binding clause)]
     `[~binding (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
-(defn path-matches-clause->lhs-match
-  [clause]
-  (let [path        (path-matches-clause-path clause)
-        match-value (matcher->value (path-matches-clause-matcher clause))
-        binding     (path-matches-clause-binding clause)]
-    (assoc-in {} (map convert-path-element path) (match-value binding))))
-
 (defn path-matches-clause->rhs-match
   [message clause]
   (let [path        (path-matches-clause-path clause)
         match-value (matcher-default-value (path-matches-clause-matcher clause))
         binding     (path-matches-clause-binding clause)]
     `[~binding (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
+
+(defn matcher->value
+  "Takes a `matcher` and returns the value/s it matches on.
+  `::not-nil` symbolizes the existence matcher."
+  [matcher]
+  (fn [message path]
+    (cond
+      (constant-matcher? matcher)
+      (constant-matcher-value matcher)
+
+      (regex-matcher? matcher)
+      (regex-matcher-regex matcher)
+
+      (options-matcher? matcher)
+      (cons :or (options-matcher-options matcher))
+
+      (existence-matcher? matcher)  ; matches on everything.
+      ::not-nil
+
+      (predicate-matcher? matcher)
+      [`(constantly (~(predicate-matcher-predicate matcher)
+                     (get-in ~message ~path)))]
+
+      :else
+      (c/assertion-violation `matcher->value "not a matcher" matcher))))
+
+(defn fold-path
+  [path match]
+  (let [path* (->> path
+                   (mapv convert-path-element)
+                   reverse)]
+    (reduce (fn [m path-element]
+              {path-element m})
+            {(first path*) match}
+            (rest path*))))
+
+(defn clause->lhs
+  [message clause]
+  (cond
+    (key-exists-clause? clause)
+    (let [key     (key-exists-clause-key clause)
+          binding (key-exists-clause-binding clause)]
+      ;; ignore the binding if it is the same as the key
+      {(convert-path-element key) binding})
+
+    (path-exists-clause? clause)
+    (let [path    (path-exists-clause-path clause)
+          binding (path-exists-clause-binding clause)]
+      (assoc-in {} (map convert-path-element path) binding))
+
+    (key-matches-clause? clause)
+    (let [key         (key-matches-clause-key clause)
+          matcher     (key-matches-clause-matcher clause)
+          match-value (matcher->value matcher)]
+      (if (predicate-matcher? matcher)
+        `({~key ~'_} :guard ~(match-value message [key]))
+        `{~key ~(match-value message [key])}))
+
+    (path-matches-clause? clause)
+    (let [path        (path-matches-clause-path clause)
+          matcher     (path-matches-clause-matcher clause)
+          match-value (matcher->value matcher)]
+      (if (predicate-matcher? matcher)
+        `(~(fold-path path '_) :guard ~(match-value message path))
+        (fold-path path (match-value message path))))
+
+    (optional-clause? clause)
+    {}))
 
 (defn deep-merge-with
   "Like merge-with, but merges maps recursively, applying the given fn
@@ -503,17 +525,12 @@
    maps))
 
 (defn pattern->lhs
-  [pattern]
+  [message pattern]
   (let [clauses (pattern-clauses pattern)]
-    (apply deep-merge-with merge
-           (mapv (fn [clause]
-                   (cond
-                     (key-exists-clause? clause)   (key-exists-clause->match clause)
-                     (path-exists-clause? clause)  (path-exists-clause->match clause)
-                     (key-matches-clause? clause)  (key-matches-clause->lhs-match clause)
-                     (path-matches-clause? clause) (path-matches-clause->lhs-match clause)
-                     (optional-clause? clause)     {}))
-                 clauses))))
+    (->> pattern
+         pattern-clauses
+         (mapv (partial clause->lhs message))
+         (apply deep-merge-with merge))))
 
 (defn clause->rhs
   [message bindings clause]
@@ -653,7 +670,7 @@
                                                     (parse-pattern (gensym) lhs)
                                                     lhs)]
                                       (concat code
-                                              [(pattern->lhs pattern)
+                                              [(pattern->lhs message pattern)
                                                (pattern->rhs message pattern rhs)])))))
                               nil
                               (partition 2 args))]
@@ -663,7 +680,7 @@
 
 (defmacro defpattern
   [binding pattern]
-  `(def ~binding ~(parse-pattern (gensym) pattern)))
+  `(def ~binding ~(parse-pattern binding pattern)))
 
 (defmacro matcher
   [& args]

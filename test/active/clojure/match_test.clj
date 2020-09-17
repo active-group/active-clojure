@@ -2,9 +2,7 @@
   (:require [active.clojure.match :as p]
             [active.clojure.functions :as f]
             [clojure.core.match.regex]
-            [clojure.test :as t]
-
-            [active.clojure.old-match :as old-match]))
+            [clojure.test :as t]))
 
 (t/deftest parse-clause-test
   (t/testing "key exists clause"

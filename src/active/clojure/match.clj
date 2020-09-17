@@ -337,7 +337,6 @@
         :key-matches-with-binding ::key-matches-with-binding
         :path-matches ::path-matches
         :path-matches-with-binding ::path-matches-with-binding))
-(s/conform ::clause (list :k (list :compare-fn even?)))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -346,6 +345,11 @@
     (= :options kind)    (match-options (:options match-value))
     (= :compare-fn kind) (match-predicate (:fn match-value))
     :else                (match-const match-value)))
+
+(defn make-key
+  "Returns k as a string if k is a symbol, otherwise returns k."
+  [[kind k]]
+  (if (= :symbol kind) (str k) k))
 
 (defn parse-clause
   [p]
@@ -362,49 +366,49 @@
           (case match
             :key-exists
             (if (optional? mode)
-              (opt (key-exists-clause (second (:key body))))
-              (key-exists-clause (second body)))
+              (opt (key-exists-clause (make-key (:key body))))
+              (key-exists-clause (make-key body)))
 
             :key-exists-with-binding
-            (let [clause (-> (key-exists-clause (second (:key body)))
+            (let [clause (-> (key-exists-clause (make-key (:key body)))
                              (bind-match (:binding body)))]
               (if (optional? mode) (opt clause) clause))
 
             :path-exists
             (if (optional? mode)
-              (opt (path-exists-clause (mapv second (:path body))))
-              (path-exists-clause (mapv second body)))
+              (opt (path-exists-clause (mapv make-key (:path body))))
+              (path-exists-clause (mapv make-key body)))
 
             :path-exists-with-binding
             (let [{:keys [path binding]} body
 
-                  components (mapv second path)
+                  components (mapv make-key path)
                   clause     (bind-match (path-exists-clause components) binding)]
               (if (optional? mode) (opt clause) clause))
 
             :key-matches
             (let [{:keys [key match-value]} body
 
-                  clause (key-matches-clause (second key) (match-value->matcher match-value))]
+                  clause (key-matches-clause (make-key key) (match-value->matcher match-value))]
               (if (optional? mode) (opt clause) clause))
 
             :key-matches-with-binding
             (let [{:keys [key match-value binding]} body
 
-                  clause (bind-match (key-matches-clause (second key) (match-value->matcher match-value)) binding)]
+                  clause (bind-match (key-matches-clause (make-key key) (match-value->matcher match-value)) binding)]
               (if (optional? mode) (opt clause) clause))
 
             :path-matches
             (let [{:keys [path match-value]} body
 
-                  components (mapv second path)
+                  components (mapv make-key path)
                   clause     (path-matches-clause components (match-value->matcher match-value))]
               (if (optional? mode) (opt clause) clause))
 
             :path-matches-with-binding
             (let [{:keys [path match-value binding]} body
 
-                  components (mapv second path)
+                  components (mapv make-key path)
                   clause     (bind-match (path-matches-clause components (match-value->matcher match-value)) binding)]
               (if (optional? mode) (opt clause) clause))))))))
 

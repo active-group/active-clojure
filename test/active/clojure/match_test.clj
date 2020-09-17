@@ -14,11 +14,11 @@
              (p/parse-clause (list :k :as 'Binding)))))
 
   (t/testing "path exists clause"
-    (t/is (= (p/make-path-exists-clause [:k 'V] p/the-existence-matcher 'V)
+    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
              (p/parse-clause [:k 'V]))))
 
   (t/testing "path exists clause with binding"
-    (t/is (= (p/make-path-exists-clause [:k 'V] p/the-existence-matcher 'Binding)
+    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'Binding)
              (p/parse-clause (list [:k 'V] :as 'Binding)))))
 
   (t/testing "key matches clause"
@@ -36,11 +36,11 @@
              (p/parse-clause (list :k "foo" :as 'Binding)))))
 
   (t/testing "path matches clause"
-    (t/is (= (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'baz)
+    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'baz)
              (p/parse-clause (list [:k 'bar 'baz] "foo")))))
 
   (t/testing "path matches clause with binding"
-    (t/is (= (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding)
+    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'Binding)
              (p/parse-clause (list [:k 'bar 'baz] "foo" :as 'Binding)))))
 
   (t/testing "with an options matcher"
@@ -58,7 +58,7 @@
              (p/parse-clause (list '? :k))))
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'Binding))
              (p/parse-clause (list '? :k :as 'Binding))))
-    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k 'bar 'baz] (p/make-constant-matcher "foo") 'Binding))
+    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'Binding))
              (p/parse-clause (list '? [:k 'bar 'baz] "foo" :as 'Binding))))))
 
 (t/deftest parse-pattern-test

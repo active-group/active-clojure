@@ -411,7 +411,9 @@
 (defn parse-pattern
   "Parse the argument to `defpattern` as a [[Pattern]]"
   [name p]
-  (make-pattern name (mapv parse-clause p)))
+  (if (pattern? p)
+    p
+    (make-pattern name (mapv parse-clause p))))
 
 ;; Match
 

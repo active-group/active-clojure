@@ -227,6 +227,8 @@
       (path-matches-clause? clause) path-matches-lens
       (key-exists-clause? clause)   key-exists-lens
       (path-exists-clause? clause)  path-exists-lens
+      (optional-clause? clause)     (lens/>> optional-clause-clause ((clause-lens key-matches-lens path-matches-lens key-exists-lens path-exists-lens)
+                                                                     (optional-clause-clause clause)))
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
 
@@ -248,7 +250,7 @@
 
 (def path-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
-  the matcher of the clause."
+  the path of the clause."
   (clause-lens key-matches-clause-key
                path-matches-clause-path
                key-exists-clause-key

@@ -129,6 +129,25 @@
                                              (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
                                                  (p/bind-match 'rebind))))))
 
+(t/deftest reduce-lhs-test
+  (t/is (empty? (p/reduce-lhs [])))
+  (t/is (= {:x "x"} (p/reduce-lhs [{:x "x"}])))
+  (t/is (= {:x "x" :y 'y} (p/reduce-lhs [{:x "x"} {:y 'y}])))
+  (t/is (= {:x "other"} (p/reduce-lhs [{:x "X"} {:x "other"}])))
+  (t/is (= (list {:x "x" :y "y"} :guard [:some-guard])
+           (p/reduce-lhs [(list {:x "x"} :guard [:some-guard])
+                          {:y "y"}])))
+  (t/is (= (list {:x "x" :y "y"})
+           (p/reduce-lhs [{:x "x"} (list {:y "y"})])))
+
+  (t/is (= (list {:x "x" :y '_ :a 42 :z '_} :guard [:guard-1 :guard-2 :guard-3])
+           (p/reduce-lhs [{:x "x"}
+                          (list {:y '_} :guard [:guard-1])
+                          (list {:y '_} :guard [:guard-2])
+                          {:a 42}
+                          (list {:z '_} :guard [:guard-3])]))))
+
+
 ;; Imported test from active.clojure.match-test
 (def one-data
   {:kind "one" :x "x" :y "y" :z "z" :w "w"})
@@ -211,46 +230,49 @@
 
 
 ;;; FIXME these tests all fail because compare-fn patterns dont work.
-;; (p/defpattern one-guard
-;;   [(:kind #"one")
-;;    (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
-;;    (:y (:compare-fn #(= % (:y {:x "x" :y "y" :z "z"}))))
-;;    (:z :as z)
-;;    :w])
+(p/defpattern one-guard
+  [(:kind #"one")
+   (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
+   (:y (:compare-fn #(= % (:y {:x "x" :y "y" :z "z"}))))
+   (:z :as z)
+   :w])
 
-;; (def example-guard-matcher
-;;   (p/map-matcher
-;;    one-guard [x y z w]
-;;    two [a b c Z Y X foo]
-;;    :else false))
+(macroexpand-1 '(old-match/map-matcher [(:x (:compare-fn even?))
+                                        :y] x))
 
-;; (def predicate-matcher
-;;   (p/map-matcher
-;;    ;; The order is important
-;;    [(:x (:compare-fn #(string? %)))] ::string
-;;    [(:x (:compare-fn (fn [x] (boolean? x))))] ::boolean
-;;    [(:x (:compare-fn even?))] ::even
-;;    [(:x (:compare-fn odd?))] ::odd))
+(def example-guard-matcher
+  (p/map-matcher
+   one-guard [x y z w]
+   two [a b c Z Y X foo]
+   :else false))
 
-;; (t/deftest map-matcher-predicate-test
-;;   (t/is (= ::even (predicate-matcher {:x 42})))
-;;   (t/is (= ::odd (predicate-matcher {:x 41})))
-;;   (t/is (= ::string (predicate-matcher {:x "string"})))
-;;   (t/is (= ::boolean (predicate-matcher {:x true}))))
+(def predicate-matcher
+  (p/map-matcher
+   ;; The order is important
+   [(:x (:compare-fn #(string? %)))] ::string
+   [(:x (:compare-fn (fn [x] (boolean? x))))] ::boolean
+   [(:x (:compare-fn even?))] ::even
+   [(:x (:compare-fn odd?))] ::odd))
 
-;; (p/defpattern predicate-pattern
-;;   [(:x (:compare-fn even?))])
+(t/deftest map-matcher-predicate-test
+  (t/is (= ::even (predicate-matcher {:x 42})))
+  (t/is (= ::odd (predicate-matcher {:x 41})))
+  (t/is (= ::string (predicate-matcher {:x "string"})))
+  (t/is (= ::boolean (predicate-matcher {:x true}))))
 
-;; (t/deftest map-matcher-polymorphism-test
-;;   (t/testing "works with a pattern record"
-;;     (t/is (= ::even
-;;              ((p/map-matcher predicate-pattern ::even)
-;;               {:x 42}))))
+(p/defpattern predicate-pattern
+  [(:x (:compare-fn even?))])
 
-;;   (t/testing "works with pattern syntax"
-;;     (t/is (= ::even
-;;              ((p/map-matcher [(:x (:compare-fn even?))] ::even)
-;;               {:x 42})))))
+(t/deftest map-matcher-polymorphism-test
+  (t/testing "works with a pattern record"
+    (t/is (= ::even
+             ((p/map-matcher predicate-pattern ::even)
+              {:x 42}))))
+
+  (t/testing "works with pattern syntax"
+    (t/is (= ::even
+             ((p/map-matcher [(:x (:compare-fn even?))] ::even)
+              {:x 42})))))
 
 ;; FIXME this should work
 ;; (t/deftest closes-over-outer-variables-test

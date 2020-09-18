@@ -510,19 +510,39 @@
     (optional-clause? clause)
     {}))
 
-(defn deep-merge-with
-  "Like merge-with, but merges maps recursively, applying the given fn
-  only when there's a non-map at a particular level.
-  (deep-merge-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
-                     {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
-  -> {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
-  [f & maps]
-  (apply
-   (fn m [& maps]
-     (if (every? map? maps)
-       (apply merge-with m maps)
-       (apply f maps)))
-   maps))
+(defn deep-merge [v & vs]
+  (letfn [(rec-merge [v1 v2]
+            (if (and (map? v1) (map? v2))
+              (merge-with deep-merge v1 v2)
+              v2))]
+    (if (some identity vs)
+      (reduce #(rec-merge %1 %2) v vs)
+      v)))
+
+(defn reduce-lhs
+  [lhss]
+  (reduce (fn [acc lhs]
+            (cond
+              (and (map? acc) (map? lhs))
+              (deep-merge acc lhs)
+
+              (and (sequential? acc) (map? lhs))
+              (let [[acc-map & tail] acc]
+                (cons (deep-merge acc-map lhs) tail))
+
+              (and (map? acc) (sequential? lhs))
+              (let [[lhs-map & tail] lhs]
+                (cons (deep-merge acc lhs-map) tail))
+
+              (and (sequential? acc) (sequential? lhs))
+              (let [[acc-map guard-key acc-tail] acc
+                    [lhs-map guard-key lhs-tail] lhs]
+                (list (deep-merge acc-map lhs-map) :guard (concat acc-tail lhs-tail)))
+
+              :else
+              (c/assertion-violation `reduce-lhs "not a valid lhs pattern:" lhs)))
+          {}
+          lhss))
 
 (defn pattern->lhs
   [message pattern]
@@ -530,7 +550,7 @@
     (->> pattern
          pattern-clauses
          (mapv (partial clause->lhs message))
-         (apply deep-merge-with merge))))
+         reduce-lhs)))
 
 (defn clause->rhs
   [message bindings clause]

@@ -256,7 +256,7 @@
 
 (s/def ::regex regex?)
 (s/def ::compare-fn-token #{:compare-fn})
-(s/def ::fn? #(or (ifn? %) (ifn? (eval %))))
+(s/def ::fn? any?)
 (s/def ::compare-fn (s/cat :compare-fn ::compare-fn-token :fn ::fn?))
 
 (s/def ::or-token #{:or})

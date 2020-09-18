@@ -274,7 +274,8 @@
              ((p/map-matcher [(:x (:compare-fn even?))] ::even)
               {:x 42})))))
 
-;; FIXME this should work
-;; (t/deftest closes-over-outer-variables-test
-;;   (let [evt {:x "x"}]
-;;     (p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)))
+(t/deftest closes-over-outer-variables-test
+  (let [evt {:x "x"}]
+    (t/is (= "x"
+             ((p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)
+              evt)))))

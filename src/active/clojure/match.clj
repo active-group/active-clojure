@@ -642,9 +642,6 @@
     `(:compare-fn <compare-fn>)` where `<compare-fn>` accepts the value that
     is mapped to `<key>` or `<key-and-name>`.
 
-  `<value>` also can be a list of alternative values in the form of:
-  `(:or <value> <value>*)`.
-
   `map-matcher` returns a function that accepts a map and evaluates
   `<consequent>` with all the `<name>`s bound when the message matches
   the given `<clause>`s, otherwise it evaluates `<alternative>`. or

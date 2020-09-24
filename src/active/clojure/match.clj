@@ -20,8 +20,12 @@
 
 (defn pattern
   "Takes a name and some `clauses` and returns a [[Pattern]]."
-  [name & clauses]
-  (make-pattern name clauses))
+  [& clauses]
+  (make-pattern (str (gensym "pattern-")) clauses))
+
+(defn named-pattern
+  [pattern the-name]
+  (lens/shove pattern pattern-name the-name))
 
 ;;    We differentiate between three kinds of matchers:
 ;; 1. Constant: Match on exactly one value. The value must be equatable.
@@ -122,9 +126,9 @@
 (defn key-matches-clause
   "Returns a clause that matches a `key` with a certain `matcher`, binding the
   match to a symbol based on `key`."
-  [key matcher]
+  [key matcher bind]
   {:pre [(matcher? matcher)]}
-  (make-key-matches-clause key matcher (key->sym key)))
+  (make-key-matches-clause key matcher bind))
 
 ;; 2.
 (define-record-type
@@ -139,9 +143,9 @@
 (def path? "Is something a valid path?" (some-fn list? vector?))
 
 (defn path-matches-clause
-  [path matcher]
+  [path matcher bind]
   {:pre [(and (path? path) (matcher? matcher))]}
-  (make-path-matches-clause path matcher ((comp key->sym last) path)))
+  (make-path-matches-clause path matcher bind))
 
 ;; 3.
 (define-record-type KeyExistsClause
@@ -155,8 +159,8 @@
 (defn key-exists-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `key` to `(key->sym key)`."
-  [key]
-  (make-key-exists-clause key the-existence-matcher (key->sym key)))
+  [key bind]
+  (make-key-exists-clause key the-existence-matcher bind))
 
 ;; 4.
 (define-record-type
@@ -171,8 +175,8 @@
 (defn path-exists-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `path` to `(key->sym (last path))`."
-  [path]
-  (make-path-exists-clause path the-existence-matcher ((comp key->sym last) path)))
+  [path bind]
+  (make-path-exists-clause path the-existence-matcher bind))
 
 ;; 5.
 (define-record-type
@@ -327,88 +331,129 @@
 
 (defn make-key
   "Returns k as a string if k is a symbol, otherwise returns k."
-  [[kind k]]
-  (if (= :symbol kind) (str k) k))
+  [k #_[kind k]]
+  (let [[kind k] (if (map? k)
+                   (:key k)
+                   k)]
+    (cond
+      (= :symbol kind) (str k)
+      (= :keyword kind) k
+      :else k)))
+
+(defn make-binding
+  "Returns k as a string if k is a symbol, otherwise returns k."
+  [k]
+  (if-not (vector? k)
+    (str k)
+    (let [[kind k] k]
+      (cond
+        (= :symbol kind)  (str k)
+        (= :keyword kind) (str (name k))
+        :else             k))))
 
 (def flat? (partial = :flat))
+(def optional? (partial = :optional))
 
-(defn parse-clause
+(defmacro parse-clause
   [p]
-  (letfn [(optional? [k]
-            (= :optional k))
-          (opt [clause]
-            (make-optional-clause clause))]
-    (let [parse (s/conform ::clause p)]
-      (if (s/invalid? parse)
-        (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
+  (let [parse (s/conform ::clause p)]
+    (if (s/invalid? parse)
+      (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
 
-        (let [[match parse] parse
-              [mode body]   parse]
-          (case match
-            :key-exists
+      (let [[match parse] parse
+            [mode body]   parse]
+        (case match
+          :key-exists
+          (if (optional? mode)
+            (let [k (make-key (:key body))
+                  b (make-binding (:key body))]
+              `(make-optional-clause (key-exists-clause ~k ~b)))
+            (let [[mode body] body
+                  mflat?      (flat? mode)
+                  k           (make-key (if mflat? body (:key body)))
+                  b           (make-binding (if mflat? body (:key body)))]
+              (if (flat? mode)
+                `(key-exists-clause ~k ~b)
+                `(key-exists-clause ~k ~b))))
+
+          :key-exists-with-binding
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
             (if (optional? mode)
-              (opt (key-exists-clause (make-key (:key body))))
-              (let [[mode body] body]
-                (if (flat? mode)
-                  (key-exists-clause (make-key body))
-                  (key-exists-clause (make-key (:key body))))))
+              `(make-optional-clause (key-exists-clause ~k ~b))
+              `(key-exists-clause ~k ~b)))
 
-            :key-exists-with-binding
-            (let [clause (-> (key-exists-clause (make-key (:key body)))
-                             (bind-match (:binding body)))]
-              (if (optional? mode) (opt clause) clause))
+          :path-exists
+          (if (optional? mode)
+            (let [path (mapv make-key (:path body))
+                  b    (make-binding (last (:path body)))]
+              `(make-optional-clause (path-exists-clause ~path ~b)))
+            (let [[mode body] body
+                  mflat?      (flat? mode)
+                  path        (mapv make-key (if mflat? body (:path body)))
+                  b           (make-binding (if mflat? (last body) (last (:path body))))]
+              (if (optional? mode)
+                `(make-optional-clause (path-exists-clause ~path ~b))
+                `(path-exists-clause ~path ~b))))
 
-            :path-exists
+          :path-exists-with-binding
+          (let [path (mapv make-key (:path body))
+                b    (make-binding (:binding body))]
             (if (optional? mode)
-              (opt (path-exists-clause (mapv make-key (:path body))))
-              (let [[mode body] body]
-                (if (flat? mode)
-                  (path-exists-clause (mapv make-key body))
-                  (path-exists-clause (mapv make-key (:path body))))))
+              `(make-optional-clause (path-exists-clause ~path ~b))
+              `(path-exists-clause ~path ~b)))
 
-            :path-exists-with-binding
-            (let [{:keys [path binding]} body
+          :key-matches
+          (let [k           (make-key (:key body))
+                b           (make-binding (:key body))
+                match-value (match-value->matcher (:match-value body))]
+            (if (optional? mode)
+              `(make-optional-clause (key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b))
+              `(key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
-                  components (mapv make-key path)
-                  clause     (bind-match (path-exists-clause components) binding)]
-              (if (optional? mode) (opt clause) clause))
+          :key-matches-with-binding
+          (let [k           (make-key (:key body))
+                b           (make-binding (:binding body))
+                match-value (match-value->matcher (:match-value body))]
+            (if (optional? mode)
+              `(make-optional-clause (key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b))
+              `(key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
-            :key-matches
-            (let [{:keys [key match-value]} body
+          :path-matches
+          (let [path        (mapv make-key (:path body))
+                b           (make-binding (last (:path body)))
+                match-value (match-value->matcher (:match-value body))]
+            (if (optional? mode)
+              `(make-optional-clause (path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))
+              `(path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b)))
 
-                  clause (key-matches-clause (make-key key) (match-value->matcher match-value))]
-              (if (optional? mode) (opt clause) clause))
+          :path-matches-with-binding
+          (let [path        (mapv make-key (:path body))
+                b           (make-binding (:binding body))
+                match-value (match-value->matcher (:match-value body))]
+            (if (optional? mode)
+              `(make-optional-clause (path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))
+              `(path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
 
-            :key-matches-with-binding
-            (let [{:keys [key match-value binding]} body
+(defmacro parse-clauses
+  [cs]
+  (when-not (empty? cs)
+    `(let [clause# (parse-clause ~(first cs))]
+       (cons clause# (parse-clauses ~(rest cs))))))
 
-                  clause (bind-match (key-matches-clause (make-key key) (match-value->matcher match-value)) binding)]
-              (if (optional? mode) (opt clause) clause))
+(parse-clauses [:k :v :u])
 
-            :path-matches
-            (let [{:keys [path match-value]} body
-
-                  components (mapv make-key path)
-                  clause     (path-matches-clause components (match-value->matcher match-value))]
-              (if (optional? mode) (opt clause) clause))
-
-            :path-matches-with-binding
-            (let [{:keys [path match-value binding]} body
-
-                  components (mapv make-key path)
-                  clause     (bind-match (path-matches-clause components (match-value->matcher match-value)) binding)]
-              (if (optional? mode) (opt clause) clause))))))))
-
-(defn parse-pattern
+(defmacro parse-pattern
   "Parse the argument to `defpattern` as a [[Pattern]].
   Optionally accepts a `name` (String) that names the pattern. If none is
   provided, automatically assigns a name."
-  ([p]
-   (parse-pattern (str "pattern-" (gensym)) p))
-  ([name p]
-   (if (pattern? p)
-     p
-     (make-pattern name (mapv parse-clause p)))))
+  [pattern]
+  (if (vector? pattern)
+    `(make-pattern ~(str (gensym "pattern-")) (parse-clauses ~pattern))
+    pattern))
+
+(parse-pattern [:k :v :u])
+(parse-pattern 42)
 
 ;; Match
 
@@ -420,27 +465,27 @@
   [message clause]
   (let [key     (key-exists-clause-key clause)
         binding (key-exists-clause-binding clause)]
-    `[~binding (get-in ~message [~(convert-path-element key)])]))
+    `[~(symbol binding) (get-in ~message [~(convert-path-element key)])]))
 
 (defn path-exists-clause->rhs-match
   [message clause]
   (let [key         (path-exists-clause-path clause)
         binding     (path-exists-clause-binding clause)]
-    `[~binding (get-in ~message ~(mapv convert-path-element key))]))
+    `[~(symbol binding) (get-in ~message ~(mapv convert-path-element key))]))
 
 (defn key-matches-clause->rhs-match
   [message clause]
   (let [key         (key-matches-clause-key clause)
         match-value (matcher-default-value (key-matches-clause-matcher clause))
         binding     (key-matches-clause-binding clause)]
-    `[~binding (get-in ~message [~(convert-path-element key)] ~match-value)]))
+    `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
 (defn path-matches-clause->rhs-match
   [message clause]
   (let [path        (path-matches-clause-path clause)
         match-value (matcher-default-value (path-matches-clause-matcher clause))
         binding     (path-matches-clause-binding clause)]
-    `[~binding (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
+    `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
 
 (defn matcher->value
   "Takes a `matcher` and returns the value/s it matches on.
@@ -484,12 +529,12 @@
     (let [key     (key-exists-clause-key clause)
           binding (key-exists-clause-binding clause)]
       ;; ignore the binding if it is the same as the key
-      {(convert-path-element key) binding})
+      {(convert-path-element key) (symbol binding)})
 
     (path-exists-clause? clause)
     (let [path    (path-exists-clause-path clause)
           binding (path-exists-clause-binding clause)]
-      (assoc-in {} (map convert-path-element path) binding))
+      (assoc-in {} (map convert-path-element path) (symbol binding)))
 
     (key-matches-clause? clause)
     (let [key         (key-matches-clause-key clause)
@@ -687,7 +732,7 @@
                                   (if (= lhs :else)
                                     (concat code [lhs rhs])
                                     (let [pattern (if (vector? lhs)
-                                                    (parse-pattern (gensym) lhs)
+                                                    (parse-pattern ~lhs)
                                                     lhs)]
                                       (concat code
                                               [(pattern->lhs message pattern)
@@ -700,7 +745,7 @@
 
 (defmacro defpattern
   [binding pattern]
-  `(def ~binding ~(parse-pattern binding pattern)))
+  `(def ~binding (parse-pattern ~pattern)))
 
 (defmacro matcher
   [& args]

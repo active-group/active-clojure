@@ -7,127 +7,127 @@
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
-               (p/parse-clause :k))))
+      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "k")
+               (p/parse-clause :k)))
+      (t/is (= (p/make-key-exists-clause "k" p/the-existence-matcher "k")
+               (p/parse-clause k))))
     (t/testing "list"
-      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'k)
-               (p/parse-clause (list :k))))))
+      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "k")
+               (p/parse-clause (:k))))))
 
   (t/testing "key exists with binding clause"
-    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher 'Binding)
-             (p/parse-clause (list :k :as 'Binding)))))
+    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "Binding")
+             (p/parse-clause (:k :as Binding)))))
 
   (t/testing "path exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
-               (p/parse-clause [:k 'V]))))
+      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "V")
+               (p/parse-clause [:k V]))))
     (t/testing "list"
-      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'V)
-               (p/parse-clause (list [:k 'V]))))))
+      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "V")
+               (p/parse-clause [:k V])))))
 
   (t/testing "path exists clause with binding"
-    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher 'Binding)
-             (p/parse-clause (list [:k 'V] :as 'Binding)))))
+    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "Binding")
+             (p/parse-clause ([:k V] :as Binding)))))
 
   (t/testing "key matches clause"
     (t/testing "with regex"
-      (let [c (p/parse-clause (list :k #"foo"))]
+      (let [c (p/parse-clause (:k #"foo"))]
         (t/is (= :k (p/key-matches-clause-key c)))
         (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-clause-matcher c)))))
-        (t/is (= 'k (p/key-matches-clause-binding c)))))
+        (t/is (= "k" (p/key-matches-clause-binding c)))))
     (t/testing "with any other value"
-      (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") 'k)
-               (p/parse-clause (list :k "foo"))))))
+      (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "k")
+               (p/parse-clause (:k "foo"))))))
 
   (t/testing "key matches clause with binding"
-    (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") 'Binding)
-             (p/parse-clause (list :k "foo" :as 'Binding)))))
+    (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "Binding")
+             (p/parse-clause (:k "foo" :as Binding)))))
 
   (t/testing "path matches clause"
-    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'baz)
-             (p/parse-clause (list [:k 'bar 'baz] "foo")))))
+    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "baz")
+             (p/parse-clause ([:k bar baz] "foo")))))
 
   (t/testing "path matches clause with binding"
-    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'Binding)
-             (p/parse-clause (list [:k 'bar 'baz] "foo" :as 'Binding)))))
+    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
+             (p/parse-clause ([:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with an options matcher"
-    (t/is (= (p/make-key-matches-clause :k (p/make-options-matcher [1 2 3]) 'Binding)
-             (p/parse-clause (list :k (list :or 1 2 3) :as 'Binding)))))
+    (t/is (= (p/make-key-matches-clause :k (p/make-options-matcher [1 2 3]) "Binding")
+             (p/parse-clause (:k (:or 1 2 3) :as Binding)))))
 
   (t/testing "with a predicate matcher"
-    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher even?) 'Binding)
-             (p/parse-clause (list :k (list :compare-fn even?) :as 'Binding))))
-    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher (f/partial = 42)) 'Binding)
-             (p/parse-clause (list :k (list :compare-fn (f/partial = 42)) :as 'Binding))))
+    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher even?) "Binding")
+             (p/parse-clause (:k (:compare-fn even?) :as Binding))))
+    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher (f/partial = 42)) "Binding")
+             (p/parse-clause (:k (:compare-fn (f/partial = 42)) :as Binding))))
+
     ;; What about "regular" anonymous functions?
     (t/is (p/predicate-matcher?
            (p/key-matches-clause-matcher
-            (p/parse-clause (list :k (list :compare-fn #(= % 42)) :as 'Binding))))))
+            (p/parse-clause (:k (:compare-fn #(= % 42)) :as Binding))))))
 
   (t/testing "optional clauses"
-    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'k))
-             (p/parse-clause (list '? :k))))
-    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher 'Binding))
-             (p/parse-clause (list '? :k :as 'Binding))))
-    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") 'Binding))
-             (p/parse-clause (list '? [:k 'bar 'baz] "foo" :as 'Binding))))))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher "k"))
+             (p/parse-clause (? :k))))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher "Binding"))
+             (p/parse-clause (? :k :as Binding))))
+    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding"))
+             (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
+
+  (t/testing "with local binding as match value"
+    (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "k")
+             (let [foo "foo"]
+               (p/parse-clause (:k foo)))))))
 
 (t/deftest parse-pattern-test
-  (let [three '[(:kind "three")
-                (:x "x" :as x)
-                (:y "y")
-                (:z :as z)
-                :w]
-        three-pattern (p/pattern 'three
-                                 (p/key-matches-clause :kind (p/match-const "three"))
-                                 (-> (p/key-matches-clause :x (p/match-const "x"))
-                                     (p/bind-match 'x))
-                                 (p/key-matches-clause :y (p/match-const "y"))
-                                 (-> (p/key-exists-clause :z)
-                                     (p/bind-match 'z))
-                                 (p/key-exists-clause :w))]
-    (t/is (= three-pattern (p/parse-pattern 'three three)))))
+  (let [three-pattern
+        (p/pattern (p/key-matches-clause :kind (p/match-const "three") "kind")
+                   (p/key-matches-clause :x (p/match-const "x") "x")
+                   (p/key-matches-clause :y (p/match-const "y") "y")
+                   (p/key-exists-clause :z "z")
+                   (p/key-exists-clause :w "w"))]
+    (t/is (= (p/pattern-clauses three-pattern)
+             (p/pattern-clauses (p/parse-pattern [(:kind "three")
+                                                  (:x "x" :as x)
+                                                  (:y "y")
+                                                  (:z :as z)
+                                                  :w]))))))
 
 (t/deftest clause->lhs
 
   (t/testing "key exists"
-    (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-clause :x))))
-    (t/is (= {:x 'rebind}
-             (p/clause->lhs {} (-> (p/key-exists-clause :x)
-                                   (p/bind-match 'rebind))))))
+    (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-clause :x "x"))))
+    (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-clause :x "rebind")))))
 
   (t/testing "path exists"
     (t/is (= {:x {"b" {"c" 'c}}}
-             (p/clause->lhs {} (p/path-exists-clause [:x "b" "c"]))))
+             (p/clause->lhs {} (p/path-exists-clause [:x "b" "c"] "c"))))
     (t/is (= {:x {"b" {"c" 'rebind}}}
-             (p/clause->lhs {} (-> (p/path-exists-clause [:x "b" "c"])
-                                   (p/bind-match 'rebind))))))
+             (p/clause->lhs {} (p/path-exists-clause [:x "b" "c"] "rebind")))))
 
   (t/testing "key matches"
-    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-clause :x (p/match-const "b")))))
+    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-clause :x (p/match-const "b") "x"))))
     (t/testing "lhs doesn't care abound bindings"
-      (t/is (= {:x "b"} (p/clause->lhs {} (-> (p/key-matches-clause :x (p/match-const "b"))
-                                              (p/bind-match 'rebind))))))
-    (t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
+      (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-clause :x (p/match-const "b") "rebind")))))
+    #_(t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
              (p/clause->lhs {} (p/key-matches-clause :x (p/match-predicate even?))))))
 
   (t/testing "path matches"
-    (t/is (= {:x {:y {:z "b"}}} (p/clause->lhs {} (p/path-matches-clause [:x :y :z] (p/match-const "b")))))
+    (t/is (= {:x {:y {:z "b"}}} (p/clause->lhs {} (p/path-matches-clause [:x :y :z] (p/match-const "b") "z"))))
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
-                                   (p/bind-match 'rebind)))))
-    (t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
+             (p/clause->lhs {} (-> (p/path-matches-clause [:x :y :z] (p/match-const "b") "rebind")))))
+    #_(t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
              (p/clause->lhs {} (p/path-matches-clause [:x :y "Z"] (p/match-predicate even?)))))))
 
 (t/deftest path-matches-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
-                                             (p/path-matches-clause [:x :y :z] (p/match-const "b")))))
+                                             (p/path-matches-clause [:x :y :z] (p/match-const "b") "z"))))
   (t/is (= `[~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
-                                             (-> (p/path-matches-clause [:x :y :z] (p/match-const "b"))
-                                                 (p/bind-match 'rebind))))))
+                                             (p/path-matches-clause [:x :y :z] (p/match-const "b") "rebind")))))
 
 (t/deftest reduce-lhs-test
   (t/is (empty? (p/reduce-lhs [])))
@@ -275,7 +275,44 @@
               {:x 42})))))
 
 (t/deftest closes-over-outer-variables-test
-  (let [evt {:x "x"}]
-    (t/is (= "x"
-             ((p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)
-              evt)))))
+  (t/testing "with compare-fn"
+    (let [evt {:x "x"}]
+      (t/is (= "x"
+               ((p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)
+                evt)))))
+  (t/testing "as local constant"
+    (let [x "x"
+          evt {:x x}]
+      (t/is (= x
+               ((p/map-matcher [(:x x)] x)
+                evt)))))
+  (t/testing "as global constant"
+    (let [evt {:x x}]
+      (t/is (= x
+               ((p/map-matcher [(:x x)] x)
+                evt)))))
+  (t/testing "as constant with global defpattern"
+    (let [x "x"
+          evt {:x x}]
+      (t/is (= x
+               ((p/map-matcher constant-pattern x)
+                evt)))))
+  (t/testing "as constant with global parse-pattern"
+    (let [evt {:x x}]
+      (t/is (= x
+               ((p/map-matcher p x)
+                evt)))))
+  (t/testing "as constant with global defpattern"
+    (let [x "x"
+          evt {:x x}]
+      (p/defpattern p [(:x x)])
+      (t/is (= x
+               ((p/map-matcher p x)
+                evt)))))
+  (t/testing "as constant with local parse-pattern"
+    (let [x "x"
+          evt {:x x}
+          p (p/parse-pattern [(:x x)])]
+      (t/is (= x
+               ((p/map-matcher p x)
+                evt))))))

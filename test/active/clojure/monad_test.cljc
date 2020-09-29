@@ -19,7 +19,8 @@
                                                    run-monadic-swiss-army execute-monadic-swiss-army
                                                    monad-command-config-run-command
                                                    reify-command reify-as
-                                                   put-state-component!)])
+                                                   put-state-component!
+                                                   update-state-component!)])
             [active.clojure.condition :as c]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))

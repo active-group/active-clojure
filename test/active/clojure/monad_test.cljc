@@ -399,3 +399,57 @@
              (execute-monadic-swiss-army
               (null-monad-command-config nil nil)
               (call-cc f)))))))
+
+(deftest call-cc-state-test
+  (testing "that state does not get saved over call-cc"
+    (let [f (fn [cont]
+              (put-state-component! ::cont-test true)
+              (cont nil))
+          [result state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (put-state-component! ::cont-test false)
+            [r (call-cc f)]
+            (return r)))]
+      (is (false? (::cont-test state)))))
+  (testing "that state does get passed to but not get saved over call-cc"
+    (let [f (fn [cont]
+              (update-state-component! ::cont-test inc)
+              (cont nil))
+          [result state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (put-state-component! ::cont-test 0)
+            [r (call-cc f)]
+            (return r)))]
+      (is (= 0 (::cont-test state))))))
+
+(deftest call-cc-env-test
+  (testing "that env does get saved over call-cc"
+    (let [f (fn [cont]
+              (with-env-component ::cont-test (constantly true)
+                (cont nil)))
+          [result _state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (with-env-component ::cont-test (constantly false)
+              (monadic
+               [r (call-cc f)]
+               (get-env-component ::cont-test)))))]
+      (is (true? result))))
+  (testing "that env does get passed to and saved over call-cc"
+    (let [f (fn [cont]
+              (with-env-component ::cont-test inc
+                (cont nil)))
+          [result _state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (with-env-component ::cont-test (constantly 0)
+              (monadic
+               [r (call-cc f)]
+               (get-env-component ::cont-test)))))]
+      (is (= 1 result)))))

@@ -191,8 +191,23 @@
            (example-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 
+(t/deftest map-matcher-optional-default-test
+  (t/is (= ["a" "b" "C" "C" 42 "y" nil]
+           ((p/map-matcher [(:kind #"two")
+                            (? :a :as a)
+                            (? :b)
+                            (? :c "C" :as c)
+                            (? :C "C" :as C)
+                            (? [:d Z] :as Z)
+                            (? [:d Y] "y")
+                            (? [:d U])]
+                           [a b c C Z Y U])
+            {:kind "two" :a "a" :b "b"
+             :d {"Z" 42 "X" 65
+                 "W" {"foo" "bar"}}}))))
+
 (t/deftest map-matcher-optional-test
-  (t/is (= ["a" "b" "c" nil 42 23 nil]
+  (t/is (= ["a" "b" "c" "C" 42 23 nil]
            ((p/map-matcher [(:kind #"two")
                             (? :a :as a)
                             (? :b)

@@ -520,7 +520,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message [~k])]]
+               `[~(symbol b) (get-in ~message [~k] ~match-value)]]
               predicate?
               [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
                `[~(symbol b) (get-in ~message [~k])]]
@@ -537,7 +537,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message [~k])]]
+               `[~(symbol b) (get-in ~message [~k] ~match-value)]]
               predicate?
               [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
                `[~(symbol b) (get-in ~message [~k])]]
@@ -555,7 +555,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message ~path)]]
+               `[~(symbol b) (get-in ~message ~path ~match-value)]]
               predicate?
               [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[~(symbol b) (get-in ~message ~path)]]
@@ -573,7 +573,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message ~path)]]
+               `[~(symbol b) (get-in ~message ~path ~match-value)]]
               predicate?
               [`(~(fold-path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[~(symbol b) (get-in ~message ~path)]]

@@ -566,7 +566,7 @@
           :path-matches-with-binding
           (let [path        (mapv make-key (:path body))
                 b           (make-binding (:binding body))
-                match-value (second (:match-value body))
+                match       (:match-value body)
                 predicate?  (= :compare-fn (first match))
                 match-value (second match)
                 path-map    (assoc-in {} path match-value)]

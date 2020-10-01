@@ -192,7 +192,7 @@
   (t/is (= false (example-matcher {:kind "none"}))))
 
 (t/deftest map-matcher-optional-test
-  (t/is (= ["a" "b" "c" "C" 42 23 nil]
+  (t/is (= ["a" "b" "c" nil 42 23 nil]
            ((p/map-matcher [(:kind #"two")
                             (? :a :as a)
                             (? :b)
@@ -237,9 +237,6 @@
    (:z :as z)
    :w])
 
-(macroexpand-1 '(old-match/map-matcher [(:x (:compare-fn even?))
-                                        :y] x))
-
 (def example-guard-matcher
   (p/map-matcher
    one-guard [x y z w]
@@ -263,6 +260,11 @@
 (p/defpattern predicate-pattern
   [(:x (:compare-fn even?))])
 
+
+(def x "x")
+(p/defpattern constant-pattern [(:x x)])
+(def p (p/parse-pattern '[(:x x)]))
+
 (t/deftest map-matcher-polymorphism-test
   (t/testing "works with a pattern record"
     (t/is (= ::even
@@ -281,7 +283,7 @@
                ((p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)
                 evt)))))
   (t/testing "as local constant"
-    (let [x "x"
+    (let [x   "x"
           evt {:x x}]
       (t/is (= x
                ((p/map-matcher [(:x x)] x)
@@ -292,7 +294,7 @@
                ((p/map-matcher [(:x x)] x)
                 evt)))))
   (t/testing "as constant with global defpattern"
-    (let [x "x"
+    (let [x   "x"
           evt {:x x}]
       (t/is (= x
                ((p/map-matcher constant-pattern x)
@@ -303,16 +305,16 @@
                ((p/map-matcher p x)
                 evt)))))
   (t/testing "as constant with global defpattern"
-    (let [x "x"
+    (let [x   "x"
           evt {:x x}]
       (p/defpattern p [(:x x)])
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
-  (t/testing "as constant with local parse-pattern"
-    (let [x "x"
+  #_(t/testing "as constant with local parse-pattern"
+    (let [x   "x"
           evt {:x x}
-          p (p/parse-pattern [(:x x)])]
+          p   (p/parse-pattern [(:x x)])]
       (t/is (= x
                ((p/map-matcher p x)
                 evt))))))

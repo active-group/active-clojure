@@ -441,7 +441,166 @@
     `(let [clause# (parse-clause ~(first cs))]
        (cons clause# (parse-clauses ~(rest cs))))))
 
-(parse-clauses [:k :v :u])
+(defn convert-path-element
+  [path-element]
+  (if (symbol? path-element) (str path-element) path-element))
+
+(defn fold-path
+  [path match]
+  (let [path* (->> path
+                   (mapv convert-path-element)
+                   reverse)]
+    (reduce (fn [m path-element]
+              {path-element m})
+            {(first path*) match}
+            (rest path*))))
+
+;; syntax emitter
+(defn parse-emit-syntax
+  [message p rhs]
+  (let [parse (s/conform ::clause p)]
+    (if (s/invalid? parse)
+      (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
+
+      (let [[match parse] parse
+            [mode body]   parse]
+        (case match
+          :key-exists
+          (if (optional? mode)
+            (let [k (make-key (:key body))
+                  b (make-binding (:key body))]
+              [{}
+               `[~(symbol b) (get-in ~message [~k])]])
+            (let [[mode body] body
+                  mflat?      (flat? mode)
+                  k           (make-key (if mflat? body (:key body)))
+                  b           (make-binding (if mflat? body (:key body)))]
+              [`{~k ~(symbol b)}
+               `[~(symbol b) (get-in ~message [~k])]]))
+
+          :key-exists-with-binding
+          (if (optional? mode)
+            (let [k (make-key (:key body))
+                  b (make-binding (:binding body))]
+              [{}
+               `[~(symbol b) (get-in ~message [~k])]])
+            (let [k (make-key (:key body))
+                  b (make-binding (:binding body))]
+              [`{~k ~(symbol b)}
+               `[~(symbol b) (get-in ~message [~k])]]))
+
+          :path-exists
+          (if (optional? mode)
+            (let [path (mapv make-key (:path body))
+                  b    (make-binding (last (:path body)))]
+              [{}
+               `[~(symbol b) (get-in ~message ~path)]])
+            (let [[mode body] body
+                  mflat?      (flat? mode)
+                  path        (mapv make-key (if mflat? body (:path body)))
+                  b           (make-binding (if mflat? (last body) (last (:path body))))
+                  path-map    (assoc-in {} path (symbol b))]
+              [`~path-map
+               `[~(symbol b) (get-in ~message ~path)]]))
+
+          :path-exists-with-binding
+          (let [path     (mapv make-key (:path body))
+                b        (make-binding (:binding body))
+                path-map (assoc-in {} path (symbol b))]
+            [`~(if (optional? mode)
+                 {} path-map)
+             `[~(symbol b) (get-in ~message ~path)]])
+
+          :key-matches
+          (let [k           (make-key (:key body))
+                b           (make-binding (:key body))
+                match       (:match-value body)
+                predicate?  (= :compare-fn (first match))
+                match-value (second match)]
+            (cond
+              (optional? mode)
+              [{}
+               `[~(symbol b) (get-in ~message [~k])]]
+              predicate?
+              [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
+               `[~(symbol b) (get-in ~message [~k])]]
+              :else
+              [`{~k ~match-value}
+               `[~(symbol b) (get-in ~message [~k])]]))
+
+          :key-matches-with-binding
+          (let [k           (make-key (:key body))
+                b           (make-binding (:binding body))
+                match       (:match-value body)
+                predicate?  (= :compare-fn (first match))
+                match-value (second match)]
+            (cond
+              (optional? mode)
+              [{}
+               `[~(symbol b) (get-in ~message [~k])]]
+              predicate?
+              [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
+               `[~(symbol b) (get-in ~message [~k])]]
+              :else
+              [`{~k ~match-value}
+               `[~(symbol b) (get-in ~message [~k])]]))
+
+          :path-matches
+          (let [path        (mapv make-key (:path body))
+                b           (make-binding (last (:path body)))
+                match       (:match-value body)
+                predicate?  (= :compare-fn (first match))
+                match-value (second match)
+                path-map    (assoc-in {} path match-value)]
+            (cond
+              (optional? mode)
+              [{}
+               `[~(symbol b) (get-in ~message ~path)]]
+              predicate?
+              [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
+               `[~(symbol b) (get-in ~message ~path)]]
+              :else
+              [`~path-map
+               `[~(symbol b) (get-in ~message ~path)]]))
+
+          :path-matches-with-binding
+          (let [path        (mapv make-key (:path body))
+                b           (make-binding (:binding body))
+                match-value (second (:match-value body))
+                predicate?  (= :compare-fn (first match))
+                match-value (second match)
+                path-map    (assoc-in {} path match-value)]
+            (cond
+              (optional? mode)
+              [{}
+               `[~(symbol b) (get-in ~message ~path)]]
+              predicate?
+              [`(~(fold-path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
+               `[~(symbol b) (get-in ~message ~path)]]
+              :else
+              [`~path-map
+               `[~(symbol b) (get-in ~message ~path)]])))))))
+
+(defn deep-merge [v & vs]
+  (letfn [(rec-merge [v1 v2]
+            (if (and (map? v1) (map? v2))
+              (merge-with deep-merge v1 v2)
+              v2))]
+    (if (some identity vs)
+      (reduce #(rec-merge %1 %2) v vs)
+      v)))
+
+(defn parse-emit-match-syntax
+  [message [pattern rhs]]
+  (let [[lhss rhss] (reduce (fn [[clauses bindings] c]
+                           (let [[clause binding] (parse-emit-syntax message c rhs)]
+                             [(conj clauses clause)
+                              (conj bindings binding)]))
+                         [[] []]
+                         pattern)]
+    [(apply deep-merge lhss)
+     `(let ~(into [] (apply concat rhss))
+        ~rhs)]))
 
 (defmacro parse-pattern
   "Parse the argument to `defpattern` as a [[Pattern]].
@@ -452,14 +611,7 @@
     `(make-pattern ~(str (gensym "pattern-")) (parse-clauses ~pattern))
     pattern))
 
-(parse-pattern [:k :v :u])
-(parse-pattern 42)
-
 ;; Match
-
-(defn convert-path-element
-  [path-element]
-  (if (symbol? path-element) (str path-element) path-element))
 
 (defn key-exists-clause->rhs-match
   [message clause]
@@ -512,16 +664,6 @@
       :else
       (c/assertion-violation `matcher->value "not a matcher" matcher))))
 
-(defn fold-path
-  [path match]
-  (let [path* (->> path
-                   (mapv convert-path-element)
-                   reverse)]
-    (reduce (fn [m path-element]
-              {path-element m})
-            {(first path*) match}
-            (rest path*))))
-
 (defn clause->lhs
   [message clause]
   (cond
@@ -555,14 +697,6 @@
     (optional-clause? clause)
     {}))
 
-(defn deep-merge [v & vs]
-  (letfn [(rec-merge [v1 v2]
-            (if (and (map? v1) (map? v2))
-              (merge-with deep-merge v1 v2)
-              v2))]
-    (if (some identity vs)
-      (reduce #(rec-merge %1 %2) v vs)
-      v)))
 
 (defn reduce-lhs
   [lhss]
@@ -589,13 +723,13 @@
           {}
           lhss))
 
+
 (defn pattern->lhs
   [message pattern]
-  (let [clauses (pattern-clauses pattern)]
-    (->> pattern
-         pattern-clauses
-         (mapv (partial clause->lhs message))
-         reduce-lhs)))
+  (->> pattern
+       pattern-clauses
+       (mapv (partial clause->lhs message))
+       reduce-lhs))
 
 (defn clause->rhs
   [message bindings clause]
@@ -726,20 +860,20 @@
   (when-not (even? (count args))
     (throw (IllegalArgumentException. (str "expecting an even number of arguments " *ns* " " (meta &form)))))
   (let [message              `message#
-        patterns+consequents (reduce
-                              (fn [code [lhs* rhs]]
+        patterns+consequents (mapcat
+                              (fn [[lhs* rhs]]
                                 (let [lhs (if (symbol? lhs*) (eval lhs*) lhs*)]
-                                  (if (= lhs :else)
-                                    (concat code [lhs rhs])
-                                    (let [pattern (if (vector? lhs)
-                                                    (parse-pattern ~lhs)
-                                                    lhs)]
-                                      (concat code
-                                              [(pattern->lhs message pattern)
-                                               (pattern->rhs message pattern rhs)])))))
-                              nil
-                              (partition 2 args))]
+                                  (cond
+                                    (= lhs :else)
+                                    [lhs rhs]
 
+                                    (pattern? lhs)
+                                    [(pattern->lhs message lhs)
+                                     (pattern->rhs message lhs rhs)]
+
+                                    :else
+                                    (parse-emit-match-syntax message [lhs rhs]))))
+                              (partition 2 args))]
     `(fn [~message]
        (match/match ~message ~@patterns+consequents))))
 

@@ -292,48 +292,48 @@
               {:x 42})))))
 
 (def x "x")
-(p/defpattern constant-pattern [(:x x)])
-(def p (p/parse-pattern '[(:x x)]))
+(p/defpattern constant-pattern [(X x)])
+(def p (p/parse-pattern '[(X x)]))
 
 (t/deftest closes-over-outer-variables-test
   (t/testing "with compare-fn"
-    (let [evt {:x "x"}]
+    (let [evt {"X" "x"}]
       (t/is (= "x"
-               ((p/map-matcher [(:x (:compare-fn #(= % (:x evt))))] x)
+               ((p/map-matcher [(X (:compare-fn #(= % (get evt "X"))))] x)
                 evt)))))
   (t/testing "as local constant"
     (let [x   "x"
-          evt {:x x}]
+          evt {"X" x}]
       (t/is (= x
-               ((p/map-matcher [(:x x)] x)
+               ((p/map-matcher [(X x)] x)
                 evt)))))
   (t/testing "as global constant"
-    (let [evt {:x x}]
+    (let [evt {"X" x}]
       (t/is (= x
-               ((p/map-matcher [(:x x)] x)
+               ((p/map-matcher [(X x)] x)
                 evt)))))
   (t/testing "as constant with global defpattern"
     (let [x   "x"
-          evt {:x x}]
+          evt {"X" x}]
       (t/is (= x
                ((p/map-matcher constant-pattern x)
                 evt)))))
   (t/testing "as constant with global parse-pattern"
-    (let [evt {:x x}]
+    (let [evt {"X" x}]
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
   (t/testing "as constant with global defpattern"
     (let [x   "x"
-          evt {:x x}]
-      (p/defpattern p [(:x x)])
+          evt {"X" x}]
+      (p/defpattern p [("X" x)])
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
   #_(t/testing "as constant with local parse-pattern"
     (let [x   "x"
-          evt {:x x}
-          p   (p/parse-pattern [(:x x)])]
+          evt {"X" x}
+          p   (p/parse-pattern [(X x)])]
       (t/is (= x
                ((p/map-matcher p x)
                 evt))))))

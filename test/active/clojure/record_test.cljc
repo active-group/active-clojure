@@ -855,6 +855,8 @@
 (deftest set-contains-test
   (is (= (hash (make-set-contains-test-record-1 :foo))
          (hash (make-set-contains-test-record-1 :foo))))
+  (is (not= (hash (make-set-contains-test-record-1 :foo))
+            (hash (make-set-contains-test-record-1 :bar))))
 
   (is (contains? (set (cons
                        (make-set-contains-test-record-1 :foo)

@@ -52,7 +52,10 @@
                        other-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record other)]
                    (and (rtd= this-rtd other-rtd)
                         (java.util.Arrays/deepEquals this-slots other-slots)))
-                 false))] ; must be `false`, `nil` is no Java value
+                 false)) ; must be `false`, `nil` is no Java value
+       (hashCode [this]
+                 (hash-combine (hash (.rtd this))
+                               (hash (seq (.slots this)))))]
       :cljs
       [IEquiv
        (-equiv [this other]
@@ -66,7 +69,11 @@
                                  this-slots
                                  other-slots
                                  -equiv)))
-                 false))])
+                 false))
+       IHash
+       (-hash [this]
+              (hash-combine (hash (.-rtd this))
+                            (hash (array-seq (.-slots this)))))])
   Object
   (toString [^Record this]
     (let [rtd        (.-rtd this)

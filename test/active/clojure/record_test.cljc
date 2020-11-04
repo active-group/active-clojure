@@ -845,3 +845,19 @@
                        (make-many-fields 1 2 3))))
   #?(:clj (is (thrown? Exception
                        (make-many-fields 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27)))))
+
+(define-record-type set-contains-test-record-1
+  {:rtd-record? true}
+  make-set-contains-test-record-1
+  set-contains-test-record-1?
+  [v set-contains-test-record-1-v])
+
+(deftest set-contains-test
+  (is (= (hash (make-set-contains-test-record-1 :foo))
+         (hash (make-set-contains-test-record-1 :foo))))
+
+  (is (contains? (set (cons
+                       (make-set-contains-test-record-1 :foo)
+                       ;; Note: must have more than a few items to become a hash-set
+                       (map make-set-contains-test-record-1 (range 100))))
+                 (make-set-contains-test-record-1 :foo))))

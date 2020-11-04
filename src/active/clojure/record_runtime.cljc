@@ -55,7 +55,11 @@
                  false)) ; must be `false`, `nil` is no Java value
        (hashCode [this]
                  (hash-combine (hash (.rtd this))
-                               (hash (seq (.slots this)))))]
+                               (hash (seq (.slots this)))))
+       ;; deftype types implement this by default, it seems; better override it:
+       clojure.lang.IHashEq
+       (hasheq [this]
+               (.hashCode this))]
       :cljs
       [IEquiv
        (-equiv [this other]

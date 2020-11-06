@@ -10,3 +10,4 @@ pom.xml.asc
 /.cljs_rhino_repl
 *~
 resources/public/cljs-out
+.rebel_readline_history

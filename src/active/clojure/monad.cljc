@@ -38,6 +38,24 @@
   [v replace-cont-v
    cont replace-cont-cont])
 
+(define-record-type ^{:doc "Accepts a arbitrary value `thing` that can be used
+  to mark the type of the [[IntermediateResult]].  `pause` can be used to pause
+  the current monadic calculation and return an [[Intermediate Result]]."}
+  Pause
+  (pause thing)
+  pause?
+  [thing pause-thing])
+
+(define-record-type ^{:doc "Possible return value
+  for [[run-monadic-swiss-army]], when monadic program wants to [[pause]]
+  calculation.  Call [[intermediate-result-resume]] with a value [[v]] to resume
+  the paused calculation with [[v]]."}
+  IntermediateResult
+  (make-intermediate-result thing resume)
+  intermediate-result?
+  [thing intermediate-result-thing
+   resume intermediate-result-resume])
+
 (defn free-bind
   "Bind/flatMap for the free monad."
   [mv f]
@@ -448,6 +466,9 @@
                (call-cc? m) (recur env state ((call-cc-f m) (fn [v] (replace-cont v return))))
                (replace-cont? m) (recur env state ((replace-cont-cont m) (replace-cont-v m)))
 
+               (pause? m) [(make-intermediate-result (pause-thing m) (fn [v] (run env state (return v))))
+                           state]
+
                (free-bind? m)
                (let [m1 (:monad m)
                      cont (:cont m)]
@@ -457,6 +478,9 @@
 
                   (call-cc? m1) (recur env state (free-bind ((call-cc-f m1) (fn [v] (replace-cont v cont))) cont))
                   (replace-cont? m1) (recur env state ((replace-cont-cont m1) (replace-cont-v m1)))
+
+                  (pause? m1) [(make-intermediate-result (pause-thing m1) (fn [v] (run env state (cont v))))
+                               state]
 
                   (free-bind? m1) (unknown-command m m1)
 

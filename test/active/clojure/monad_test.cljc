@@ -453,3 +453,35 @@
                (get-env-component ::cont-test)))))]
       (is (false? result)))))
 
+(deftest pause-resume-test
+  (testing "that calculation pauses and resume"
+    (let [[result state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (put-state-component! ::pause-resume-test 0)
+            [v (pause ::test)]
+            (update-state-component! ::pause-resume-test v)
+            [r (get-state-component ::pause-resume-test)]
+            (return r)))]
+      (is (intermediate-result? result))
+      (is (= ::test (intermediate-result-thing result)))
+      (is (= 0 (::pause-resume-test state)))
+      (let [[result state]
+            ((intermediate-result-resume result) inc)]
+        (is (= 1 result))
+        (is (= 1 (::pause-resume-test state))))))
+  (testing "that calculation pauses and resumes in tail position"
+    (let [[result state]
+          (execute-monadic-swiss-army
+           (null-monad-command-config nil nil)
+           (monadic
+            (put-state-component! ::pause-resume-test 0)
+            (pause ::test)))]
+      (is (intermediate-result? result))
+      (is (= ::test (intermediate-result-thing result)))
+      (is (= 0 (::pause-resume-test state)))
+      (let [[result state]
+            ((intermediate-result-resume result) 23)]
+        (is (= 23 result))
+        (is (= 0 (::pause-resume-test state)))))))

@@ -401,6 +401,14 @@
               (null-monad-command-config nil nil)
               (call-cc f)))))))
 
+(deftest call-cc-no-call
+  (is (= [23 nil]
+         (execute-monadic-swiss-army
+          (null-monad-command-config nil nil)
+          (monadic
+           (call-cc (fn [cont] (return 65)))
+           (return 23))))))
+
 (deftest call-cc-state-test
   (testing "that state does not get saved over call-cc"
     (let [f (fn [cont]
@@ -428,10 +436,13 @@
       (is (= 0 (::cont-test state))))))
 
 (deftest call-cc-env-test
-  (testing "that env does get saved over call-cc"
+  (testing "that env does get restored when call-cc"
     (let [f (fn [cont]
               (with-env-component ::cont-test (constantly true)
-                (cont nil)))
+                (monadic
+                 [r (get-env-component ::cont-test)]
+                 (return (is (true? r)))
+                 (cont nil))))
           [result _state]
           (execute-monadic-swiss-army
            (null-monad-command-config nil nil)
@@ -440,17 +451,5 @@
               (monadic
                [r (call-cc f)]
                (get-env-component ::cont-test)))))]
-      (is (true? result))))
-  (testing "that env does get passed to and saved over call-cc"
-    (let [f (fn [cont]
-              (with-env-component ::cont-test inc
-                (cont nil)))
-          [result _state]
-          (execute-monadic-swiss-army
-           (null-monad-command-config nil nil)
-           (monadic
-            (with-env-component ::cont-test (constantly 0)
-              (monadic
-               [r (call-cc f)]
-               (get-env-component ::cont-test)))))]
-      (is (= 1 result)))))
+      (is (false? result)))))
+

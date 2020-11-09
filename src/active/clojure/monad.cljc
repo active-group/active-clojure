@@ -455,7 +455,7 @@
                   (free-return? m1) (recur  env state (cont (free-return-val m1)))
                   (free-throw? m1) [(make-exception-value (free-throw-exception m1)) state]
 
-                  (call-cc? m1) (recur env state ((call-cc-f m1) (fn [v] (replace-cont v cont))))
+                  (call-cc? m1) (recur env state (free-bind ((call-cc-f m1) (fn [v] (replace-cont v cont))) cont))
                   (replace-cont? m1) (recur env state ((replace-cont-cont m1) (replace-cont-v m1)))
 
                   (free-bind? m1) (unknown-command m m1)

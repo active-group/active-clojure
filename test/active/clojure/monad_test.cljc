@@ -20,7 +20,10 @@
                                                    monad-command-config-run-command
                                                    reify-command reify-as
                                                    put-state-component!
-                                                   update-state-component!)])
+                                                   update-state-component!
+                                                   get-state-component
+                                                   pause
+                                                   intermediate-result? intermediate-result-thing intermediate-result-resume)])
             [active.clojure.condition :as c]
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test])))

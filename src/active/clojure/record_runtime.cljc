@@ -173,8 +173,8 @@
   The outer if condition is needed, because primitive types can't be type hinted."
   [^RecordTypeDescriptor ?rtd ^Record ?r]
   (let [error (if (:ns &env)
-                `(js/Error. (str "Not a record of the correct type [[" (:name ~?rtd) "]]"))
-                `(new Error (str "Not a record of the correct type [[" (:name ~?rtd) "]]")))
+                `(js/Error. (str "Not a record of the correct type [[" (:name ~?rtd) "]]" ":" (pr-str ~?r)))
+                `(new Error (str "Not a record of the correct type [[" (:name ~?rtd) "]]" ":" (pr-str ~?r))))
         record (vary-meta (gensym) assoc :tag `Record)]
     (if (or (symbol? ?r) (list? ?r))
       `(do

@@ -69,37 +69,47 @@
 (def rtd2-2 (r/make-record-type-descriptor `rtd2-2 nil [(r/make-record-field "f1")
                                                         (r/make-record-field "f2")]))
 
+;; generate regexp for the expected error message
+;; Todo: sth like escape for the cljs-regexp, \Q and \E is not available in JavaScript.
+(defn expected-check-rtd!-throw-error-message [wrong-rec]
+  (let [tstr (pr-str wrong-rec)
+        res-str #?(:clj (str "^\\QNot a record of the correct type [[active.clojure.record-runtime-test/rtd2]]:" tstr "\\E$")
+                   :cljs (str "^Not a record of the correct type \\[\\[active.clojure.record-runtime-test/rtd2\\]\\]:" tstr "$"))]
+    (println res-str)
+    (re-pattern res-str)))
+
+
 (deftest record-check-rtd!-throws-when-wrong-record-type
   (testing "not even an rtd-record"
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message 4)
          (r/record-check-rtd! ^RecordTypeDescriptor rtd2 4)))
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message "blub")
          (r/record-check-rtd! rtd2 "blub")))
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message (->NotRTDRecord 1 2))
          (r/record-check-rtd! rtd2 (->NotRTDRecord 1 2)))))
   (testing "wrong rtd-record"
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message (r/make-record rtd0))
          (r/record-check-rtd! rtd2 (r/make-record rtd0))))
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message (r/make-record rtd1))
          (r/record-check-rtd! rtd2 (r/make-record rtd1))))
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd2]]"
+         (expected-check-rtd!-throw-error-message (r/make-record rtd2-2))
          (r/record-check-rtd! rtd2 (r/make-record rtd2-2))))
     (is (thrown-with-msg?
          #?(:clj Error :cljs js/Error)
-         #"Not a record of the correct type \[\[active.clojure.record-runtime-test/rtd0]]"
-         (r/record-check-rtd! rtd0 (r/make-record rtd0-2)))))
+         (expected-check-rtd!-throw-error-message (r/make-record rtd0-2))
+         (r/record-check-rtd! rtd2 (r/make-record rtd0-2)))))
   (testing "correct record, shouldnt throw"
     (is (nil? (r/record-check-rtd! rtd0 (r/make-record rtd0)))))
   (testing "correct record, shouldnt throw"

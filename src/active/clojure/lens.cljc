@@ -388,7 +388,7 @@ right-most element where they were before."}  merge
                      (shove r lens (yank v f)))
                    out
                    fields)))]
-  (defn- projection
+  (defn projection
     "A lens that projects multiple derived values into a new value,
   with `empty` being an initial new value, and `fields` a map or
   sequence of tuples, of a lens on the new value and lens over the

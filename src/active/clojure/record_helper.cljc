@@ -248,20 +248,18 @@
 (def record-identifier ::record)
 
 #?(:clj
-   (defn define-type-function [meta-data type rtd-symbol predicate constructor args field-tuples]
+   (defn define-type-function [type rtd-symbol predicate constructor args field-tuples]
      (let [sym-fn (fn [a] (str *ns* "/" a))
            field-tuples-sym (mapv (fn [[name accessor]] [(str name) (sym-fn accessor)]) field-tuples)
-           additional-meta {:meta         (meta type)
-                            :t            record-identifier
+           additional-meta {:t            record-identifier
                             :rtd          (sym-fn rtd-symbol)
                             :predicate    (sym-fn predicate)
                             :constructor  (sym-fn constructor)
                             :args         (mapv str args)
-                            :field-tuples field-tuples-sym
-                            :ns           (str *ns*)}]
+                            :field-tuples field-tuples-sym}]
 
-       `(def ~(add-meta type (merge meta-data additional-meta))
-          ~additional-meta))))
+       `(def ~(add-meta type additional-meta)
+          ~rtd-symbol))))
 
 
 #?(:clj
@@ -293,14 +291,6 @@
                             nil))
                         field-tuples))))))))
 
-
-
-
-#_(defn define-accessors [type internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data]
-    (map
-      (get-accessor-from-field-tuple-no-java-class type
-        internal-constructor ?docref constructor-symbol field-tuples fields-symbols rtd-symbol meta-data)
-      field-tuples))
 
 #?(:clj
    (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]
@@ -343,5 +333,5 @@
           ~(when-let [spec-name (:spec options)]
              (add-spec-code spec-name predicate field-tuples constructor-args constructor))
 
-          ~(define-type-function meta-data type rtd-symbol predicate constructor constructor-args field-tuples)
+          ~(define-type-function type rtd-symbol predicate constructor constructor-args field-tuples)
           ))))

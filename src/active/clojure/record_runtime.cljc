@@ -1,7 +1,6 @@
 (ns ^:no-doc active.clojure.record-runtime
   (:refer-clojure :exclude [record?])
-  #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!
-                                                                   record-type-meta record-type-rtd]])))
+  #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!]])))
 
 (defrecord RecordField [name])
 
@@ -196,14 +195,6 @@
         (aclone ^{:tag "[Ljava.lang.Object;"} (.-slots r))]
     (aset slots index v)
     (Record. (.-rtd r) slots)))
-
-(defmacro record-type-rtd
-  [rt]
-  `(~rt :rtd))
-
-(defmacro record-type-meta
-  [rt]
-  `(~rt :meta))
 
 ;; FIXME: lens
 ;; FIXME: serialization

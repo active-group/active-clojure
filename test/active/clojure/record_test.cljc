@@ -490,17 +490,17 @@
        (is (= 1 (icnjc-a r)))
        (is (= 2 (icnjc-b r))))))
 
-;;; :meta option (works only with :java-class? false)
-(define-record-type ^{:foo "I am meta information"} MetaInfo
-  {:java-class? false}
-  meta-info
-  meta-info?
-  [])
-
-#?(:clj
-   (deftest meta-info-test
-     (is (= "I am meta information"
-            (:foo (MetaInfo :meta))))))
+(do
+  (define-record-type ^{:foo "I am meta information"} MetaInfo
+    {:java-class? false :rtd-record? true}
+    meta-info
+    meta-info?
+    [])
+  
+  (deftest meta-info-test
+    ;; only works for rtd records currently; not sure why.
+    (is (= "I am meta information"
+           (:foo (meta #'MetaInfo))))))
 
 
 ;;;; rtd-records
@@ -539,21 +539,6 @@
        (is (not (icnrtd? r)))
        (is (= 1 (icrtd-a r)))
        (is (= 2 (icrtd-b r))))))
-
-;;; :meta option (works only with :rtd-record? true)
-#?(:cljs
-   (define-record-type ^{:foo "I am meta information"} MetaInfoCljs
-     {:rtd-record? true}
-     meta-infoc
-     meta-infoc?
-     []))
-
-#?(:cljs
-   (deftest meta-info-CLJS-test
-     (is (= "I am meta information"
-            (:foo (MetaInfoCljs :meta))))))
-
-
 
 ;;; test meta-info inheritance
 

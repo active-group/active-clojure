@@ -18,16 +18,6 @@
                                             predicate field-triples opt+specs)))))
 
 
-
-;; (defn predicate->record-meta [predicate]
-;;   ;; Expects a namespace resolved predicate
-;;   ;; if the predicate meta contains UnresolvedRecordMeta it returns a RecordMeta
-;;   ;; record with resolved values. Else nil.
-;;   (:meta (meta predicate)))
-
-;; (defn record-type-predicate? [foo]
-;;   (instance? RecordMeta (predicate->record-meta foo)))
-
 #?(:clj
    (defmacro define-singleton-type
      "Defines a record type without fields. Instead of a constructor, the single value of this type is bound to `var-name`."

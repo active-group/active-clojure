@@ -1,5 +1,6 @@
 (ns active.clojure.cljs.record
   (:require [active.clojure.record-helper :as r-help]
+            [active.clojure.record-runtime :as record-runtime]
             #?(:clj [active.clojure.cljs.record-cljs-internals :refer [emit-javascript-record-definition]])
             ))
 
@@ -28,3 +29,17 @@
               ~(or predicate-name (gensym "predicate"))
               [])
             (def ~var-name (~ctor))))))
+
+(defn record-type
+  "Returns the record type of the given record value.
+
+  ```
+  (define-record-type Foo foo? (make-foo a))
+  
+  (= Foo (record-type (make-foo :b)))
+  ```
+  "
+  [v]
+  (if (record-runtime/record? v)
+    (record-runtime/record-rtd v)
+    (type v)))

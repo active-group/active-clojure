@@ -2,14 +2,14 @@
   (:require [active.clojure.lens :as lens]
             [clojure.spec.test.alpha :as spec-test]
             #?(:clj [clojure.spec.alpha :as spec])
-            #?(:clj [active.clojure.record :refer [define-record-type]])
+            #?(:clj [active.clojure.record :refer [define-record-type record-type]])
             #?(:clj [active.clojure.record-data-test :as r-data])
             #?(:clj [active.clojure.record-nongenerative-test])
             #?(:clj [active.clojure.record-runtime :as rrun])
             #?(:clj [clojure.test :refer :all])
             ;; The following is needed because the unique test
             ;; below contains `Throwable`.
-            #?(:cljs [active.clojure.cljs.record])
+            #?(:cljs [active.clojure.cljs.record :refer [record-type]])
             #?(:cljs [active.clojure.record-nongenerative-test])
             #?(:cljs [cljs.test])
             #?(:cljs [cljs.spec.alpha :as spec])
@@ -848,3 +848,28 @@
                        ;; Note: must have more than a few items to become a hash-set
                        (map make-set-contains-test-record-1 (range 100))))
                  (make-set-contains-test-record-1 :foo))))
+
+
+(do
+  (define-record-type method-dispatch-test-1 {:java-class? false :rtd-record? true}
+    make-method-dispatch-test-1 method-dispatch-test-1?
+    [])
+  (define-record-type method-dispatch-test-2
+    make-method-dispatch-test-2 method-dispatch-test-2?
+    [])
+
+  (deftest method-dispatch-test
+
+    (defmulti mtest (fn [v] (record-type v)))
+
+    ;; Note: works the same on both rtd and standard records:
+    
+    (defmethod mtest method-dispatch-test-1 [v]
+      (is (method-dispatch-test-1? v)))
+
+    (defmethod mtest method-dispatch-test-2 [v]
+      (is (method-dispatch-test-2? v)))
+
+    (mtest (make-method-dispatch-test-1))
+    (mtest (make-method-dispatch-test-2))
+    ))

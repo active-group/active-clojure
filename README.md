@@ -5,6 +5,11 @@ A library with various basic utilities for programming with Clojure.
 [![Clojars Project](https://img.shields.io/clojars/v/de.active-group/active-clojure.svg)](https://clojars.org/de.active-group/active-clojure)
 [![Actions Status](https://github.com/active-group/active-clojure/workflows/Tests/badge.svg)](https://github.com/active-group/active-clojure/actions)
 
+### Breaking changes in version 0.38
+
+- For an RTD record `MyRecord`, `(MyRecord :meta)` will no longer
+  return a meta data map. Use `(meta #'MyRecord)` instead.
+
 ### Breaking changes since version `0.28.0`
 - Clojure version 1.9.0 or higher and Clojurescript version 1.9.542 or higher
   are required.
@@ -180,18 +185,26 @@ You can also override the defaultly implemented interfaces/protocols by the same
 means. You don't have to provide every method of a default interface, those left
 out by you will remain the default ones.
 
-#### Java Class
+#### Java Classes, RTD records
 
-Default is `true`.
+By default `define-record-type` generates new types in the host
+language (Java for Clojure or JavaScript for ClojureScript), just
+like `defrecord` does. That can be changed by specifying either
+`:java-class? false`, or `rtd-record? true` options like so:
 
-If you provide the key:val pair `:java-class?`:`false`, no java class is created
-for the given type, and instead a `record-type-descriptor` is created.
+```clojure
+(r/define-record-type Foo {:rtd-record? true}
+ ...)
+```
 
+These records have the advantage, that a hot code reload of the same
+definition will not create a new type in the host language. So record
+values created before the code reload are still compatible with the
+record type, unless its fields have changed of course.
 
-#### RTD record
-
-If you provide the key:val pair `:rtd-record?`:`true`, an own record
-implementation for ClojureScript is used instead of `defrecord`.
+You cannot define protocol implementations for these kinds of record
+types, but you can use multi methods. Use the defined type and the
+result of `r/record-type` as the dispatch value for that.
 
 #### Meta data
 
@@ -200,7 +213,7 @@ MyRecord)`. This meta data is then "inherited" to all created symobls
 (like `->MyRecord`).
 
 If you use an RTD record (`:java-class?`, `:rtd-record?` options), this data
-is retrievable via `(MyRecord :meta)`.
+is also retrievable via `(meta #'MyRecord)`.
 
 
 

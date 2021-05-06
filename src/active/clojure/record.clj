@@ -10,7 +10,8 @@
   ;; (only, when :nongenerative option is truthy)
   (when-let [[type options constructor constructor-args predicate field-triples opt+specs]
              (r-help/prepare-arguments! &form *ns* ?type ?second ?params)]
-    (if (false? (:java-class? options))
+    ;; Note: rtd-record? used to be only for cljs; now an alternative option.
+    (if (or (:rtd-record? options) (false? (:java-class? options)))
       (r-help/emit-own-record-definition type options constructor constructor-args
         predicate field-triples opt+specs)
       (emit-java-record-definition type options constructor constructor-args
@@ -38,7 +39,7 @@
   "Defines a record type without fields. Instead of a constructor, the single value of this type is bound to `var-name`."
   [type-name var-name & [predicate-name]]
   (let [ctor (gensym "ctor")]
-    `(do (active.clojure.record/define-record-type ~type-name {:rtd-record? true}
+    `(do (active.clojure.record/define-record-type ~type-name {:java-class? false}
            (~ctor)
            ~(or predicate-name (gensym "predicate"))
            [])

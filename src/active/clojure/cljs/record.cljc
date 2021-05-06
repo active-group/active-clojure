@@ -10,7 +10,8 @@
      ;; (only, when :nongenerative option is truthy)
      (when-let [[type options constructor constructor-args predicate field-triples opt+specs]
                 (r-help/prepare-arguments! &form *ns* ?type ?second ?params)]
-       (if (:rtd-record? options)
+       ;; Note: java-class? used to be only for clj; now an alternative option.
+       (if (or (:rtd-record? options) (false? (:java-class? options)))
          (r-help/emit-own-record-definition type options constructor constructor-args
                                      predicate field-triples opt+specs)
          (emit-javascript-record-definition &env type options constructor constructor-args

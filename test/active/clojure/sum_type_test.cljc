@@ -170,7 +170,11 @@
 
 (st/define-sum-type forms&colors forms&colors? [data/circle data/square rgb-color])
 
+(deftest sum-type-descriptor-test
+  (is (st/sum-type-descriptor? forms&colors))
 
+  (is (st/value-of-sum-type? (data/make-square 0 0) forms&colors))
+  (is (st/value-of-sum-type? (make-red 0) forms&colors)))
 
 
 (deftest from-other-ns

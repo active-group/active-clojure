@@ -3,6 +3,7 @@
    #?(:clj  [active.clojure.record :as record]
       :cljs [active.clojure.cljs.record :as record :include-macros true])
    [active.clojure.record-helper :as record-helper]
+   [active.clojure.record-runtime :as record-runtime]
    #?(:clj  [active.clojure.lens :as lens]
       :cljs [active.clojure.lens :as lens :include-macros true])))
 
@@ -40,6 +41,21 @@
        (str (:name ((resolve 'cljs.analyzer.api/resolve) env t)))
        (str (:ns (meta (resolve t))) "/" (:name (meta (resolve t)))))))
 
+(record/define-record-type ^:no-doc SumTypeDescriptor
+  (make-sum-type-descriptor name sub-types)
+  sum-type-descriptor?
+  [name sum-type-descriptor-name
+   sub-types sum-type-descriptor-sub-types])
+
+(defn ^:no-doc value-of-sum-type? [v sum-type]
+  (boolean (some (fn [t]
+                   (cond
+                     (sum-type-descriptor? t) (value-of-sum-type? v t)
+                     (record-runtime/record-type-descriptor? t) (record-runtime/record-of-type? v t)
+                     :else
+                     (do (assert false t) false) ;; should not happen?
+                     ))
+                 (sum-type-descriptor-sub-types sum-type))))
 
 
 ;; a clause is one of the following:
@@ -131,7 +147,7 @@
 
 
      (let [sym-fn                (fn [a] (str *ns* "/" a))
-           resolved-type-symbols (mapv #(resolve-qualified-str % &env) type-symbols)
+           resolved-type-symbols (mapv (comp symbol #(resolve-qualified-str % &env)) type-symbols)
            sum-type-meta         {:predicate (sym-fn predicate)
                                   :t         sum-type-identifier
 
@@ -143,21 +159,20 @@
                                            (dissoc :end-line)
                                            (dissoc :end-column)
                                            (dissoc :name) ; this leads to a crash in clj
-                                           (dissoc :column)) type-symbols)}]
+                                           (dissoc :column)) type-symbols)}
+           arg (gensym "arg")]
 
        (throw-when-illegal-types! type-symbols &env)
 
 
        `(do
-
-          (let [rss# ~resolved-type-symbols] ;; we only do resolution once
-
-            (defn ~predicate [arg#]
-              (boolean (some true?
-                         (map (fn [pred#] (pred# arg#))
-                           ~(mapv #(symbol (get-predicate (symbol %) &env)) resolved-type-symbols)))))
-
-            (def ~(add-meta type-name sum-type-meta) ~sum-type-meta))))))
+          (defn ~predicate [~arg]
+            ;; we could use [[value-of-sum-type?]], but this is an optimized compiled version:
+            (or ~@(map (fn [p] (list p arg))
+                       (mapv #(symbol (get-predicate % &env)) resolved-type-symbols))))
+          
+          (def ~(add-meta type-name sum-type-meta)
+            (make-sum-type-descriptor '~type-name (vector ~@resolved-type-symbols)))))))
 
 
 

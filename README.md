@@ -4,6 +4,7 @@ A library with various basic utilities for programming with Clojure.
 
 [![Clojars Project](https://img.shields.io/clojars/v/de.active-group/active-clojure.svg)](https://clojars.org/de.active-group/active-clojure)
 [![Actions Status](https://github.com/active-group/active-clojure/workflows/Tests/badge.svg)](https://github.com/active-group/active-clojure/actions)
+[![cljdoc badge](https://cljdoc.org/badge/de.active-group/active-clojure)](https://cljdoc.org/d/de.active-group/active-clojure/CURRENT)
 
 ### Breaking changes in version 0.38
 

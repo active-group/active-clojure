@@ -181,6 +181,10 @@
   (lens-laws-hold (lens/at-index 0) [12 42] 7 65)
   (lens-laws-hold (lens/at-index 1) '(12 42) 7 65)
 
+  ;; laws must hold for map-entries
+  (let [entry (first {3 4})]
+    (lens-laws-hold (lens/at-index 0) entry 7 65))
+
   (is (= [13 42]
          (lens/shove [13 0] (lens/at-index 1) 42)))
   (is (= '(13 42)

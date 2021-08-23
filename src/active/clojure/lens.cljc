@@ -315,15 +315,18 @@
         lenses))
 
 (defn- at-index-shove [coll v n]
-  (let [[front back] (split-at n coll)]
-    (let [s (concat front
-                    (list v)
-                    (rest back))]
-      (if (list? coll)
-        (apply list s)
-        (if (seq? coll)
-          s
-          (into (empty coll) s))))))
+  (if (associative? coll)
+    ;; hitting vectors and map-entries
+    (assoc coll n v)
+    (let [[front back] (split-at n coll)]
+      (let [s (concat front
+                      (list v)
+                      (rest back))]
+        (if (list? coll)
+          (apply list s)
+          (if (seq? coll)
+            s
+            (into (empty coll) s)))))))
 
 (defn at-index
   "Returns a lens that focuses on the value at index n in a collection.

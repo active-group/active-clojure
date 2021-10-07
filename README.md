@@ -207,6 +207,13 @@ You cannot define protocol implementations for these kinds of record
 types, but you can use multi methods. Use the defined type and the
 result of `r/record-type` as the dispatch value for that.
 
+Above options may not work with RTD records:
+
+- Arrow: RTD records don't provide an arrow constructor
+- Map implementation: RTD records don't implement the map interface
+- Interfaces: No interfaces are implemented, you cannot provide your own
+  implementations for RTD records
+
 #### Meta data
 
 You can provide meta data via `(define-record-type ^{:foo "bar"}

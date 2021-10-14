@@ -240,6 +240,17 @@
            (run-free-reader-state-exception (null-monad-command-config nil nil)
                                             (sequ_ (repeat 20000 (return "hello"))))))))
 
+(deftest reduce-m-test
+  (letfn [(sum-m [a b]
+            (return (+ a b)))]
+    (is (= [6 nil] (run-free-reader-state-exception (null-monad-command-config nil nil)
+                                                    (reduce-m sum-m 0 [1 2 3]))))))
+
+(deftest reduce-m-test
+  (letfn [(sum-m [a b]
+            (return (+ a b)))]
+    (is (= [(list 0 1 3 6) nil] (run-free-reader-state-exception (null-monad-command-config nil nil)
+                                                                 (scan-m sum-m 0 [1 2 3]))))))
 
 (deftest frse-trivial
   (is (= ["Hola" nil]

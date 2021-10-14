@@ -160,6 +160,28 @@
           (free-return nil)
           (reverse ms)))
 
+(defn reduce-m
+  "Like reduce, but takes a monadic function `m-fn` for folding the
+  results.  Returns the final result."
+  [m-fn acc xs]
+  (if (empty? xs)
+    (return acc)
+    (monadic [res (m-fn acc (first xs))]
+             (reduce-m m-fn res (rest xs)))))
+
+(defn scan-m
+  "Like `reduce-m`, but returns a sequence of each intermediate
+  result.  The actual result is the last element of that sequence.
+
+  `(last (scan-m f zero xs)) = (reduce-m f zero xs)` holds."
+  [m-fn acc xs]
+  (monadic [reversed (reduce-m (fn [acc* x]
+                                 (monadic [res (m-fn (first acc*) x)]
+                                          (return (cons res acc*))))
+                               (list acc)
+                               xs)]
+           (return (reverse reversed))))
+
 (define-record-type ^:no-doc Throw
   (free-throw exception)
   free-throw?

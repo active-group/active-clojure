@@ -388,24 +388,19 @@
     b first-important-b]
   #?@(:clj
       [clojure.lang.IPersistentMap
-       (equiv [this other] (= (first-important-a this) (first-important-a other)))]
+       (equiv [this other] (= (first-important-a this) (first-important-a other)))
+       clojure.lang.IHashEq
+       (hasheq [this] (clojure.lang.APersistentMap/mapHasheq (-> this (dissoc :b))))]
       :cljs
       [IEquiv
        (-equiv [this other] (= (first-important-a this) (first-important-a other)))]))
 
 (deftest providing-own-equality-implementation-test
-  #?(:clj
-     (is (= (make-first-important 1 1) (make-first-important 1 1)))
-     :cljs
-     (is (= (make-first-important 1 1) (make-first-important 1 1))))
-  #?(:clj
-     (is (= (make-first-important 1 1) (make-first-important 1 0)))
-     :cljs
-     (is (= (make-first-important 1 1) (make-first-important 1 0))))
-  #?(:clj
-     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))
-     :cljs
-     (is (not (= (make-first-important 1 1) (make-first-important 0 1))))))
+  (is (= (make-first-important 1 1) (make-first-important 1 1)))
+  (is (= (make-first-important 1 1) (make-first-important 1 0)))
+  (is (not (= (make-first-important 1 1) (make-first-important 0 1))))
+  (is (= #{(make-first-important 1 1)} #{(make-first-important 1 0)}))
+  (is (not (= #{(make-first-important 1 1)} #{(make-first-important 0 1)}))))
 
 ;;; Remove a (default) interface from record
 ;;; (This example, yields the same result as providing `:no-map-protocol? true` in the options map)

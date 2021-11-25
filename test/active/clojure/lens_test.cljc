@@ -461,7 +461,7 @@
     
     (lens-laws-hold lens/merge [{:a 42} {:b 10}] {:a 42 :b 10 :c 17} {:a 42 :b 10 :c 42}))
 
-  (testing "duplicate keys are taken from right and shadow thos on the left"
+  (testing "duplicate keys are taken from right and shadow those on the left"
     (is (= {:a 10}
            (lens/yank [{:a 42} {:a 10}]
                       lens/merge)))
@@ -470,8 +470,7 @@
                        lens/merge
                        {:a 21})))
     
-    (lens-laws-hold lens/merge [{:a 42} {:a 10}] {:a 21} {:a 2}))
-  )
+    (lens-laws-hold lens/merge [{:a 42} {:a 10}] {:a 21} {:a 2})))
 
 (deftest pattern-lens-test
   (testing "as a map"
@@ -498,5 +497,4 @@
                        [21 5])))
     
     (lens-laws-hold (lens/pattern [:foo :bar])
-                    {:foo 42 :bar 10} [21 5] [11 3]))
-  )
+                    {:foo 42 :bar 10} [21 5] [11 3])))

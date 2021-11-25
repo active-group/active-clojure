@@ -498,3 +498,45 @@
     
     (lens-laws-hold (lens/pattern [:foo :bar])
                     {:foo 42 :bar 10} [21 5] [11 3])))
+
+(defrecord ProjectionSource [foo bar])
+(defrecord ProjectionTarget [shmup flup])
+
+(deftest projection-lens-test
+  (lens-laws-hold (lens/projection {} {:c :d :e :f})
+                  {:d 3 :f "some f"}
+                  {:c -1 :e nil}
+                  {:c 17 :e "hi"})
+  (testing "can convert between maps"
+    (let [proj (lens/projection {} {:a :b})]
+      (is (= {:a "foobar"}
+             (lens/yank {:b "foobar"} proj)))
+      (is (= {:b "blub"}
+             (lens/shove {:b "foobar"}
+                         proj
+                         {:a "blub"})))))
+  (testing "can convert between records"
+    (let [proj (lens/projection (->ProjectionTarget nil nil)
+                                {:flup :foo
+                                 :shmup :bar})]
+      (is (= (->ProjectionTarget 3 "hi")
+             (lens/yank (->ProjectionSource "hi" 3) proj)))
+      (is (= (->ProjectionSource 0 "empty")
+             (lens/shove (->ProjectionSource -2 "abc")
+                         proj
+                         (->ProjectionTarget "empty" 0))))))
+  (testing "combinations with other lenses"
+    (let [proj (lens/projection {}
+                                {(lens/>> :flup :shmup) (lens/>> :a :b)
+                                 (lens/>> :flup :blub) (lens/>> :list
+                                                                (lens/at-index 1))})]
+      (is (= {:flup {:shmup 17 :blub 2}}
+             (lens/yank {:a {:b 17}
+                         :list [1 2 3]}
+                        proj)))
+      (is (= {:a {:b -1}
+              :list [5 "abc"]}
+             (lens/shove {:a {:b 17}
+                          :list [5]}
+                         proj
+                         {:flup {:shmup -1 :blub "abc"}}))))))

@@ -1,6 +1,7 @@
 (ns ^:no-doc active.clojure.record-runtime
   (:refer-clojure :exclude [record?])
-  #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!]])))
+  #?(:cljs (:require-macros [active.clojure.record-runtime :refer [really-make-record record-check-rtd!]]))
+  #?(:cljs (:require [goog.array])))
 
 (defrecord RecordField [name])
 

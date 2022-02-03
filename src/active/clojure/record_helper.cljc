@@ -306,9 +306,7 @@
 
 
        `(do
-          (declare
-            ~@(map second field-tuples)
-            ~@(map first field-tuples))
+          (declare ~@(map second field-tuples))
 
           ~(define-record-type-descriptor meta-data type fields rtd-symbol)
 

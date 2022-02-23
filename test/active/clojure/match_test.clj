@@ -172,6 +172,7 @@
    (:a "a" :as a)
    (:b "b")
    (:c :as c)
+   ([:d] :as d)
    ([:d Z] 42 :as Z)
    ([:d Y] :as Y)
    ([:d X] 65)
@@ -181,13 +182,13 @@
 (def example-matcher
   (p/map-matcher
    one   [x y z w]
-   two   [a b c Z Y X foo]
+   two   [a b c d Z Y X foo]
    :else false))
 
 (t/deftest map-matcher-test
   (t/is (= ["x" "y" "z" "w"]
            (example-matcher one-data)))
-  (t/is (= ["a" "b" "c" 42 23 65 "bar"]
+  (t/is (= ["a" "b" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23 65 "bar"]
            (example-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 

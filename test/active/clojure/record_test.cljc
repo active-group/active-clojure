@@ -868,3 +868,15 @@
     (mtest (make-method-dispatch-test-1))
     (mtest (make-method-dispatch-test-2))
     ))
+
+;; Records with fields of slightly different types should still be
+;; equal
+(define-record-type RWFOSDT
+  {:rtd-record? true}
+  rwfosdt
+  rwfosdt?
+  [a rwfosdt-a])
+
+(deftest records-fields-different-types-equality-test
+  (is (= (rwfosdt 1)          ; 1 :: java.lang.Long
+         (rwfosdt (int 1))))) ; 1 :: java.lang.Integer

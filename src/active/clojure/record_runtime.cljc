@@ -51,8 +51,9 @@
                        other-rtd ^RecordTypeDescriptor (.rtd ^Record other)
                        other-slots ^{:tag "[Ljava.lang.Object;"} (.slots ^Record other)]
                    (and (rtd= this-rtd other-rtd)
-                        (java.util.Arrays/deepEquals this-slots other-slots)))
+                        (every? true? (map = this-slots other-slots))))
                  false)) ; must be `false`, `nil` is no Java value
+       
        (hashCode [this]
                  (hash-combine (hash (.rtd this))
                                (hash (seq (.slots this)))))

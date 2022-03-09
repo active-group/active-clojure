@@ -318,7 +318,7 @@
 
 (defn run-no-commands
   "For use in [[make-monad-command-config]] when there are no commands."
-  [run-any env state m]
+  [_run-any _env _state _m]
   unknown-command)
 
 (defn combine-monad-command-configs
@@ -355,11 +355,11 @@
         unknown-command (fn [bind m]
                           (if-let [{line :line column :column statement :statement} (meta bind)]
                             (c/assertion-violation `run-free-reader-state-exception
-                                                   (str "unknown monad command in bind, line " line ", column " column)
+                                                   (str "unknown monad command in bind, line " line ", column " column ": " m)
                                                    bind m
                                                    statement)
                             (c/assertion-violation `run-free-reader-state-exception
-                                                   "unknown monad command in bind"
+                                                   (str "unknown monad command in bind: " m)
                                                    bind m)))]
     (letfn [(run [env state m]
               (cond
@@ -448,14 +448,15 @@
   "
   [^MonadCommandConfig command-config m & [state]]
   (let [res (run-free-reader-state-exception command-config m state)
-        [r state] res]
+        [r _state] res]
     (if (exception-value? r)
-      (throw (exception-value-exception r)))
-    res))
+      (throw (exception-value-exception r))
+      res)))
 
 (defn run-monadic-swiss-army
   "Run a monadic computation in an almighty monad.  Same as
-  [[`run-free-reader-state-exception`]] with the addition of `call-cc`.
+  [[`run-free-reader-state-exception`]] with the addition of `call-cc`
+  and `pause`.
 
   - `command-config` is the configuration object for running commands
   - `m` is the computation to run
@@ -473,12 +474,12 @@
                      state)
         unknown-command (fn [bind m]
                           (if-let [{line :line column :column statement :statement} (meta bind)]
-                            (c/assertion-violation `run-free-reader-state-exception
-                                                   (str "unknown monad command in bind, line " line ", column " column)
+                            (c/assertion-violation `run-monadic-swiss-army
+                                                   (str "unknown monad command in bind, line " line ", column " column ": " m)
                                                    bind m
                                                    statement)
-                            (c/assertion-violation `run-free-reader-state-exception
-                                                   "unknown monad command in bind"
+                            (c/assertion-violation `run-monadic-swiss-army
+                                                   (str "unknown monad command in bind: " m)
                                                    bind m)))]
     (letfn [(run [env state m]
               (cond
@@ -579,10 +580,10 @@
   "
   [^MonadCommandConfig command-config m & [state]]
   (let [res (run-monadic-swiss-army command-config m state)
-        [r state] res]
+        [r _state] res]
     (if (exception-value? r)
-      (throw (exception-value-exception r)))
-      res))
+      (throw (exception-value-exception r))
+      res)))
 
 (defn reify-as
   "Adds `reification` meta data to `m` that helps utilities (like the

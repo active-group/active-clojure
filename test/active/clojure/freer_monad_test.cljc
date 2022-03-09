@@ -15,7 +15,7 @@
                                                          combine-monad-command-configs
                                                          null-monad-command-config
                                                          run-freer-reader-state-exception execute-freer-reader-state-exception
-                                                         run-monadic-swiss-army execute-monadic-swiss-army
+                                                         run-monadic execute-monadic
                                                          monad-command-config-run-command
                                                          reify-command reify-as
                                                          put-state-component!)])
@@ -370,32 +370,32 @@
                         (cont 42)
                         (return 23)))]
       (is (= [23 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (call-cc f))))))
   (testing "tail escape call"
     (let [f (fn [cont] (cont 42))]
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (call-cc f)))))))

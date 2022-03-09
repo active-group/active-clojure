@@ -498,7 +498,7 @@
       (throw (exception-value-exception r)))
     res))
 
-(defn run-monadic-swiss-army
+(defn run-monadic
   "Run a monadic computation in an almighty monad.  Same as
   [[`run-freer-reader-state-exception`]] with the addition of `call-cc`.
 
@@ -610,9 +610,9 @@
 
       (run env state m))))
 
-(defn execute-monadic-swiss-army
+(defn execute-monadic
   "Run monadic computation in an almighty monad, turning exceptions
-  into Clojure exceptions.  See [[`run-monadic-swiss-army]].
+  into Clojure exceptions.  See [[`run-monadic`]].
 
   - `command-config` is the configuration object for running commands
   - `m` is the computation to run
@@ -621,7 +621,7 @@
   Returns [result state].
   "
   [^MonadCommandConfig command-config m & [state]]
-  (let [res (run-monadic-swiss-army command-config m state)
+  (let [res (run-monadic command-config m state)
         [r state] res]
     (if (exception-value? r)
       (throw (exception-value-exception r)))

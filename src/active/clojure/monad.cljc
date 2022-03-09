@@ -47,7 +47,7 @@
   [thing pause-thing])
 
 (define-record-type ^{:doc "Possible return value
-  for [[run-monadic-swiss-army]], when monadic program wants to [[pause]]
+  for [[run-monadic]], when monadic program wants to [[pause]]
   calculation.  Call [[intermediate-result-resume]] with a value [[v]] to resume
   the paused calculation with [[v]]."}
   IntermediateResult
@@ -453,7 +453,7 @@
       (throw (exception-value-exception r))
       res)))
 
-(defn run-monadic-swiss-army
+(defn run-monadic
   "Run a monadic computation in an almighty monad.  Same as
   [[`run-free-reader-state-exception`]] with the addition of `call-cc`
   and `pause`.
@@ -474,11 +474,11 @@
                      state)
         unknown-command (fn [bind m]
                           (if-let [{line :line column :column statement :statement} (meta bind)]
-                            (c/assertion-violation `run-monadic-swiss-army
+                            (c/assertion-violation `run-monadic
                                                    (str "unknown monad command in bind, line " line ", column " column ": " m)
                                                    bind m
                                                    statement)
-                            (c/assertion-violation `run-monadic-swiss-army
+                            (c/assertion-violation `run-monadic
                                                    (str "unknown monad command in bind: " m)
                                                    bind m)))]
     (letfn [(run [env state m]
@@ -568,9 +568,9 @@
 
       (run env state m))))
 
-(defn execute-monadic-swiss-army
+(defn execute-monadic
   "Run monadic computation in an almighty monad, turning exceptions
-  into Clojure exceptions.  See [[`run-monadic-swiss-army]].
+  into Clojure exceptions.  See [[`run-monadic`]].
 
   - `command-config` is the configuration object for running commands
   - `m` is the computation to run
@@ -579,7 +579,7 @@
   Returns [result state].
   "
   [^MonadCommandConfig command-config m & [state]]
-  (let [res (run-monadic-swiss-army command-config m state)
+  (let [res (run-monadic command-config m state)
         [r _state] res]
     (if (exception-value? r)
       (throw (exception-value-exception r))

@@ -17,7 +17,7 @@
                                                    combine-monad-command-configs
                                                    null-monad-command-config
                                                    run-free-reader-state-exception execute-free-reader-state-exception
-                                                   run-monadic-swiss-army execute-monadic-swiss-army
+                                                   run-monadic execute-monadic
                                                    monad-command-config-run-command
                                                    reify-command reify-as
                                                    put-state-component!
@@ -386,39 +386,39 @@
                         (cont 42)
                         (return 23)))]
       (is (= [23 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (call-cc f))))))
   (testing "tail escape call"
     (let [f (fn [cont] (cont 42))]
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (f return))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (monadic
                [r (call-cc f)]
                (return r)))))
       (is (= [42 nil]
-             (execute-monadic-swiss-army
+             (execute-monadic
               (null-monad-command-config nil nil)
               (call-cc f)))))))
 
 (deftest call-cc-no-call
   (is (= [23 nil]
-         (execute-monadic-swiss-army
+         (execute-monadic
           (null-monad-command-config nil nil)
           (monadic
            (call-cc (fn [cont] (return 65)))
@@ -430,7 +430,7 @@
               (put-state-component! ::cont-test true)
               (cont nil))
           [result state]
-          (execute-monadic-swiss-army
+          (execute-monadic
            (null-monad-command-config nil nil)
            (monadic
             (put-state-component! ::cont-test false)
@@ -442,7 +442,7 @@
               (update-state-component! ::cont-test inc)
               (cont nil))
           [result state]
-          (execute-monadic-swiss-army
+          (execute-monadic
            (null-monad-command-config nil nil)
            (monadic
             (put-state-component! ::cont-test 0)
@@ -459,7 +459,7 @@
                  (return (is (true? r)))
                  (cont nil))))
           [result _state]
-          (execute-monadic-swiss-army
+          (execute-monadic
            (null-monad-command-config nil nil)
            (monadic
             (with-env-component ::cont-test (constantly false)
@@ -471,7 +471,7 @@
 (deftest pause-resume-test
   (testing "that calculation pauses and resume"
     (let [[result state]
-          (execute-monadic-swiss-army
+          (execute-monadic
            (null-monad-command-config nil nil)
            (monadic
             (put-state-component! ::pause-resume-test 0)
@@ -488,7 +488,7 @@
         (is (= 1 (::pause-resume-test state))))))
   (testing "that calculation pauses and resumes in tail position"
     (let [[result state]
-          (execute-monadic-swiss-army
+          (execute-monadic
            (null-monad-command-config nil nil)
            (monadic
             (put-state-component! ::pause-resume-test 0)

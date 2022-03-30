@@ -799,14 +799,14 @@
     `<key-and-name>` in the map or to `nil` if `<key-and-name>` is not
     in the map.
 
-  Access to nested values is also possible.  Use `[<key>+]` to access
-  a nested value, where `[<key>+]` is a sequence of keys.  When no
+  Access to nested values is also possible. Use `[<key>+]` to access
+  a nested value, where `[<key>+]` is a sequence of keys. When no
   `:as <name>` clause is given, the last `<key>` of the sequence of
   keys is used as a name to bind the value.
 
   `<key>` and `<key-and-name>` can be either a symbol or a keyword.
   If `<key-and-name>` is a symbol, it is converted to a string when
-  used as a key (and used as symbol for binding the value).  If
+  used as a key (and used as symbol for binding the value). If
   `<key-and-name>` is a keyword, it is converted to a name for binding
   the value (and usesd as keyword when used as a key).
 

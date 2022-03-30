@@ -148,7 +148,8 @@
                           (list {:z '_} :guard [:guard-3])]))))
 
 
-;; Imported test from active.clojure.match-test
+;; Testing Macro
+
 (def one-data
   {:kind "one" :x "x" :y "y" :z "z" :w "w"})
 

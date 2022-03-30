@@ -824,7 +824,7 @@
   `map-matcher` returns a function that accepts a map and evaluates
   `<consequent>` with all the `<name>`s bound when the message matches
   the given `<clause>`s, otherwise it evaluates `<alternative>`. or
-  throws `IllegalArgumentException` if `<clause>` matches and no
+  throws `IllegalArgumentException` if no `<clause>` matches and no
   `<alternative>` is given.
 
   Example:

@@ -63,7 +63,7 @@
   existence-matcher?
   [])
 
-(def the-existence-matcher "Singleton matcher. Match the existence of a vale."
+(def the-existence-matcher "Singleton matcher. Match the existence of a value."
   (make-existence-matcher))
 
 (define-record-type

@@ -7,12 +7,12 @@
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "k")
+      (t/is (= (p/make-key-exists-nobinding-clause :k p/the-existence-matcher)
                (p/parse-clause :k)))
-      (t/is (= (p/make-key-exists-clause "k" p/the-existence-matcher "k")
+      (t/is (= (p/make-key-exists-nobinding-clause "k" p/the-existence-matcher)
                (p/parse-clause k))))
     (t/testing "list"
-      (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "k")
+      (t/is (= (p/make-key-exists-nobinding-clause :k p/the-existence-matcher)
                (p/parse-clause (:k))))))
 
   (t/testing "key exists with binding clause"
@@ -69,7 +69,7 @@
             (p/parse-clause (:k (:compare-fn #(= % 42)) :as Binding))))))
 
   (t/testing "optional clauses"
-    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher "k"))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-nobinding-clause :k p/the-existence-matcher))
              (p/parse-clause (? :k))))
     (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher "Binding"))
              (p/parse-clause (? :k :as Binding))))
@@ -87,7 +87,7 @@
                    (p/key-matches-clause :x (p/match-const "x") "x")
                    (p/key-matches-clause :y (p/match-const "y") "y")
                    (p/key-exists-clause :z "z")
-                   (p/key-exists-clause :w "w"))]
+                   (p/key-exists-nobinding-clause :w))]
     (t/is (= (p/pattern-clauses three-pattern)
              (p/pattern-clauses (p/parse-pattern [(:kind "three")
                                                   (:x "x" :as x)
@@ -182,23 +182,23 @@
 
 (def example-matcher
   (p/map-matcher
-   one   [x y z w]
-   two   [a b c d Z Y X foo]
+   one   [x z]
+   two   [a c d Z Y]
    :else false))
 
 (t/deftest map-matcher-test
-  (t/is (= ["x" "y" "z" "w"]
+  (t/is (= ["x" "z"]
            (example-matcher one-data)))
-  (t/is (= ["a" "b" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23 65 "bar"]
+  (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
            (example-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 
-(t/deftest map-matcher-default-binding-test
+(t/deftest map-matcher-nobinding-test
   (let [k "my-value"]
     ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
 
 (t/deftest map-matcher-optional-default-test
-  (t/is (= ["a" "b" "C" "C" 42 "y" nil]
+  (t/is (= ["a" "C" "C" 42]
            ((p/map-matcher [(:kind #"two")
                             (? :a :as a)
                             (? :b)
@@ -207,13 +207,13 @@
                             (? [:d Z] :as Z)
                             (? [:d Y] "y")
                             (? [:d U])]
-                           [a b c C Z Y U])
+                           [a c C Z])
             {:kind "two" :a "a" :b "b"
              :d {"Z" 42 "X" 65
                  "W" {"foo" "bar"}}}))))
 
 (t/deftest map-matcher-optional-test
-  (t/is (= ["a" "b" "c" "C" 42 23 nil]
+  (t/is (= ["a" "c" "C" 42]
            ((p/map-matcher [(:kind #"two")
                             (? :a :as a)
                             (? :b)
@@ -222,7 +222,7 @@
                             (? [:d Z] :as Z)
                             (? [:d Y] "y")
                             (? [:d U])]
-                           [a b c C Z Y U])
+                           [a c C Z])
             two-data))))
 
 (t/deftest map-matcher-regex-key-not-found-t
@@ -238,7 +238,7 @@
 
 (def example-or-matcher
   (p/map-matcher
-   one-or [x y z w]
+   one-or [x z]
    two [a b c Z Y X foo]
    :else false))
 
@@ -250,7 +250,6 @@
   (t/is (= false (example-matcher {:kind "none"}))))
 
 
-;;; FIXME these tests all fail because compare-fn patterns dont work.
 (p/defpattern one-guard
   [(:kind #"one")
    (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
@@ -260,8 +259,8 @@
 
 (def example-guard-matcher
   (p/map-matcher
-   one-guard [x y z w]
-   two [a b c Z Y X foo]
+   one-guard [x z]
+   two [a c Z Y]
    :else false))
 
 (def predicate-matcher

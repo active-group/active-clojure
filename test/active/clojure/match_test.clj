@@ -34,11 +34,12 @@
   (t/testing "key matches clause"
     (t/testing "with regex"
       (let [c (p/parse-clause (:k #"foo"))]
-        (t/is (= :k (p/key-matches-clause-key c)))
-        (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-clause-matcher c)))))
-        (t/is (= "k" (p/key-matches-clause-binding c)))))
+        (t/is (= :k (p/key-matches-nobinding-clause-key c)))
+        (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-nobinding-clause-matcher c)))))
+        ;; (t/is (= "k" (p/key-matches-clause-binding c)))
+        ))
     (t/testing "with any other value"
-      (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "k")
+      (t/is (= (p/make-key-matches-nobinding-clause :k (p/make-constant-matcher "foo"))
                (p/parse-clause (:k "foo"))))))
 
   (t/testing "key matches clause with binding"
@@ -77,15 +78,15 @@
              (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with local binding as match value"
-    (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "k")
+    (t/is (= (p/make-key-matches-nobinding-clause :k (p/make-constant-matcher "foo"))
              (let [foo "foo"]
                (p/parse-clause (:k foo)))))))
 
 (t/deftest parse-pattern-test
   (let [three-pattern
-        (p/pattern (p/key-matches-clause :kind (p/match-const "three") "kind")
+        (p/pattern (p/key-matches-nobinding-clause :kind (p/match-const "three"))
                    (p/key-matches-clause :x (p/match-const "x") "x")
-                   (p/key-matches-clause :y (p/match-const "y") "y")
+                   (p/key-matches-nobinding-clause :y (p/match-const "y"))
                    (p/key-exists-clause :z "z")
                    (p/key-exists-nobinding-clause :w))]
     (t/is (= (p/pattern-clauses three-pattern)

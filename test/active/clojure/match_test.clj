@@ -193,6 +193,10 @@
            (example-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 
+(t/deftest map-matcher-default-binding-test
+  (let [k "my-value"]
+    ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
+
 (t/deftest map-matcher-optional-default-test
   (t/is (= ["a" "b" "C" "C" 42 "y" nil]
            ((p/map-matcher [(:kind #"two")

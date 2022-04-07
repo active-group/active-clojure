@@ -114,121 +114,121 @@
 ;; 1
 (define-record-type
   ^{:doc "A clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
-  KeyMatchesClause
-  (make-key-matches-clause key matcher binding)
-  key-matches-clause?
-  [key key-matches-clause-key
-   matcher key-matches-clause-matcher
-   binding key-matches-clause-binding])
+  KeyMatchesWithBindingClause
+  (make-key-matches-with-binding-clause key matcher binding)
+  key-matches-with-binding-clause?
+  [key key-matches-with-binding-clause-key
+   matcher key-matches-with-binding-clause-matcher
+   binding key-matches-with-binding-clause-binding])
 
 (define-record-type
   ^{:doc "A clause that matches the value of `key` of a map using `matcher`."}
-  KeyMatchesNobindingClause
-  (make-key-matches-nobinding-clause key matcher)
-  key-matches-nobinding-clause?
-  [key key-matches-nobinding-clause-key
-   matcher key-matches-nobinding-clause-matcher])
+  KeyMatchesWithoutBindingClause
+  (make-key-matches-without-binding-clause key matcher)
+  key-matches-without-binding-clause?
+  [key key-matches-without-binding-clause-key
+   matcher key-matches-without-binding-clause-matcher])
 
 (def key->sym (comp symbol name))
 
-(defn key-matches-clause
+(defn key-matches-with-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`, binding the
   match to a symbol based on `key`."
   [key matcher bind]
   {:pre [(matcher? matcher)]}
-  (make-key-matches-clause key matcher bind))
+  (make-key-matches-with-binding-clause key matcher bind))
 
-(defn key-matches-nobinding-clause
+(defn key-matches-without-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`."
   [key matcher]
   {:pre [(matcher? matcher)]}
-  (make-key-matches-nobinding-clause key matcher))
+  (make-key-matches-without-binding-clause key matcher))
 
 ;; 2.
 (define-record-type
   ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
-  PathMatchesClause
-  (make-path-matches-clause path matcher binding)
-  path-matches-clause?
-  [path path-matches-clause-path
-   matcher path-matches-clause-matcher
-   binding path-matches-clause-binding])
+  PathMatchesWithBindingClause
+  (make-path-matches-with-binding-clause path matcher binding)
+  path-matches-with-binding-clause?
+  [path path-matches-with-binding-clause-path
+   matcher path-matches-with-binding-clause-matcher
+   binding path-matches-with-binding-clause-binding])
 
 (define-record-type
   ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`."}
-  PathMatchesNobindingClause
-  (make-path-matches-nobinding-clause path matcher)
-  path-matches-nobinding-clause?
-  [path path-matches-nobinding-clause-path
-   matcher path-matches-nobinding-clause-matcher])
+  PathMatchesWithoutBindingClause
+  (make-path-matches-without-binding-clause path matcher)
+  path-matches-without-binding-clause?
+  [path path-matches-without-binding-clause-path
+   matcher path-matches-without-binding-clause-matcher])
 
 (def path? "Is something a valid path?" (some-fn list? vector?))
 
-(defn path-matches-clause
+(defn path-matches-with-binding-clause
   [path matcher bind]
   {:pre [(and (path? path) (matcher? matcher))]}
-  (make-path-matches-clause path matcher bind))
+  (make-path-matches-with-binding-clause path matcher bind))
 
-(defn path-matches-nobinding-clause
+(defn path-matches-without-binding-clause
   [path matcher]
   {:pre [(and (path? path) (matcher? matcher))]}
-  (make-path-matches-nobinding-clause path matcher))
+  (make-path-matches-without-binding-clause path matcher))
 
 ;; 3.
-(define-record-type KeyExistsClause
+(define-record-type KeyExistsWithBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
-  (make-key-exists-clause key matcher binding)
-  key-exists-clause?
-  [key key-exists-clause-key
-   matcher key-exists-clause-matcher
-   binding key-exists-clause-binding])
+  (make-key-exists-with-binding-clause key matcher binding)
+  key-exists-with-binding-clause?
+  [key key-exists-with-binding-clause-key
+   matcher key-exists-with-binding-clause-matcher
+   binding key-exists-with-binding-clause-binding])
 
-(define-record-type KeyExistsNobindingClause
+(define-record-type KeyExistsWithoutBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`."}
-  (make-key-exists-nobinding-clause key matcher)
-  key-exists-nobinding-clause?
-  [key key-exists-nobinding-clause-key
-   matcher key-exists-nobinding-clause-matcher])
+  (make-key-exists-without-binding-clause key matcher)
+  key-exists-without-binding-clause?
+  [key key-exists-without-binding-clause-key
+   matcher key-exists-without-binding-clause-matcher])
 
-(defn key-exists-clause
+(defn key-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `key` to `(key->sym key)`."
   [key bind]
-  (make-key-exists-clause key the-existence-matcher bind))
+  (make-key-exists-with-binding-clause key the-existence-matcher bind))
 
-(defn key-exists-nobinding-clause
+(defn key-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key]
-  (make-key-exists-nobinding-clause key the-existence-matcher))
+  (make-key-exists-without-binding-clause key the-existence-matcher))
 
 ;; 4.
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
-  PathExistsClause
-  (make-path-exists-clause path matcher binding)
-  path-exists-clause?
-  [path path-exists-clause-path
-   matcher path-exists-clause-matcher
-   binding path-exists-clause-binding])
+  PathExistsWithBindingClause
+  (make-path-exists-with-binding-clause path matcher binding)
+  path-exists-with-binding-clause?
+  [path path-exists-with-binding-clause-path
+   matcher path-exists-with-binding-clause-matcher
+   binding path-exists-with-binding-clause-binding])
 
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
-  PathExistsNobindingClause
-  (make-path-exists-nobinding-clause path matcher)
-  path-exists-nobinding-clause?
-  [path path-exists-nobinding-clause-path
-   matcher path-exists-nobinding-clause-matcher])
+  PathExistsWithoutBindingClause
+  (make-path-exists-without-binding-clause path matcher)
+  path-exists-without-binding-clause?
+  [path path-exists-without-binding-clause-path
+   matcher path-exists-without-binding-clause-matcher])
 
-(defn path-exists-clause
+(defn path-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`.
   Binds the value associated with `path` to `(key->sym (last path))`."
   [path bind]
-  (make-path-exists-clause path the-existence-matcher bind))
+  (make-path-exists-with-binding-clause path the-existence-matcher bind))
 
-(defn path-exists-nobinding-clause
+(defn path-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path]
-  (make-path-exists-clause path the-existence-matcher))
+  (make-path-exists-with-binding-clause path the-existence-matcher))
 
 ;; 5.
 (define-record-type
@@ -246,37 +246,37 @@
     clause
     (make-optional-clause clause)))
 
-(def clause? (some-fn key-matches-clause?
-                      key-matches-nobinding-clause?
-                      path-matches-clause?
-                      key-exists-clause?
-                      key-exists-nobinding-clause?
-                      path-exists-clause?
+(def clause? (some-fn key-matches-with-binding-clause?
+                      key-matches-without-binding-clause?
+                      path-matches-with-binding-clause?
+                      key-exists-with-binding-clause?
+                      key-exists-without-binding-clause?
+                      path-exists-with-binding-clause?
                       optional-clause?))
 
 ;; helpers
 (defn clause-lens
-  [key-matches-lens
-   key-matches-nobinding-lens
-   path-matches-lens
-   key-exists-lens
-   key-exists-nobinding-lens
-   path-exists-lens]
+  [key-matches-with-binding-lens
+   key-matches-without-binding-lens
+   path-matches-with-binding-lens
+   key-exists-with-binding-lens
+   key-exists-without-binding-lens
+   path-exists-with-binding-lens]
   (fn [clause]
     (cond
-      (key-matches-clause? clause)  key-matches-lens
-      (key-matches-nobinding-clause? clause)  key-matches-nobinding-lens
-      (path-matches-clause? clause) path-matches-lens
-      (key-exists-clause? clause)   key-exists-lens
-      (key-exists-nobinding-clause? clause) key-exists-nobinding-lens
-      (path-exists-clause? clause)  path-exists-lens
+      (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
+      (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
+      (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
+      (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
+      (key-exists-without-binding-clause? clause) key-exists-without-binding-lens
+      (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
       (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
-                                                                  key-matches-lens
-                                                                  key-matches-nobinding-lens
-                                                                  path-matches-lens
-                                                                  key-exists-lens
-                                                                  key-exists-nobinding-lens
-                                                                  path-exists-lens)
+                                                                  key-matches-with-binding-lens
+                                                                  key-matches-without-binding-lens
+                                                                  path-matches-with-binding-lens
+                                                                  key-exists-with-binding-lens
+                                                                  key-exists-without-binding-lens
+                                                                  path-exists-with-binding-lens)
                                                                  (optional-clause-clause clause)))
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
@@ -284,30 +284,30 @@
 ;; (def binding-lens
 ;;   "Returns a function that when applied to a clause, returns a lens focusing on
 ;;   the binding of the clause."
-;;   (clause-lens key-matches-clause-binding
-;;                path-matches-clause-binding
-;;                key-exists-clause-binding
-;;                path-exists-clause-binding))
+;;   (clause-lens key-matches-with-binding-clause-binding
+;;                path-matches-with-binding-clause-binding
+;;                key-exists-with-binding-clause-binding
+;;                path-exists-with-binding-clause-binding))
 
 (def matcher-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
   the matcher of the clause."
-  (clause-lens key-matches-clause-matcher
-               key-matches-nobinding-clause-matcher
-               path-matches-clause-matcher
-               key-exists-clause-matcher
-               key-exists-nobinding-clause-matcher
-               path-exists-clause-matcher))
+  (clause-lens key-matches-with-binding-clause-matcher
+               key-matches-without-binding-clause-matcher
+               path-matches-with-binding-clause-matcher
+               key-exists-with-binding-clause-matcher
+               key-exists-without-binding-clause-matcher
+               path-exists-with-binding-clause-matcher))
 
 (def path-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
   the path of the clause."
-  (clause-lens key-matches-clause-key
-               key-matches-nobinding-clause-key
-               path-matches-clause-path
-               key-exists-clause-key
-               key-exists-nobinding-clause-key
-               path-exists-clause-path))
+  (clause-lens key-matches-with-binding-clause-key
+               key-matches-without-binding-clause-key
+               path-matches-with-binding-clause-path
+               key-exists-with-binding-clause-key
+               key-exists-without-binding-clause-key
+               path-exists-with-binding-clause-path))
 
 ;; (defn bind-match
 ;;   "Takes a clause and replaces it's binding with `binding`."
@@ -350,7 +350,7 @@
 
 (s/def ::qmark #{'?})
 
-(s/def ::key-exists
+(s/def ::key-exists-without-binding
   (s/or :required (s/or :flat ::key
                         :list (s/cat :key ::key))
         :optional (s/cat :qmark ::qmark :key ::key)))
@@ -359,7 +359,7 @@
   (s/or :required (s/cat :key ::key :binding-key ::binding-key :binding ::binding)
         :optional (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding)))
 
-(s/def ::path-exists
+(s/def ::path-exists-without-binding
   (s/or :required (s/or :flat ::path
                         :list (s/cat :path ::path))
         :optional (s/cat :qmark ::qmark :path ::path)))
@@ -368,7 +368,7 @@
   (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)
         :optional (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
 
-(s/def ::key-matches
+(s/def ::key-matches-without-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value)
         :optional (s/cat :qmark ::qmark :key ::key :match-value ::match-value)))
 
@@ -376,7 +376,7 @@
   (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)
         :optional (s/cat :qmark ::qmark :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
 
-(s/def ::path-matches
+(s/def ::path-matches-without-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value)
         :optional (s/cat :qmark ::qmark :path ::path :match-value ::match-value)))
 
@@ -385,13 +385,13 @@
         :optional (s/cat :qmark ::qmark :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::clause
-  (s/or :key-exists ::key-exists
+  (s/or :key-exists-without-binding ::key-exists-without-binding
         :key-exists-with-binding ::key-exists-with-binding
-        :path-exists ::path-exists
+        :path-exists-without-binding ::path-exists-without-binding
         :path-exists-with-binding ::path-exists-with-binding
-        :key-matches ::key-matches
+        :key-matches-without-binding ::key-matches-without-binding
         :key-matches-with-binding ::key-matches-with-binding
-        :path-matches ::path-matches
+        :path-matches-without-binding ::path-matches-without-binding
         :path-matches-with-binding ::path-matches-with-binding))
 
 (defn match-value->matcher
@@ -436,74 +436,74 @@
       (let [[match parse] parse
             [mode body]   parse]
         (case match
-          :key-exists
+          :key-exists-without-binding
           (if (optional? mode)
             (let [k (make-key (:key body))]
-              `(make-optional-clause (key-exists-nobinding-clause ~k)))
+              `(make-optional-clause (key-exists-without-binding-clause ~k)))
             (let [[mode body] body
                   mflat?      (flat? mode)
                   k           (make-key (if mflat? body (:key body)))]
               (if (flat? mode)
-                `(key-exists-nobinding-clause ~k)
-                `(key-exists-nobinding-clause ~k))))
+                `(key-exists-without-binding-clause ~k)
+                `(key-exists-without-binding-clause ~k))))
 
           :key-exists-with-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
             (if (optional? mode)
-              `(make-optional-clause (key-exists-clause ~k ~b))
-              `(key-exists-clause ~k ~b)))
+              `(make-optional-clause (key-exists-with-binding-clause ~k ~b))
+              `(key-exists-with-binding-clause ~k ~b)))
 
-          :path-exists
+          :path-exists-without-binding
           (if (optional? mode)
             (let [path (mapv make-key (:path body))
                   b    (make-binding (last (:path body)))]
-              `(make-optional-clause (path-exists-clause ~path ~b)))
+              `(make-optional-clause (path-exists-with-binding-clause ~path ~b)))
             (let [[mode body] body
                   mflat?      (flat? mode)
                   path        (mapv make-key (if mflat? body (:path body)))
                   b           (make-binding (if mflat? (last body) (last (:path body))))]
               (if (optional? mode)
-                `(make-optional-clause (path-exists-clause ~path ~b))
-                `(path-exists-clause ~path ~b))))
+                `(make-optional-clause (path-exists-with-binding-clause ~path ~b))
+                `(path-exists-with-binding-clause ~path ~b))))
 
           :path-exists-with-binding
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
             (if (optional? mode)
-              `(make-optional-clause (path-exists-clause ~path ~b))
-              `(path-exists-clause ~path ~b)))
+              `(make-optional-clause (path-exists-with-binding-clause ~path ~b))
+              `(path-exists-with-binding-clause ~path ~b)))
 
-          :key-matches
+          :key-matches-without-binding
           (let [k           (make-key (:key body))
                 match-value (match-value->matcher (:match-value body))]
             (if (optional? mode)
-              `(make-optional-clause (key-matches-nobinding-clause ~k (match-value->matcher ~(:match-value body))))
-              `(key-matches-nobinding-clause ~k (match-value->matcher ~(:match-value body)))))
+              `(make-optional-clause (key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body))))
+              `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))))
 
           :key-matches-with-binding
           (let [k           (make-key (:key body))
                 b           (make-binding (:binding body))
                 match-value (match-value->matcher (:match-value body))]
             (if (optional? mode)
-              `(make-optional-clause (key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b))
-              `(key-matches-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
+              `(make-optional-clause (key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b))
+              `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
-          :path-matches
+          :path-matches-without-binding
           (let [path        (mapv make-key (:path body))
                 b           (make-binding (last (:path body)))
                 match-value (match-value->matcher (:match-value body))]
             (if (optional? mode)
-              `(make-optional-clause (path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))
-              `(path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b)))
+              `(make-optional-clause (path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))
+              `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b)))
 
           :path-matches-with-binding
           (let [path        (mapv make-key (:path body))
                 b           (make-binding (:binding body))
                 match-value (match-value->matcher (:match-value body))]
             (if (optional? mode)
-              `(make-optional-clause (path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))
-              `(path-matches-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
+              `(make-optional-clause (path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))
+              `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
 
 (defmacro parse-clauses
   [cs]
@@ -535,7 +535,7 @@
       (let [[match parse] parse
             [mode body]   parse]
         (case match
-          :key-exists
+          :key-exists-without-binding
           (if (optional? mode)
             (let [k (make-key (:key body))]
               [{}
@@ -557,7 +557,7 @@
               [`{~k ~(symbol b)}
                `[~(symbol b) (get-in ~message [~k])]]))
 
-          :path-exists
+          :path-exists-without-binding
           (if (optional? mode)
             (let [path (mapv make-key (:path body))
                   b    (make-binding (last (:path body)))]
@@ -579,7 +579,7 @@
                  {} path-map)
              `[~(symbol b) (get-in ~message ~path)]])
 
-          :key-matches
+          :key-matches-without-binding
           (let [k           (make-key (:key body))
                 match       (:match-value body)
                 predicate?  (= :compare-fn (first match))
@@ -612,7 +612,7 @@
               [`{~k ~match-value}
                `[~(symbol b) (get-in ~message [~k])]]))
 
-          :path-matches
+          :path-matches-without-binding
           (let [path        (mapv make-key (:path body))
                 b           (make-binding (last (:path body)))
                 match       (:match-value body)
@@ -680,41 +680,41 @@
 
 ;; Match
 
-(defn key-exists-clause->rhs-match
+(defn key-exists-with-binding-clause->rhs-match
   [message clause]
-  (let [key     (key-exists-clause-key clause)
-        binding (key-exists-clause-binding clause)]
+  (let [key     (key-exists-with-binding-clause-key clause)
+        binding (key-exists-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)])]))
 
-(defn key-exists-nobinding-clause->rhs-match
+(defn key-exists-without-binding-clause->rhs-match
   [message clause]
-  (let [key     (key-exists-nobinding-clause-key clause)]
+  (let [key     (key-exists-without-binding-clause-key clause)]
     `[]))
 
-(defn path-exists-clause->rhs-match
+(defn path-exists-with-binding-clause->rhs-match
   [message clause]
-  (let [key         (path-exists-clause-path clause)
-        binding     (path-exists-clause-binding clause)]
+  (let [key         (path-exists-with-binding-clause-path clause)
+        binding     (path-exists-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element key))]))
 
-(defn key-matches-clause->rhs-match
+(defn key-matches-with-binding-clause->rhs-match
   [message clause]
-  (let [key         (key-matches-clause-key clause)
-        match-value (matcher-default-value (key-matches-clause-matcher clause))
-        binding     (key-matches-clause-binding clause)]
+  (let [key         (key-matches-with-binding-clause-key clause)
+        match-value (matcher-default-value (key-matches-with-binding-clause-matcher clause))
+        binding     (key-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
-(defn key-matches-nobinding-clause->rhs-match
+(defn key-matches-without-binding-clause->rhs-match
   [message clause]
-  (let [key         (key-matches-nobinding-clause-key clause)
-        match-value (matcher-default-value (key-matches-nobinding-clause-matcher clause))]
+  (let [key         (key-matches-without-binding-clause-key clause)
+        match-value (matcher-default-value (key-matches-without-binding-clause-matcher clause))]
     `[]))
 
-(defn path-matches-clause->rhs-match
+(defn path-matches-with-binding-clause->rhs-match
   [message clause]
-  (let [path        (path-matches-clause-path clause)
-        match-value (matcher-default-value (path-matches-clause-matcher clause))
-        binding     (path-matches-clause-binding clause)]
+  (let [path        (path-matches-with-binding-clause-path clause)
+        match-value (matcher-default-value (path-matches-with-binding-clause-matcher clause))
+        binding     (path-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
 
 (defn matcher->value
@@ -745,40 +745,40 @@
 (defn clause->lhs
   [message clause]
   (cond
-    (key-exists-clause? clause)
-    (let [key     (key-exists-clause-key clause)
-          binding (key-exists-clause-binding clause)]
+    (key-exists-with-binding-clause? clause)
+    (let [key     (key-exists-with-binding-clause-key clause)
+          binding (key-exists-with-binding-clause-binding clause)]
       ;; ignore the binding if it is the same as the key
       {(convert-path-element key) (symbol binding)})
 
-    (key-exists-nobinding-clause? clause)
-    (let [key     (key-exists-nobinding-clause-key clause)]
+    (key-exists-without-binding-clause? clause)
+    (let [key     (key-exists-without-binding-clause-key clause)]
       `{~key ~'_})
 
-    (path-exists-clause? clause)
-    (let [path    (path-exists-clause-path clause)
-          binding (path-exists-clause-binding clause)]
+    (path-exists-with-binding-clause? clause)
+    (let [path    (path-exists-with-binding-clause-path clause)
+          binding (path-exists-with-binding-clause-binding clause)]
       (assoc-in {} (map convert-path-element path) (symbol binding)))
 
-    (key-matches-clause? clause)
-    (let [key         (key-matches-clause-key clause)
-          matcher     (key-matches-clause-matcher clause)
+    (key-matches-with-binding-clause? clause)
+    (let [key         (key-matches-with-binding-clause-key clause)
+          matcher     (key-matches-with-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
-    (key-matches-nobinding-clause? clause)
-    (let [key         (key-matches-nobinding-clause-key clause)
-          matcher     (key-matches-nobinding-clause-matcher clause)
+    (key-matches-without-binding-clause? clause)
+    (let [key         (key-matches-without-binding-clause-key clause)
+          matcher     (key-matches-without-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
-    (path-matches-clause? clause)
-    (let [path        (path-matches-clause-path clause)
-          matcher     (path-matches-clause-matcher clause)
+    (path-matches-with-binding-clause? clause)
+    (let [path        (path-matches-with-binding-clause-path clause)
+          matcher     (path-matches-with-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `(~(fold-path path '_) :guard ~(match-value message path))
@@ -824,23 +824,23 @@
 (defn clause->rhs
   [message bindings clause]
   (cond
-    (key-exists-clause? clause)
-    (conj bindings (key-exists-clause->rhs-match message clause))
+    (key-exists-with-binding-clause? clause)
+    (conj bindings (key-exists-with-binding-clause->rhs-match message clause))
 
-    (key-exists-nobinding-clause? clause)
-    (conj bindings (key-exists-nobinding-clause->rhs-match message clause))
+    (key-exists-without-binding-clause? clause)
+    (conj bindings (key-exists-without-binding-clause->rhs-match message clause))
 
-    (path-exists-clause? clause)
-    (conj bindings (path-exists-clause->rhs-match message clause))
+    (path-exists-with-binding-clause? clause)
+    (conj bindings (path-exists-with-binding-clause->rhs-match message clause))
 
-    (key-matches-clause? clause)
-    (conj bindings (key-matches-clause->rhs-match message clause))
+    (key-matches-with-binding-clause? clause)
+    (conj bindings (key-matches-with-binding-clause->rhs-match message clause))
 
-    (key-matches-nobinding-clause? clause)
-    (conj bindings (key-matches-nobinding-clause->rhs-match message clause))
+    (key-matches-without-binding-clause? clause)
+    (conj bindings (key-matches-without-binding-clause->rhs-match message clause))
 
-    (path-matches-clause? clause)
-    (conj bindings (path-matches-clause->rhs-match message clause))
+    (path-matches-with-binding-clause? clause)
+    (conj bindings (path-matches-with-binding-clause->rhs-match message clause))
 
     (optional-clause? clause)
     (clause->rhs message bindings (optional-clause-clause clause))))

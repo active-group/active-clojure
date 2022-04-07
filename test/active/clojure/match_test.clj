@@ -7,88 +7,88 @@
 (t/deftest parse-clause-test
   (t/testing "key exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-key-exists-nobinding-clause :k p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
                (p/parse-clause :k)))
-      (t/is (= (p/make-key-exists-nobinding-clause "k" p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause "k" p/the-existence-matcher)
                (p/parse-clause k))))
     (t/testing "list"
-      (t/is (= (p/make-key-exists-nobinding-clause :k p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
                (p/parse-clause (:k))))))
 
   (t/testing "key exists with binding clause"
-    (t/is (= (p/make-key-exists-clause :k p/the-existence-matcher "Binding")
+    (t/is (= (p/make-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
              (p/parse-clause (:k :as Binding)))))
 
   (t/testing "path exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "V")
+      (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "V")
                (p/parse-clause [:k V]))))
     (t/testing "list"
-      (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "V")
+      (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "V")
                (p/parse-clause [:k V])))))
 
   (t/testing "path exists clause with binding"
-    (t/is (= (p/make-path-exists-clause [:k "V"] p/the-existence-matcher "Binding")
+    (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "Binding")
              (p/parse-clause ([:k V] :as Binding)))))
 
   (t/testing "key matches clause"
     (t/testing "with regex"
       (let [c (p/parse-clause (:k #"foo"))]
-        (t/is (= :k (p/key-matches-nobinding-clause-key c)))
-        (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-nobinding-clause-matcher c)))))
-        ;; (t/is (= "k" (p/key-matches-clause-binding c)))
+        (t/is (= :k (p/key-matches-without-binding-clause-key c)))
+        (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-without-binding-clause-matcher c)))))
+        ;; (t/is (= "k" (p/key-matches-with-binding-clause-binding c)))
         ))
     (t/testing "with any other value"
-      (t/is (= (p/make-key-matches-nobinding-clause :k (p/make-constant-matcher "foo"))
+      (t/is (= (p/make-key-matches-without-binding-clause :k (p/make-constant-matcher "foo"))
                (p/parse-clause (:k "foo"))))))
 
   (t/testing "key matches clause with binding"
-    (t/is (= (p/make-key-matches-clause :k (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-key-matches-with-binding-clause :k (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause (:k "foo" :as Binding)))))
 
   (t/testing "path matches clause"
-    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "baz")
+    (t/is (= (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "baz")
              (p/parse-clause ([:k bar baz] "foo")))))
 
   (t/testing "path matches clause with binding"
-    (t/is (= (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause ([:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with an options matcher"
-    (t/is (= (p/make-key-matches-clause :k (p/make-options-matcher [1 2 3]) "Binding")
+    (t/is (= (p/make-key-matches-with-binding-clause :k (p/make-options-matcher [1 2 3]) "Binding")
              (p/parse-clause (:k (:or 1 2 3) :as Binding)))))
 
   (t/testing "with a predicate matcher"
-    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher even?) "Binding")
+    (t/is (= (p/make-key-matches-with-binding-clause :k (p/make-predicate-matcher even?) "Binding")
              (p/parse-clause (:k (:compare-fn even?) :as Binding))))
-    (t/is (= (p/make-key-matches-clause :k (p/make-predicate-matcher (f/partial = 42)) "Binding")
+    (t/is (= (p/make-key-matches-with-binding-clause :k (p/make-predicate-matcher (f/partial = 42)) "Binding")
              (p/parse-clause (:k (:compare-fn (f/partial = 42)) :as Binding))))
 
     ;; What about "regular" anonymous functions?
     (t/is (p/predicate-matcher?
-           (p/key-matches-clause-matcher
+           (p/key-matches-with-binding-clause-matcher
             (p/parse-clause (:k (:compare-fn #(= % 42)) :as Binding))))))
 
   (t/testing "optional clauses"
-    (t/is (= (p/make-optional-clause (p/make-key-exists-nobinding-clause :k p/the-existence-matcher))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-without-binding-clause :k p/the-existence-matcher))
              (p/parse-clause (? :k))))
-    (t/is (= (p/make-optional-clause (p/make-key-exists-clause :k p/the-existence-matcher "Binding"))
+    (t/is (= (p/make-optional-clause (p/make-key-exists-with-binding-clause :k p/the-existence-matcher "Binding"))
              (p/parse-clause (? :k :as Binding))))
-    (t/is (= (p/make-optional-clause (p/make-path-matches-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding"))
+    (t/is (= (p/make-optional-clause (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding"))
              (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with local binding as match value"
-    (t/is (= (p/make-key-matches-nobinding-clause :k (p/make-constant-matcher "foo"))
+    (t/is (= (p/make-key-matches-without-binding-clause :k (p/make-constant-matcher "foo"))
              (let [foo "foo"]
                (p/parse-clause (:k foo)))))))
 
 (t/deftest parse-pattern-test
   (let [three-pattern
-        (p/pattern (p/key-matches-nobinding-clause :kind (p/match-const "three"))
-                   (p/key-matches-clause :x (p/match-const "x") "x")
-                   (p/key-matches-nobinding-clause :y (p/match-const "y"))
-                   (p/key-exists-clause :z "z")
-                   (p/key-exists-nobinding-clause :w))]
+        (p/pattern (p/key-matches-without-binding-clause :kind (p/match-const "three"))
+                   (p/key-matches-with-binding-clause :x (p/match-const "x") "x")
+                   (p/key-matches-without-binding-clause :y (p/match-const "y"))
+                   (p/key-exists-with-binding-clause :z "z")
+                   (p/key-exists-without-binding-clause :w))]
     (t/is (= (p/pattern-clauses three-pattern)
              (p/pattern-clauses (p/parse-pattern [(:kind "three")
                                                   (:x "x" :as x)
@@ -99,36 +99,36 @@
 (t/deftest clause->lhs
 
   (t/testing "key exists"
-    (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-clause :x "x"))))
-    (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-clause :x "rebind")))))
+    (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "x"))))
+    (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "rebind")))))
 
   (t/testing "path exists"
     (t/is (= {:x {"b" {"c" 'c}}}
-             (p/clause->lhs {} (p/path-exists-clause [:x "b" "c"] "c"))))
+             (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "c"))))
     (t/is (= {:x {"b" {"c" 'rebind}}}
-             (p/clause->lhs {} (p/path-exists-clause [:x "b" "c"] "rebind")))))
+             (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "rebind")))))
 
   (t/testing "key matches"
-    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-clause :x (p/match-const "b") "x"))))
+    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
     (t/testing "lhs doesn't care abound bindings"
-      (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-clause :x (p/match-const "b") "rebind")))))
+      (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind")))))
     #_(t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
-             (p/clause->lhs {} (p/key-matches-clause :x (p/match-predicate even?))))))
+             (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?))))))
 
   (t/testing "path matches"
-    (t/is (= {:x {:y {:z "b"}}} (p/clause->lhs {} (p/path-matches-clause [:x :y :z] (p/match-const "b") "z"))))
+    (t/is (= {:x {:y {:z "b"}}} (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (-> (p/path-matches-clause [:x :y :z] (p/match-const "b") "rebind")))))
+             (p/clause->lhs {} (-> (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind")))))
     #_(t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
-             (p/clause->lhs {} (p/path-matches-clause [:x :y "Z"] (p/match-predicate even?)))))))
+             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?)))))))
 
-(t/deftest path-matches-clause->rhs-match-test
+(t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
-           (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
-                                             (p/path-matches-clause [:x :y :z] (p/match-const "b") "z"))))
+           (p/path-matches-with-binding-clause->rhs-match {:x {:y {:z "b"}}}
+                                             (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
   (t/is (= `[~(symbol "rebind") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
-           (p/path-matches-clause->rhs-match {:x {:y {:z "b"}}}
-                                             (p/path-matches-clause [:x :y :z] (p/match-const "b") "rebind")))))
+           (p/path-matches-with-binding-clause->rhs-match {:x {:y {:z "b"}}}
+                                             (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind")))))
 
 (t/deftest reduce-lhs-test
   (t/is (empty? (p/reduce-lhs [])))

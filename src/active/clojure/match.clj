@@ -246,14 +246,22 @@
     clause
     (make-optional-clause clause)))
 
-(def clause? (some-fn key-matches-clause? path-matches-clause?
+(def clause? (some-fn key-matches-clause?
+                      key-matches-nobinding-clause?
+                      path-matches-clause?
+                      key-exists-clause?
                       key-exists-nobinding-clause?
-                      key-exists-clause?  path-exists-clause?
+                      path-exists-clause?
                       optional-clause?))
 
 ;; helpers
 (defn clause-lens
-  [key-matches-lens key-matches-nobinding-lens path-matches-lens key-exists-lens key-exists-nobinding-lens path-exists-lens]
+  [key-matches-lens
+   key-matches-nobinding-lens
+   path-matches-lens
+   key-exists-lens
+   key-exists-nobinding-lens
+   path-exists-lens]
   (fn [clause]
     (cond
       (key-matches-clause? clause)  key-matches-lens
@@ -263,8 +271,12 @@
       (key-exists-nobinding-clause? clause) key-exists-nobinding-lens
       (path-exists-clause? clause)  path-exists-lens
       (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
-                                                                  key-matches-lens key-matches-nobinding-lens path-matches-lens
-                                                                  key-exists-lens key-exists-nobinding-lens path-exists-lens)
+                                                                  key-matches-lens
+                                                                  key-matches-nobinding-lens
+                                                                  path-matches-lens
+                                                                  key-exists-lens
+                                                                  key-exists-nobinding-lens
+                                                                  path-exists-lens)
                                                                  (optional-clause-clause clause)))
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
@@ -816,7 +828,7 @@
     (conj bindings (key-exists-clause->rhs-match message clause))
 
     (key-exists-nobinding-clause? clause)
-    (key-exists-nobinding-clause->rhs-match message clause)
+    (conj bindings (key-exists-nobinding-clause->rhs-match message clause))
 
     (path-exists-clause? clause)
     (conj bindings (path-exists-clause->rhs-match message clause))
@@ -825,7 +837,7 @@
     (conj bindings (key-matches-clause->rhs-match message clause))
 
     (key-matches-nobinding-clause? clause)
-    (key-matches-nobinding-clause->rhs-match message clause)
+    (conj bindings (key-matches-nobinding-clause->rhs-match message clause))
 
     (path-matches-clause? clause)
     (conj bindings (path-matches-clause->rhs-match message clause))

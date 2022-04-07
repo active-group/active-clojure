@@ -240,13 +240,13 @@
 (def example-or-matcher
   (p/map-matcher
    one-or [x z]
-   two [a b c Z Y X foo]
+   two [a c Z Y]
    :else false))
 
 (t/deftest map-matcher-or-test
-  (t/is (= ["x" "y" "z" "w"]
+  (t/is (= ["x" "z"]
            (example-or-matcher one-data)))
-  (t/is (= ["a" "b" "c" 42 23 65 "bar"]
+  (t/is (= ["a" "c" 42 23]
            (example-or-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 

@@ -909,6 +909,7 @@
   throws `IllegalArgumentException` if no `<clause>` matches and no
   `<alternative>` is given.
 
+  FIXME: Example with-bindings / without-bindings.
   Example:
 
         (def example-map-matcher

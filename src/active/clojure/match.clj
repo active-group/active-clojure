@@ -281,14 +281,6 @@
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
 
-;; (def binding-lens
-;;   "Returns a function that when applied to a clause, returns a lens focusing on
-;;   the binding of the clause."
-;;   (clause-lens key-matches-with-binding-clause-binding
-;;                path-matches-with-binding-clause-binding
-;;                key-exists-with-binding-clause-binding
-;;                path-exists-with-binding-clause-binding))
-
 (def matcher-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
   the matcher of the clause."
@@ -308,12 +300,6 @@
                key-exists-with-binding-clause-key
                key-exists-without-binding-clause-key
                path-exists-with-binding-clause-path))
-
-;; (defn bind-match
-;;   "Takes a clause and replaces it's binding with `binding`."
-;;   [clause binding]
-;;   {:pre [(and (clause? clause) (symbol? binding))]}
-;;   (lens/shove clause (binding-lens clause) binding))
 
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses

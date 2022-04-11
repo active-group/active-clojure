@@ -657,19 +657,11 @@
         binding (key-exists-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)])]))
 
-(defn key-exists-without-binding-clause->rhs-match
-  [message clause]
-  `[])
-
 (defn path-exists-with-binding-clause->rhs-match
   [message clause]
   (let [key         (path-exists-with-binding-clause-path clause)
         binding     (path-exists-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element key))]))
-
-(defn path-exists-without-binding-clause->rhs-match
-  [message clause]
-  `[])
 
 (defn key-matches-with-binding-clause->rhs-match
   [message clause]
@@ -678,20 +670,12 @@
         binding     (key-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
-(defn key-matches-without-binding-clause->rhs-match
-  [message clause]
-  `[])
-
 (defn path-matches-with-binding-clause->rhs-match
   [message clause]
   (let [path        (path-matches-with-binding-clause-path clause)
         match-value (matcher-default-value (path-matches-with-binding-clause-matcher clause))
         binding     (path-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
-
-(defn path-matches-without-binding-clause->rhs-match
-  [message clause]
-  `[])
 
 (defn matcher->value
   "Takes a `matcher` and returns the value/s it matches on.
@@ -816,25 +800,25 @@
     (conj bindings (key-exists-with-binding-clause->rhs-match message clause))
 
     (key-exists-without-binding-clause? clause)
-    (conj bindings (key-exists-without-binding-clause->rhs-match message clause))
+    (conj bindings `[])
 
     (path-exists-with-binding-clause? clause)
     (conj bindings (path-exists-with-binding-clause->rhs-match message clause))
 
     (path-exists-without-binding-clause? clause)
-    (conj bindings (path-exists-without-binding-clause->rhs-match message clause))
+    (conj bindings `[])
 
     (key-matches-with-binding-clause? clause)
     (conj bindings (key-matches-with-binding-clause->rhs-match message clause))
 
     (key-matches-without-binding-clause? clause)
-    (conj bindings (key-matches-without-binding-clause->rhs-match message clause))
+    (conj bindings `[])
 
     (path-matches-with-binding-clause? clause)
     (conj bindings (path-matches-with-binding-clause->rhs-match message clause))
 
     (path-matches-without-binding-clause? clause)
-    (conj bindings (path-matches-without-binding-clause->rhs-match message clause))
+    (conj bindings `[])
 
     (optional-clause? clause)
     (clause->rhs message bindings (optional-clause-clause clause))))

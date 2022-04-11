@@ -522,36 +522,26 @@
         (case match
           :key-exists-without-binding
           (if (optional? mode)
-            (let [k (make-key (:key body))]
-              [{}
-               `[]])
+            [{} `[]]
             (let [[mode body] body
-                  mflat?      (flat? mode)
-                  k           (make-key (if mflat? body (:key body)))]
-              [`{~k ~'_}
-               `[]]))
+                  k (make-key (if (flat? mode) body (:key body)))]
+              [`{~k ~'_} `[]]))
 
           :key-exists-with-binding
-          (if (optional? mode)
-            (let [k (make-key (:key body))
-                  b (make-binding (:binding body))]
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
+            (if (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message [~k])]])
-            (let [k (make-key (:key body))
-                  b (make-binding (:binding body))]
+               `[~(symbol b) (get-in ~message [~k])]]
               [`{~k ~(symbol b)}
                `[~(symbol b) (get-in ~message [~k])]]))
 
           :path-exists-without-binding
           (if (optional? mode)
-            (let [path (mapv make-key (:path body))]
-              [{}
-               `[]])
+            [{} `[]]
             (let [[mode body] body
-                  mflat?      (flat? mode)
-                  path        (mapv make-key (if mflat? body (:path body)))]
-              [`{~path ~'_}
-               `[]]))
+                  path (mapv make-key (if (flat? mode) body (:path body)))]
+              [`{~path ~'_} `[]]))
 
           :path-exists-with-binding
           (let [path     (mapv make-key (:path body))

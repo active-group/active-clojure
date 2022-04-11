@@ -5,7 +5,7 @@
             [clojure.test :as t]))
 
 (t/deftest parse-clause-test
-  (t/testing "key exists clause"
+  (t/testing "key exists without binding clause"
     (t/testing "flat"
       (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
                (p/parse-clause :k)))
@@ -13,13 +13,17 @@
                (p/parse-clause k))))
     (t/testing "list"
       (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
-               (p/parse-clause (:k))))))
+               (p/parse-clause (:k))))
+      ;; FIXME: is this also a list - it is not a path?
+      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
+               (p/parse-clause [:k])))))
 
   (t/testing "key exists with binding clause"
     (t/is (= (p/make-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
              (p/parse-clause (:k :as Binding)))))
 
-  (t/testing "path exists clause"
+  (t/testing "path exists without binding clause"
+    ;; FIXME: the test for flat and list are the same
     (t/testing "flat"
       (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
                (p/parse-clause [:k V]))))
@@ -27,30 +31,29 @@
       (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
                (p/parse-clause [:k V])))))
 
-  (t/testing "path exists clause with binding"
+  (t/testing "path exists with binding clause"
     (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "Binding")
              (p/parse-clause ([:k V] :as Binding)))))
 
-  (t/testing "key matches clause"
+  (t/testing "key matches without binding clause"
     (t/testing "with regex"
       (let [c (p/parse-clause (:k #"foo"))]
         (t/is (= :k (p/key-matches-without-binding-clause-key c)))
         (t/is (= "foo" (.pattern ^java.util.regex.Pattern (p/regex-matcher-regex (p/key-matches-without-binding-clause-matcher c)))))
-        ;; (t/is (= "k" (p/key-matches-with-binding-clause-binding c)))
         ))
     (t/testing "with any other value"
       (t/is (= (p/make-key-matches-without-binding-clause :k (p/make-constant-matcher "foo"))
                (p/parse-clause (:k "foo"))))))
 
-  (t/testing "key matches clause with binding"
+  (t/testing "key matches with binding clause"
     (t/is (= (p/make-key-matches-with-binding-clause :k (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause (:k "foo" :as Binding)))))
 
-  (t/testing "path matches clause"
+  (t/testing "path matches without binding clause"
     (t/is (= (p/make-path-matches-without-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo"))
              (p/parse-clause ([:k bar baz] "foo")))))
 
-  (t/testing "path matches clause with binding"
+  (t/testing "path matches with binding clause"
     (t/is (= (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause ([:k bar baz] "foo" :as Binding)))))
 

@@ -659,8 +659,7 @@
 
 (defn key-exists-without-binding-clause->rhs-match
   [message clause]
-  (let [key     (key-exists-without-binding-clause-key clause)]
-    `[]))
+  `[])
 
 (defn path-exists-with-binding-clause->rhs-match
   [message clause]
@@ -670,8 +669,7 @@
 
 (defn path-exists-without-binding-clause->rhs-match
   [message clause]
-  (let [key         (path-exists-without-binding-clause-path clause)]
-    `[]))
+  `[])
 
 (defn key-matches-with-binding-clause->rhs-match
   [message clause]
@@ -682,9 +680,7 @@
 
 (defn key-matches-without-binding-clause->rhs-match
   [message clause]
-  (let [key         (key-matches-without-binding-clause-key clause)
-        match-value (matcher-default-value (key-matches-without-binding-clause-matcher clause))]
-    `[]))
+  `[])
 
 (defn path-matches-with-binding-clause->rhs-match
   [message clause]
@@ -695,9 +691,7 @@
 
 (defn path-matches-without-binding-clause->rhs-match
   [message clause]
-  (let [path        (path-matches-without-binding-clause-path clause)
-        match-value (matcher-default-value (path-matches-without-binding-clause-matcher clause))]
-    `[]))
+  `[])
 
 (defn matcher->value
   "Takes a `matcher` and returns the value/s it matches on.

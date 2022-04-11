@@ -465,31 +465,27 @@
               `(path-exists-with-binding-clause ~path ~b)))
 
           :key-matches-without-binding
-          (let [k           (make-key (:key body))
-                match-value (match-value->matcher (:match-value body))]
+          (let [k (make-key (:key body))]
             (if (optional? mode)
               `(make-optional-clause (key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body))))
               `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))))
 
           :key-matches-with-binding
-          (let [k           (make-key (:key body))
-                b           (make-binding (:binding body))
-                match-value (match-value->matcher (:match-value body))]
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
             (if (optional? mode)
               `(make-optional-clause (key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b))
               `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
           :path-matches-without-binding
-          (let [path        (mapv make-key (:path body))
-                match-value (match-value->matcher (:match-value body))]
+          (let [path (mapv make-key (:path body))]
             (if (optional? mode)
               `(make-optional-clause (path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body))))
               `(path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body)))))
 
           :path-matches-with-binding
-          (let [path        (mapv make-key (:path body))
-                b           (make-binding (:binding body))
-                match-value (match-value->matcher (:match-value body))]
+          (let [path (mapv make-key (:path body))
+                b    (make-binding (:binding body))]
             (if (optional? mode)
               `(make-optional-clause (path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))
               `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))

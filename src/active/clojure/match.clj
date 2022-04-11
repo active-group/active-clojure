@@ -441,10 +441,7 @@
             (let [[mode body] body
                   mflat?      (flat? mode)
                   k           (make-key (if mflat? body (:key body)))]
-              ;; FIXME: we are now doing in both cases the same
-              (if (flat? mode)
-                `(key-exists-without-binding-clause ~k)
-                `(key-exists-without-binding-clause ~k))))
+              `(key-exists-without-binding-clause ~k)))
 
           :key-exists-with-binding
           (let [k (make-key (:key body))

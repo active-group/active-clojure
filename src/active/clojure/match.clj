@@ -454,13 +454,8 @@
             (let [path (mapv make-key (:path body))]
               `(make-optional-clause (path-exists-without-binding-clause ~path)))
             (let [[mode body] body
-                  mflat?      (flat? mode)
-                  path        (mapv make-key (if mflat? body (:path body)))]
-              ;; FIXME: this if is always false see line 451?
-              ;; could it be analogue to line 439 'flat? mode'?
-              (if (optional? mode)
-                `(make-optional-clause (path-exists-without-binding-clause ~path))
-                `(path-exists-without-binding-clause ~path))))
+                  path (mapv make-key (if (flat? mode) body (:path body)))]
+              `(path-exists-without-binding-clause ~path)))
 
           :path-exists-with-binding
           (let [path (mapv make-key (:path body))

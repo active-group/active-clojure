@@ -562,10 +562,8 @@
                `[]])
             (let [[mode body] body
                   mflat?      (flat? mode)
-                  path        (mapv make-key (if mflat? body (:path body)))
-                  ;; FIXME: clean up
-                  path-map    (assoc-in {} path ())]
-              [`~path-map
+                  path        (mapv make-key (if mflat? body (:path body)))]
+              [`{~path ~'_}
                `[]]))
 
           :path-exists-with-binding
@@ -769,8 +767,7 @@
 
     (path-exists-without-binding-clause? clause)
     (let [path    (path-exists-without-binding-clause-path clause)]
-      ;; FIXME: does this make sense?
-      `{})
+      (assoc-in {} (map convert-path-element path) '_))
 
     (key-matches-with-binding-clause? clause)
     (let [key         (key-matches-with-binding-clause-key clause)

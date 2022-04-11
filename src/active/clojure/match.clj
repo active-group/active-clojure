@@ -613,7 +613,7 @@
               [{}
                `[~(symbol b) (get-in ~message ~path ~match-value)]]
               predicate?
-              [`(~(fold-path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
+              [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[~(symbol b) (get-in ~message ~path)]]
               :else
               [`~path-map

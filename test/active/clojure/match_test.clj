@@ -180,7 +180,6 @@
    ([:d X] 65)
    [:d W foo]])
 
-
 (def example-matcher
   (p/map-matcher
    one   [x z]
@@ -194,9 +193,22 @@
            (example-matcher two-data)))
   (t/is (= false (example-matcher {:kind "none"}))))
 
-(t/deftest map-matcher-nobinding-test
+;; FIXME: Clean up
+(t/deftest map-matcher-without-binding-test
   (let [k "my-value"]
     ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
+
+;; FIXME: Clean up
+(t/deftest my-little-no-bindings-test
+  (t/is (= ["a"]
+           ((p/map-matcher [(:a :as a)] [a])
+            {:a "a"})))
+  (t/is (= []
+           ((p/map-matcher [(:a :as a)] [])
+            {:a "a"})))
+  (t/is (= []
+           ((p/map-matcher [(:a)] [])
+            {:a "a"}))))
 
 (t/deftest map-matcher-optional-default-test
   (t/is (= ["a" "C" "C" 42]

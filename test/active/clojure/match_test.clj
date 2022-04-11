@@ -21,10 +21,10 @@
 
   (t/testing "path exists clause"
     (t/testing "flat"
-      (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "V")
+      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
                (p/parse-clause [:k V]))))
     (t/testing "list"
-      (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "V")
+      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
                (p/parse-clause [:k V])))))
 
   (t/testing "path exists clause with binding"
@@ -47,7 +47,7 @@
              (p/parse-clause (:k "foo" :as Binding)))))
 
   (t/testing "path matches clause"
-    (t/is (= (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "baz")
+    (t/is (= (p/make-path-matches-without-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo"))
              (p/parse-clause ([:k bar baz] "foo")))))
 
   (t/testing "path matches clause with binding"

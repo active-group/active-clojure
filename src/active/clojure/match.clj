@@ -776,8 +776,8 @@
                 (cons (deep-merge acc lhs-map) tail))
 
               (and (sequential? acc) (sequential? lhs))
-              (let [[acc-map guard-key acc-tail] acc
-                    [lhs-map guard-key lhs-tail] lhs]
+              (let [[acc-map _guard-key acc-tail] acc
+                    [lhs-map _guard-key lhs-tail] lhs]
                 (list (deep-merge acc-map lhs-map) :guard (concat acc-tail lhs-tail)))
 
               :else

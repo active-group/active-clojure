@@ -302,11 +302,6 @@
 (p/defpattern predicate-pattern
   [(:x (:compare-fn even?))])
 
-
-(def x "x")
-(p/defpattern constant-pattern [(:x x)])
-(def p (p/parse-pattern '[(:x x)]))
-
 (t/deftest map-matcher-polymorphism-test
   (t/testing "works with a pattern record"
     (t/is (= ::even

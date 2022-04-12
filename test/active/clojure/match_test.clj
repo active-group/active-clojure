@@ -23,13 +23,12 @@
              (p/parse-clause (:k :as Binding)))))
 
   (t/testing "path exists without binding clause"
-    ;; FIXME: the test for flat and list are the same
     (t/testing "flat"
       (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
                (p/parse-clause [:k V]))))
     (t/testing "list"
       (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
-               (p/parse-clause [:k V])))))
+               (p/parse-clause ([:k V]))))))
 
   (t/testing "path exists with binding clause"
     (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "Binding")
@@ -132,23 +131,17 @@
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-without-binding-clause :x (p/match-const "b"))))))
 
   (t/testing "path matches with binding"
-    ;; FIXME: is there a difference between these two tests? except for syntactic sugar?
     (t/is (= {:x {:y {:z "b"}}}
              (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (-> (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z")))))
-    (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (-> (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind")))))
+             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind"))))
     ;; FIXME: what is wrong with that test?
     #_(t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
              (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?))))))
 
   (t/testing "path matches without binding"
-    ;; FIXME: is there a difference between these two tests? except for syntactic sugar?
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))
-    (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (-> (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b"))))))))
+             (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))))
 
 (t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
@@ -219,7 +212,10 @@
            (example-matcher one-data)))
   (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
            (example-matcher two-data)))
-  (t/is (= false (example-matcher {:kind "none"}))))
+  (t/is (= false (example-matcher {:kind "none"})))
+  ;; FIXME: What is the difference between this and the test before?
+  (t/testing "map-matcher-regex-key-not-found"
+    (t/is (= false (example-matcher three-data)))))
 
 ;; FIXME: Clean up
 (t/deftest map-matcher-without-binding-test
@@ -266,11 +262,6 @@
                            [a c C Z])
             two-data))))
 
- ;; FIXME: map-matcher-or-test - #3 --- same test?
-(t/deftest map-matcher-regex-key-not-found-test
-  (t/is (= false
-           (example-matcher three-data))))
-
 (p/defpattern one-or
   [(:kind #"one")
    (:x (:or "a" "b" "c" "x") :as x)
@@ -289,9 +280,7 @@
            (example-or-matcher one-data)))
   (t/is (= ["a" "c" 42 23]
            (example-or-matcher two-data)))
-  ;; FIXME: this is not an example-or-matcher
-  (t/is (= false (example-matcher {:kind "none"}))))
-
+  (t/is (= false (example-or-matcher {:kind "none"}))))
 
 (p/defpattern one-guard
   [(:kind #"one")
@@ -347,7 +336,6 @@
   (t/testing "with compare-fn"
     (let [evt {"X" "x"}]
       (t/is (= "x"
-               ;; FIXME: please explain: #(= % )
                ((p/map-matcher [(X (:compare-fn #(= % (get evt "X"))))] x)
                 evt)))))
   (t/testing "as local constant"

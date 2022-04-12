@@ -208,6 +208,13 @@
    :else false))
 
 (t/deftest map-matcher-test
+  (t/testing "Very simple example without bindings."
+    ;; we thought that empty lets in the macro-expand would create problems
+    (t/is (= [] ((p/map-matcher [(:a)] []) {:a "a"}))))
+  (t/testing "Very simple examples with binding."
+    (t/is (= [] ((p/map-matcher [(:a :as a)] []) {:a "a"})))
+    (t/is (= ["a"] ((p/map-matcher [(:a :as a)] [a]) {:a "a"}))))
+
   (t/is (= ["x" "z"]
            (example-matcher one-data)))
   (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
@@ -216,23 +223,6 @@
   ;; FIXME: What is the difference between this and the test before?
   (t/testing "map-matcher-regex-key-not-found"
     (t/is (= false (example-matcher three-data)))))
-
-;; FIXME: Clean up
-(t/deftest map-matcher-without-binding-test
-  (let [k "my-value"]
-    ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
-
-;; FIXME: Clean up
-(t/deftest my-little-no-bindings-test
-  (t/is (= ["a"]
-           ((p/map-matcher [(:a :as a)] [a])
-            {:a "a"})))
-  (t/is (= []
-           ((p/map-matcher [(:a :as a)] [])
-            {:a "a"})))
-  (t/is (= []
-           ((p/map-matcher [(:a)] [])
-            {:a "a"}))))
 
 (t/deftest map-matcher-optional-default-test
   (t/is (= ["a" "C" "C" 42]
@@ -331,6 +321,11 @@
 (def x "x")
 (p/defpattern constant-pattern [(X x)])
 (def p (p/parse-pattern '[(X x)]))
+
+;; FIXME: Clean up
+(t/deftest map-matcher-without-binding-test
+  (let [k "my-value"]
+    ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
 
 (t/deftest closes-over-outer-variables-test
   (t/testing "with compare-fn"

@@ -101,29 +101,54 @@
 
 (t/deftest clause->lhs
 
-  (t/testing "key exists"
+  (t/testing "key exists with binding"
+    ;; FIXME: what are we testing here?
     (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "x"))))
     (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "rebind")))))
 
-  (t/testing "path exists"
+  (t/testing "key exists without binding"
+    (t/is (= {:x '_} (p/clause->lhs {} (p/key-exists-without-binding-clause :x)))))
+
+  (t/testing "path exists with binding"
     (t/is (= {:x {"b" {"c" 'c}}}
              (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "c"))))
     (t/is (= {:x {"b" {"c" 'rebind}}}
              (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "rebind")))))
 
-  (t/testing "key matches"
+  (t/testing "path exists without binding"
+    (t/is (= {:x {"b" {"c" '_}}}
+             (p/clause->lhs {} (p/path-exists-without-binding-clause [:x "b" "c"])))))
+
+  (t/testing "key matches with binding"
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
-    (t/testing "lhs doesn't care abound bindings"
+    ;; FIXME: why is this a new testing / is there something special about rebind?
+    (t/testing "lhs doesn't care about bindings"
       (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind")))))
+    ;; FIXME: what is wrong with that test?
     #_(t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
              (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?))))))
 
-  (t/testing "path matches"
-    (t/is (= {:x {:y {:z "b"}}} (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
+  (t/testing "key matches without binding"
+    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-without-binding-clause :x (p/match-const "b"))))))
+
+  (t/testing "path matches with binding"
+    ;; FIXME: is there a difference between these two tests? except for syntactic sugar?
+    (t/is (= {:x {:y {:z "b"}}}
+             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
+    (t/is (= {:x {:y {:z "b"}}}
+             (p/clause->lhs {} (-> (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z")))))
     (t/is (= {:x {:y {:z "b"}}}
              (p/clause->lhs {} (-> (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind")))))
+    ;; FIXME: what is wrong with that test?
     #_(t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
-             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?)))))))
+             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?))))))
+
+  (t/testing "path matches without binding"
+    ;; FIXME: is there a difference between these two tests? except for syntactic sugar?
+    (t/is (= {:x {:y {:z "b"}}}
+             (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))
+    (t/is (= {:x {:y {:z "b"}}}
+             (p/clause->lhs {} (-> (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b"))))))))
 
 (t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
@@ -241,7 +266,8 @@
                            [a c C Z])
             two-data))))
 
-(t/deftest map-matcher-regex-key-not-found-t
+ ;; FIXME: map-matcher-or-test - #3 --- same test?
+(t/deftest map-matcher-regex-key-not-found-test
   (t/is (= false
            (example-matcher three-data))))
 
@@ -263,6 +289,7 @@
            (example-or-matcher one-data)))
   (t/is (= ["a" "c" 42 23]
            (example-or-matcher two-data)))
+  ;; FIXME: this is not an example-or-matcher
   (t/is (= false (example-matcher {:kind "none"}))))
 
 
@@ -320,6 +347,7 @@
   (t/testing "with compare-fn"
     (let [evt {"X" "x"}]
       (t/is (= "x"
+               ;; FIXME: please explain: #(= % )
                ((p/map-matcher [(X (:compare-fn #(= % (get evt "X"))))] x)
                 evt)))))
   (t/testing "as local constant"
@@ -333,6 +361,7 @@
       (t/is (= x
                ((p/map-matcher [(X x)] x)
                 evt)))))
+  ;; FIXME: Docu below the same, tests different
   (t/testing "as constant with global defpattern"
     (let [x   "x"
           evt {"X" x}]

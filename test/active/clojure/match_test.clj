@@ -143,6 +143,7 @@
     (t/is (= {:x {:y {:z "b"}}}
              (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))))
 
+;; FIXME: Why is this 'with-binding' - may we need to add a binding to make this a 'sensible' test?
 (t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-with-binding-clause->rhs-match {:x {:y {:z "b"}}}
@@ -214,43 +215,43 @@
   (t/testing "Very simple examples with binding."
     (t/is (= [] ((p/map-matcher [(:a :as a)] []) {:a "a"})))
     (t/is (= ["a"] ((p/map-matcher [(:a :as a)] [a]) {:a "a"}))))
-
-  (t/is (= ["x" "z"]
-           (example-matcher one-data)))
-  (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
-           (example-matcher two-data)))
-  (t/is (= false (example-matcher {:kind "none"})))
-  ;; FIXME: What is the difference between this and the test before?
-  (t/testing "map-matcher-regex-key-not-found"
-    (t/is (= false (example-matcher three-data)))))
-
-(t/deftest map-matcher-optional-default-test
-  (t/is (= ["a" "C" "C" 42]
-           ((p/map-matcher [(:kind #"two")
-                            (? :a :as a)
-                            (? :b)
-                            (? :c "C" :as c)
-                            (? :C "C" :as C)
-                            (? [:d Z] :as Z)
-                            (? [:d Y] "y")
-                            (? [:d U])]
-                           [a c C Z])
-            {:kind "two" :a "a" :b "b"
-             :d {"Z" 42 "X" 65
-                 "W" {"foo" "bar"}}}))))
+  (t/testing "Example-matcher"
+    (t/is (= ["x" "z"]
+             (example-matcher one-data)))
+    (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
+             (example-matcher two-data)))
+    (t/is (= false (example-matcher {:kind "none"})))
+    ;; FIXME: What is the difference between this and the test before?
+    (t/testing "map-matcher-regex-key-not-found"
+      (t/is (= false (example-matcher three-data))))))
 
 (t/deftest map-matcher-optional-test
-  (t/is (= ["a" "c" "C" 42]
-           ((p/map-matcher [(:kind #"two")
-                            (? :a :as a)
-                            (? :b)
-                            (? :c "C" :as c)
-                            (? :C "C" :as C)
-                            (? [:d Z] :as Z)
-                            (? [:d Y] "y")
-                            (? [:d U])]
-                           [a c C Z])
-            two-data))))
+  (t/testing "Optional values"
+    (t/is (= ["a" "c" "C" 42]
+             ((p/map-matcher [(:kind #"two")
+                              (? :a :as a)
+                              (? :b)
+                              (? :c "C" :as c)
+                              (? :C "C" :as C)
+                              (? [:d Z] :as Z)
+                              (? [:d Y] "y")
+                              (? [:d U])]
+                             [a c C Z])
+              two-data))))
+  (t/testing "Fall back to given default value."
+    (t/is (= ["a" "C" "C" 42]
+             ((p/map-matcher [(:kind #"two")
+                              (? :a :as a)
+                              (? :b)
+                              (? :c "C" :as c)
+                              (? :C "C" :as C)
+                              (? [:d Z] :as Z)
+                              (? [:d Y] "y")
+                              (? [:d U])]
+                             [a c C Z])
+              {:kind "two" :a "a" :b "b"
+               :d {"Z" 42 "X" 65
+                   "W" {"foo" "bar"}}})))))
 
 (p/defpattern one-or
   [(:kind #"one")
@@ -266,24 +267,29 @@
    :else false))
 
 (t/deftest map-matcher-or-test
-  (t/is (= ["x" "z"]
-           (example-or-matcher one-data)))
-  (t/is (= ["a" "c" 42 23]
-           (example-or-matcher two-data)))
-  (t/is (= false (example-or-matcher {:kind "none"}))))
+  (t/testing "Alternative values to match on"
+    (t/is (= ["x" "z"]
+             (example-or-matcher one-data)))
+    (t/is (= ["a" "c" 42 23]
+             (example-or-matcher two-data)))
+    (t/is (= false (example-or-matcher {:kind "none"})))))
 
-(p/defpattern one-guard
+;; FIXME: one-guard and example-guard-matcher not used
+#_(p/defpattern one-guard
   [(:kind #"one")
    (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
    (:y (:compare-fn #(= % (:y {:x "x" :y "y" :z "z"}))))
    (:z :as z)
    :w])
 
-(def example-guard-matcher
+#_(def example-guard-matcher
   (p/map-matcher
    one-guard [x z]
    two [a c Z Y]
    :else false))
+
+(p/defpattern predicate-pattern
+  [(:x (:compare-fn even?))])
 
 (def predicate-matcher
   (p/map-matcher
@@ -294,21 +300,16 @@
    [(:x (:compare-fn odd?))] ::odd))
 
 (t/deftest map-matcher-predicate-test
-  (t/is (= ::even (predicate-matcher {:x 42})))
-  (t/is (= ::odd (predicate-matcher {:x 41})))
-  (t/is (= ::string (predicate-matcher {:x "string"})))
-  (t/is (= ::boolean (predicate-matcher {:x true}))))
-
-(p/defpattern predicate-pattern
-  [(:x (:compare-fn even?))])
-
-(t/deftest map-matcher-polymorphism-test
-  (t/testing "works with a pattern record"
+  (t/testing "Predicates"
+    (t/is (= ::even (predicate-matcher {:x 42})))
+    (t/is (= ::odd (predicate-matcher {:x 41})))
+    (t/is (= ::string (predicate-matcher {:x "string"})))
+    (t/is (= ::boolean (predicate-matcher {:x true}))))
+  (t/testing "Polymorphism: works with a pattern record"
     (t/is (= ::even
              ((p/map-matcher predicate-pattern ::even)
               {:x 42}))))
-
-  (t/testing "works with pattern syntax"
+  (t/testing "Polymorphism: works with pattern syntax"
     (t/is (= ::even
              ((p/map-matcher [(:x (:compare-fn even?))] ::even)
               {:x 42})))))
@@ -317,47 +318,49 @@
 (p/defpattern constant-pattern [(X x)])
 (def p (p/parse-pattern '[(X x)]))
 
-;; FIXME: Clean up
-(t/deftest map-matcher-without-binding-test
-  (let [k "my-value"]
-    ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
+(t/deftest map-matcher-scope-test
 
-(t/deftest closes-over-outer-variables-test
-  (t/testing "with compare-fn"
+  (t/testing "let-variable is not overwritten if there is no binding"
+    (let [k "my-value"]
+      ((p/map-matcher [(:k 23)] (t/is (= "my-value" k))) {:k 23})))
+  (t/testing "let-variable is overwritten if there is a binding"
+    (let [k "my-value"]
+      ((p/map-matcher [(:k 23 :as k)] (t/is (= 23 k))) {:k 23})))
+  (t/testing "let-variable used within compare-fn"
     (let [evt {"X" "x"}]
       (t/is (= "x"
                ((p/map-matcher [(X (:compare-fn #(= % (get evt "X"))))] x)
                 evt)))))
-  (t/testing "as local constant"
+  (t/testing "local: let-variable used as constant"
     (let [x   "x"
           evt {"X" x}]
       (t/is (= x
                ((p/map-matcher [(X x)] x)
                 evt)))))
-  (t/testing "as global constant"
+  (t/testing "global: def-variable used as constant"
     (let [evt {"X" x}]
       (t/is (= x
                ((p/map-matcher [(X x)] x)
                 evt)))))
-  ;; FIXME: Docu below the same, tests different
-  (t/testing "as constant with global defpattern"
+  (t/testing "global: defpattern used as constant"
     (let [x   "x"
           evt {"X" x}]
       (t/is (= x
                ((p/map-matcher constant-pattern x)
                 evt)))))
-  (t/testing "as constant with global parse-pattern"
+  (t/testing "global: def-parse-pattern as constant"
     (let [evt {"X" x}]
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
-  (t/testing "as constant with global defpattern"
+  (t/testing "local: defpattern as constant"
     (let [x   "x"
           evt {"X" x}]
       (p/defpattern p [("X" x)])
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
+  ;; FIXME: What's wrong with this test?
   #_(t/testing "as constant with local parse-pattern"
     (let [x   "x"
           evt {"X" x}

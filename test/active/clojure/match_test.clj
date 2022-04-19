@@ -209,6 +209,14 @@
    :else false))
 
 (t/deftest map-matcher-test
+  ;; FIXME
+  ;; compiler exception: not a valid pattern
+  ;; (t/is (= [] ((p/map-matcher [] []) {:a "a"})))
+  ;; compiler exception: Wrong number of args (0) passed to: active.clojure.match/deep-merge
+  ;; (t/is (= [] ((p/map-matcher [()] []) {:a "a"})))
+  ;; compiler exception: class clojure.lang.PersistentVector cannot be cast to class clojure.lang.Named
+  ;; (t/is (= [] ((p/map-matcher [([])] []) {:a "a"})))
+
   (t/testing "Very simple example without bindings."
     ;; we thought that empty lets in the macro-expand would create problems
     (t/is (= [] ((p/map-matcher [(:a)] []) {:a "a"}))))
@@ -223,7 +231,16 @@
     (t/is (= false (example-matcher {:kind "none"})))
     ;; FIXME: What is the difference between this and the test before?
     (t/testing "map-matcher-regex-key-not-found"
-      (t/is (= false (example-matcher three-data))))))
+      (t/is (= false (example-matcher three-data)))))
+  (t/testing "Paths"
+    ;; FIXME: path without binding not possible?
+    ;; compiler exception: class clojure.lang.PersistentVector cannot be cast to class clojure.lang.Named
+    ;; (t/is (= [] ((p/map-matcher [([:x])] []) {:x {}})))
+    ;; FIXME: key exists on a list?
+    (t/is (= [{}] ((p/map-matcher [([:a] :as a)] [a]) {:a {}})))
+    (t/is (= [] ((p/map-matcher [([:a b] "c")] []) {:a { "b" "c"}})))
+    (t/is (= [] ((p/map-matcher [([:a b c] "d")] []) {:a { "b" {"c" "d"}}})))
+    (t/is (= ["d"] ((p/map-matcher [([:a b c] "d" :as z)] [z]) {:a { "b" {"c" "d"}}})))))
 
 (t/deftest map-matcher-optional-test
   (t/testing "Optional values"
@@ -251,7 +268,50 @@
                              [a c C Z])
               {:kind "two" :a "a" :b "b"
                :d {"Z" 42 "X" 65
-                   "W" {"foo" "bar"}}})))))
+                   "W" {"foo" "bar"}}}))))
+  (t/testing "More optionals"
+    ;; FIXME: Is this a flat-key-exist matched on the symbol '?'?
+    ;; error: java.lang.IllegalArgumentException: No matching clause: {}
+    ;; (t/is (= [] ((p/map-matcher [? :a] []) {})))
+    ;; key match without binding
+    (t/is (= [] ((p/map-matcher [(? :a)] []) {})))
+    (t/is (= [] ((p/map-matcher [(? :a)] []) {:a "a"})))
+    ;; key match with binding
+    ;; FIXME: Do we expect `nil` here?
+    (t/is (= [nil] ((p/map-matcher [(? :a :as a)] [a]) {})))
+    (t/is (= ["a"] ((p/map-matcher [(? :a :as a)] [a]) {:a "a"})))
+    ;; key match with default value without binding
+    ;; not bound so it doesn't really make sense to give a default value?
+    (t/is (= [] ((p/map-matcher [(? :a "A")] []) {})))
+    (t/is (= [] ((p/map-matcher [(? :a "A")] []) {:a "a"})))
+    ;; key match with default value with binding
+    (t/is (= ["A"] ((p/map-matcher [(? :a "A" :as a)] [a]) {})))
+    (t/is (= ["a"] ((p/map-matcher [(? :a "A" :as a)] [a]) {:a "a"})))
+    ;; path match without binding
+    ;; FIXME: Really path match without binding?
+    (t/is (= [] ((p/map-matcher [(? [:a _])] []) {})))
+    (t/is (= [] ((p/map-matcher [(? [:a _])] []) {:a "a"})))
+    (t/is (= [] ((p/map-matcher [(? [:a _])] []) {:a {"b" {"c" "d"}}})))
+    ;; path match with binding
+    (t/is (= [nil] ((p/map-matcher [(? [:a _] :as a)] [a]) {})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a _] :as a)] [a]) {:a "a"})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a _] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a a] :as a)] [a]) {})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a a] :as a)] [a]) {:a "a"})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a a] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    (t/is (= [{"c" "d"}] ((p/map-matcher [(? [:a b] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    (t/is (= [nil] ((p/map-matcher [(? [:a c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    (t/is (= ["d"] ((p/map-matcher [(? [:a b c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    ;; path match without binding with default value
+    ;; not bound so it doesn't really make sense to give a default value?
+    (t/is (= [] ((p/map-matcher [(? [:a b c] "C")] []) {:a {"b" {"c" "d"}}})))
+    ;; path match with binding with default value
+    (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a "b"})))
+    (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {}}})))
+    (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"e" "d"}}})))
+    (t/is (= ["d"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    ;; (t/is (= [] ((p/map-matcher [] []) {})))
+    ))
 
 (p/defpattern one-or
   [(:kind #"one")

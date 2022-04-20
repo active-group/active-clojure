@@ -72,10 +72,15 @@
             (p/parse-clause (:k (:compare-fn #(= % 42)) :as Binding))))))
 
   (t/testing "optional clauses"
+
     (t/is (= (p/make-optional-key-exists-without-binding-clause :k p/the-existence-matcher)
              (p/parse-clause (? :k))))
     (t/is (= (p/make-optional-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
              (p/parse-clause (? :k :as Binding))))
+
+    (t/is (= (p/make-optional-path-exists-without-binding-clause [:k "bar" "baz"] p/the-existence-matcher)
+             (p/parse-clause (? [:k bar baz]))))
+
     (t/is (= (p/make-optional-clause (p/make-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding"))
              (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
 

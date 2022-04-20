@@ -107,8 +107,10 @@
 ;;    There are four kinds of clauses
 ;; 1. Assert the existence of a value in a map for a key.
 ;;    - without binding - with binding
+;;    - optional:  without binding - with binding
 ;; 2. Assert the existence of a value in a map for a path.
 ;;    - without binding - with binding
+;;    - optional:  without binding
 ;; 3. Match a key in a map to some specific value.
 ;;    - without binding - with binding
 ;; 4. Match the value at a path in a map to a specific value.
@@ -184,15 +186,28 @@
    matcher path-exists-with-binding-clause-matcher
    binding path-exists-with-binding-clause-binding])
 
-(defn path-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
-  [path bind]
-  (make-path-exists-with-binding-clause path the-existence-matcher bind))
+(define-record-type
+  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
+  OptionalPathExistsWithoutBindingClause
+  (make-optional-path-exists-without-binding-clause path matcher)
+  optional-path-exists-without-binding-clause?
+  [path optional-path-exists-without-binding-clause-path
+   matcher optional-path-exists-without-binding-clause-matcher])
 
 (defn path-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path]
   (make-path-exists-without-binding-clause path the-existence-matcher))
+
+(defn path-exists-with-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [path bind]
+  (make-path-exists-with-binding-clause path the-existence-matcher bind))
+
+(defn optional-path-exists-without-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [path]
+  (make-optional-path-exists-without-binding-clause path the-existence-matcher))
 
 ;; 3.
 (define-record-type
@@ -277,6 +292,7 @@
                       optional-key-exists-with-binding-clause?
                       path-exists-without-binding-clause?
                       path-exists-with-binding-clause?
+                      optional-path-exists-without-binding-clause?
                       key-matches-without-binding-clause?
                       key-matches-with-binding-clause?
                       path-matches-without-binding-clause?
@@ -289,8 +305,9 @@
    key-exists-with-binding-lens
    optional-key-exists-without-binding-lens
    optional-key-exists-with-binding-lens
-   path-exists-with-binding-lens
    path-exists-without-binding-lens
+   path-exists-with-binding-lens
+   optional-path-exists-without-binding-lens
    key-matches-without-binding-lens
    key-matches-with-binding-lens
    path-matches-without-binding-lens
@@ -301,8 +318,9 @@
       (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
       (optional-key-exists-without-binding-clause? clause) optional-key-exists-without-binding-lens
       (optional-key-exists-with-binding-clause? clause)   optional-key-exists-with-binding-lens
-      (path-exists-without-binding-clause? clause)  path-exists-with-binding-lens
+      (path-exists-without-binding-clause? clause)  path-exists-without-binding-lens
       (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
+      (optional-path-exists-without-binding-clause? clause)  optional-path-exists-without-binding-lens
       (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
       (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
       (path-matches-without-binding-clause? clause) path-matches-without-binding-lens
@@ -314,6 +332,7 @@
                                                                   optional-key-exists-with-binding-lens
                                                                   path-exists-without-binding-lens
                                                                   path-exists-with-binding-lens
+                                                                  optional-path-exists-without-binding-lens
                                                                   key-matches-without-binding-lens
                                                                   key-matches-with-binding-lens
                                                                   path-matches-without-binding-lens
@@ -331,6 +350,7 @@
                optional-key-exists-with-binding-clause-matcher
                path-exists-without-binding-clause-matcher
                path-exists-with-binding-clause-matcher
+               optional-path-exists-without-binding-clause-matcher
                key-matches-without-binding-clause-matcher
                key-matches-with-binding-clause-matcher
                path-matches-without-binding-clause-matcher
@@ -345,6 +365,7 @@
                optional-key-exists-with-binding-clause-key
                path-exists-without-binding-clause-path
                path-exists-with-binding-clause-path
+               optional-path-exists-without-binding-clause-path
                key-matches-without-binding-clause-key
                key-matches-with-binding-clause-key
                path-matches-without-binding-clause-path
@@ -489,7 +510,7 @@
           :path-exists-without-binding
           (if (optional? mode)
             (let [path (mapv make-key (:path body))]
-              `(make-optional-clause (path-exists-without-binding-clause ~path)))
+              `(optional-path-exists-without-binding-clause ~path))
             (let [[mode body] body
                   path (mapv make-key (if (flat? mode) body (:path body)))]
               `(path-exists-without-binding-clause ~path)))
@@ -775,6 +796,10 @@
           binding (path-exists-with-binding-clause-binding clause)]
       (assoc-in {} (map convert-path-element path) (symbol binding)))
 
+    (optional-path-exists-without-binding-clause? clause)
+    (let [path    (optional-path-exists-without-binding-clause-path clause)]
+      (assoc-in {} (map convert-path-element path) '_))
+
     (key-matches-without-binding-clause? clause)
     (let [key         (key-matches-without-binding-clause-key clause)
           matcher     (key-matches-without-binding-clause-matcher clause)
@@ -864,6 +889,9 @@
 
     (path-exists-with-binding-clause? clause)
     (conj bindings (path-exists-with-binding-clause->rhs-match message clause))
+
+    (optional-path-exists-without-binding-clause? clause)
+    (conj bindings `[])
 
     (key-matches-without-binding-clause? clause)
     (conj bindings `[])

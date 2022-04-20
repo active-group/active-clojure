@@ -99,6 +99,7 @@
                                                   :w]))))))
 
 (t/deftest clause->lhs
+  ;; lhs doesn't care about bindings
 
   (t/testing "key exists with binding"
     ;; FIXME: what are we testing here?
@@ -120,9 +121,7 @@
 
   (t/testing "key matches with binding"
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
-    ;; FIXME: why is this a new testing / is there something special about rebind?
-    (t/testing "lhs doesn't care about bindings"
-      (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind")))))
+    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind"))))
     ;; FIXME: what is wrong with that test?
     #_(t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
              (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?))))))
@@ -143,7 +142,6 @@
     (t/is (= {:x {:y {:z "b"}}}
              (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))))
 
-;; FIXME: Why is this 'with-binding' - may we need to add a binding to make this a 'sensible' test?
 (t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]
            (p/path-matches-with-binding-clause->rhs-match {:x {:y {:z "b"}}}
@@ -229,12 +227,12 @@
     (t/is (= ["a" "c" {"Z" 42 "Y" 23 "X" 65 "W" {"foo" "bar"}} 42 23]
              (example-matcher two-data)))
     (t/is (= false (example-matcher {:kind "none"})))
-    ;; FIXME: What is the difference between this and the test before?
     (t/testing "map-matcher-regex-key-not-found"
       (t/is (= false (example-matcher three-data)))))
   (t/testing "Paths"
     ;; FIXME: path without binding not possible?
     ;; compiler exception: class clojure.lang.PersistentVector cannot be cast to class clojure.lang.Named
+    ;; parse-emit-syntax?
     ;; (t/is (= [] ((p/map-matcher [([:x])] []) {:x {}})))
     ;; FIXME: key exists on a list?
     (t/is (= [{}] ((p/map-matcher [([:a] :as a)] [a]) {:a {}})))
@@ -277,7 +275,6 @@
     (t/is (= [] ((p/map-matcher [(? :a)] []) {})))
     (t/is (= [] ((p/map-matcher [(? :a)] []) {:a "a"})))
     ;; key match with binding
-    ;; FIXME: Do we expect `nil` here?
     (t/is (= [nil] ((p/map-matcher [(? :a :as a)] [a]) {})))
     (t/is (= ["a"] ((p/map-matcher [(? :a :as a)] [a]) {:a "a"})))
     ;; key match with default value without binding
@@ -288,7 +285,6 @@
     (t/is (= ["A"] ((p/map-matcher [(? :a "A" :as a)] [a]) {})))
     (t/is (= ["a"] ((p/map-matcher [(? :a "A" :as a)] [a]) {:a "a"})))
     ;; path match without binding
-    ;; FIXME: Really path match without binding?
     (t/is (= [] ((p/map-matcher [(? [:a _])] []) {})))
     (t/is (= [] ((p/map-matcher [(? [:a _])] []) {:a "a"})))
     (t/is (= [] ((p/map-matcher [(? [:a _])] []) {:a {"b" {"c" "d"}}})))
@@ -300,6 +296,7 @@
     (t/is (= [nil] ((p/map-matcher [(? [:a a] :as a)] [a]) {:a "a"})))
     (t/is (= [nil] ((p/map-matcher [(? [:a a] :as a)] [a]) {:a {"b" {"c" "d"}}})))
     (t/is (= [{"c" "d"}] ((p/map-matcher [(? [:a b] :as a)] [a]) {:a {"b" {"c" "d"}}})))
+    (t/is (= [2] ((p/map-matcher [(? [:a _] :as a)] [a]) {:a {"_" 2}})))
     (t/is (= [nil] ((p/map-matcher [(? [:a c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
     (t/is (= ["d"] ((p/map-matcher [(? [:a b c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
     ;; path match without binding with default value
@@ -310,7 +307,6 @@
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {}}})))
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"e" "d"}}})))
     (t/is (= ["d"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"c" "d"}}})))
-    ;; (t/is (= [] ((p/map-matcher [] []) {})))
     ))
 
 (p/defpattern one-or
@@ -420,11 +416,11 @@
       (t/is (= x
                ((p/map-matcher p x)
                 evt)))))
-  ;; FIXME: What's wrong with this test?
   #_(t/testing "as constant with local parse-pattern"
     (let [x   "x"
           evt {"X" x}
           p   (p/parse-pattern [(X x)])]
       (t/is (= x
+               ;; Caused by java.lang.UnsupportedOperationException Can't eval locals
                ((p/map-matcher p x)
                 evt))))))

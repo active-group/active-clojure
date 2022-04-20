@@ -129,8 +129,6 @@
   [key key-matches-without-binding-clause-key
    matcher key-matches-without-binding-clause-matcher])
 
-(def key->sym (comp symbol name))
-
 (defn key-matches-with-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`, binding the
   match to a symbol based on `key`."
@@ -191,8 +189,7 @@
    matcher key-exists-without-binding-clause-matcher])
 
 (defn key-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`.
-  Binds the value associated with `key` to `(key->sym key)`."
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key bind]
   (make-key-exists-with-binding-clause key the-existence-matcher bind))
 
@@ -220,8 +217,7 @@
    matcher path-exists-without-binding-clause-matcher])
 
 (defn path-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`.
-  Binds the value associated with `path` to `(key->sym (last path))`."
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path bind]
   (make-path-exists-with-binding-clause path the-existence-matcher bind))
 
@@ -708,7 +704,6 @@
     (key-exists-with-binding-clause? clause)
     (let [key     (key-exists-with-binding-clause-key clause)
           binding (key-exists-with-binding-clause-binding clause)]
-      ;; ignore the binding if it is the same as the key
       {(convert-path-element key) (symbol binding)})
 
     (key-exists-without-binding-clause? clause)

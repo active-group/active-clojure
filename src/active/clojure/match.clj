@@ -404,7 +404,7 @@
       (path-exists-without-binding-clause? clause)  path-exists-without-binding-lens
       (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
       (optional-path-exists-without-binding-clause? clause)  optional-path-exists-without-binding-lens
-      (optional-path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
+      (optional-path-exists-with-binding-clause? clause)  optional-path-exists-with-binding-lens
       (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
       (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
       (optional-key-matches-without-binding-clause? clause)  optional-key-matches-without-binding-lens

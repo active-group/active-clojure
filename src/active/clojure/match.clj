@@ -134,6 +134,7 @@
    matcher key-exists-with-binding-clause-matcher
    binding key-exists-with-binding-clause-binding])
 
+;; FIXME: matcher needed? is this a default value?
 (define-record-type OptionalKeyExistsWithoutBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`."}
   (make-optional-key-exists-without-binding-clause key matcher)
@@ -865,6 +866,7 @@
           binding (key-exists-with-binding-clause-binding clause)]
       {(convert-path-element key) (symbol binding)})
 
+    ;; FIXME: should this be {}
     (optional-key-exists-without-binding-clause? clause)
     (let [key     (optional-key-exists-without-binding-clause-key clause)]
       `{~key ~'_})
@@ -1181,6 +1183,7 @@
   [event & args]
   `((matcher ~@args) ~event))
 
+;; FIXME: Is this used/needed?
 (define-record-type Dependency
   (make-dependency path matcher for-pattern) dependency?
   [^{:doc "The path that this [[Dependency]] has a restriction on."}

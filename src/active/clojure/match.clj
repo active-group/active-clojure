@@ -105,74 +105,24 @@
     nil))
 
 ;;    There are four kinds of clauses
-;; 1. Match a key in a map to some specific value.
-;; 2. Match the value at a path in a map to a specific value.
-;; 3. Assert the existence of a value in a map for a key.
-;; 4. Assert the existence of a value in a map for a path.
+;; 1. Assert the existence of a value in a map for a key.
+;;    - without binding - with binding
+;; 2. Assert the existence of a value in a map for a path.
+;;    - without binding - with binding
+;; 3. Match a key in a map to some specific value.
+;;    - without binding - with binding
+;; 4. Match the value at a path in a map to a specific value.
+;;    - without binding - with binding
 ;; 5. An optional clause that contains a regular clause and makes the match optional.
 
-;; 1
-(define-record-type
-  ^{:doc "A clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
-  KeyMatchesWithBindingClause
-  (make-key-matches-with-binding-clause key matcher binding)
-  key-matches-with-binding-clause?
-  [key key-matches-with-binding-clause-key
-   matcher key-matches-with-binding-clause-matcher
-   binding key-matches-with-binding-clause-binding])
+;; 1.
+(define-record-type KeyExistsWithoutBindingClause
+  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`."}
+  (make-key-exists-without-binding-clause key matcher)
+  key-exists-without-binding-clause?
+  [key key-exists-without-binding-clause-key
+   matcher key-exists-without-binding-clause-matcher])
 
-(define-record-type
-  ^{:doc "A clause that matches the value of `key` of a map using `matcher`."}
-  KeyMatchesWithoutBindingClause
-  (make-key-matches-without-binding-clause key matcher)
-  key-matches-without-binding-clause?
-  [key key-matches-without-binding-clause-key
-   matcher key-matches-without-binding-clause-matcher])
-
-(defn key-matches-with-binding-clause
-  "Returns a clause that matches a `key` with a certain `matcher`, binding the
-  match to a symbol based on `key`."
-  [key matcher bind]
-  {:pre [(matcher? matcher)]}
-  (make-key-matches-with-binding-clause key matcher bind))
-
-(defn key-matches-without-binding-clause
-  "Returns a clause that matches a `key` with a certain `matcher`."
-  [key matcher]
-  {:pre [(matcher? matcher)]}
-  (make-key-matches-without-binding-clause key matcher))
-
-;; 2.
-(define-record-type
-  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
-  PathMatchesWithBindingClause
-  (make-path-matches-with-binding-clause path matcher binding)
-  path-matches-with-binding-clause?
-  [path path-matches-with-binding-clause-path
-   matcher path-matches-with-binding-clause-matcher
-   binding path-matches-with-binding-clause-binding])
-
-(define-record-type
-  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`."}
-  PathMatchesWithoutBindingClause
-  (make-path-matches-without-binding-clause path matcher)
-  path-matches-without-binding-clause?
-  [path path-matches-without-binding-clause-path
-   matcher path-matches-without-binding-clause-matcher])
-
-(def path? "Is something a valid path?" (some-fn list? vector?))
-
-(defn path-matches-with-binding-clause
-  [path matcher bind]
-  {:pre [(and (path? path) (matcher? matcher))]}
-  (make-path-matches-with-binding-clause path matcher bind))
-
-(defn path-matches-without-binding-clause
-  [path matcher]
-  {:pre [(and (path? path) (matcher? matcher))]}
-  (make-path-matches-without-binding-clause path matcher))
-
-;; 3.
 (define-record-type KeyExistsWithBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
   (make-key-exists-with-binding-clause key matcher binding)
@@ -181,24 +131,25 @@
    matcher key-exists-with-binding-clause-matcher
    binding key-exists-with-binding-clause-binding])
 
-(define-record-type KeyExistsWithoutBindingClause
-  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`."}
-  (make-key-exists-without-binding-clause key matcher)
-  key-exists-without-binding-clause?
-  [key key-exists-without-binding-clause-key
-   matcher key-exists-without-binding-clause-matcher])
+(defn key-exists-without-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [key]
+  (make-key-exists-without-binding-clause key the-existence-matcher))
 
 (defn key-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key bind]
   (make-key-exists-with-binding-clause key the-existence-matcher bind))
 
-(defn key-exists-without-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
-  [key]
-  (make-key-exists-without-binding-clause key the-existence-matcher))
+;; 2.
+(define-record-type
+  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
+  PathExistsWithoutBindingClause
+  (make-path-exists-without-binding-clause path matcher)
+  path-exists-without-binding-clause?
+  [path path-exists-without-binding-clause-path
+   matcher path-exists-without-binding-clause-matcher])
 
-;; 4.
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
   PathExistsWithBindingClause
@@ -207,14 +158,6 @@
   [path path-exists-with-binding-clause-path
    matcher path-exists-with-binding-clause-matcher
    binding path-exists-with-binding-clause-binding])
-
-(define-record-type
-  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
-  PathExistsWithoutBindingClause
-  (make-path-exists-without-binding-clause path matcher)
-  path-exists-without-binding-clause?
-  [path path-exists-without-binding-clause-path
-   matcher path-exists-without-binding-clause-matcher])
 
 (defn path-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
@@ -225,6 +168,67 @@
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path]
   (make-path-exists-without-binding-clause path the-existence-matcher))
+
+;; 3.
+(define-record-type
+  ^{:doc "A clause that matches the value of `key` of a map using `matcher`."}
+  KeyMatchesWithoutBindingClause
+  (make-key-matches-without-binding-clause key matcher)
+  key-matches-without-binding-clause?
+  [key key-matches-without-binding-clause-key
+   matcher key-matches-without-binding-clause-matcher])
+
+(define-record-type
+  ^{:doc "A clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
+  KeyMatchesWithBindingClause
+  (make-key-matches-with-binding-clause key matcher binding)
+  key-matches-with-binding-clause?
+  [key key-matches-with-binding-clause-key
+   matcher key-matches-with-binding-clause-matcher
+   binding key-matches-with-binding-clause-binding])
+
+(defn key-matches-without-binding-clause
+  "Returns a clause that matches a `key` with a certain `matcher`."
+  [key matcher]
+  {:pre [(matcher? matcher)]}
+  (make-key-matches-without-binding-clause key matcher))
+
+(defn key-matches-with-binding-clause
+  "Returns a clause that matches a `key` with a certain `matcher`, binding the
+  match to a symbol based on `key`."
+  [key matcher bind]
+  {:pre [(matcher? matcher)]}
+  (make-key-matches-with-binding-clause key matcher bind))
+
+;; 4.
+(define-record-type
+  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`."}
+  PathMatchesWithoutBindingClause
+  (make-path-matches-without-binding-clause path matcher)
+  path-matches-without-binding-clause?
+  [path path-matches-without-binding-clause-path
+   matcher path-matches-without-binding-clause-matcher])
+
+(define-record-type
+  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
+  PathMatchesWithBindingClause
+  (make-path-matches-with-binding-clause path matcher binding)
+  path-matches-with-binding-clause?
+  [path path-matches-with-binding-clause-path
+   matcher path-matches-with-binding-clause-matcher
+   binding path-matches-with-binding-clause-binding])
+
+(def path? "Is something a valid path?" (some-fn list? vector?))
+
+(defn path-matches-without-binding-clause
+  [path matcher]
+  {:pre [(and (path? path) (matcher? matcher))]}
+  (make-path-matches-without-binding-clause path matcher))
+
+(defn path-matches-with-binding-clause
+  [path matcher bind]
+  {:pre [(and (path? path) (matcher? matcher))]}
+  (make-path-matches-with-binding-clause path matcher bind))
 
 ;; 5.
 (define-record-type
@@ -242,45 +246,45 @@
     clause
     (make-optional-clause clause)))
 
-(def clause? (some-fn key-matches-with-binding-clause?
-                      key-matches-without-binding-clause?
-                      path-matches-with-binding-clause?
-                      path-matches-without-binding-clause?
+(def clause? (some-fn key-exists-without-binding-clause?
                       key-exists-with-binding-clause?
-                      key-exists-without-binding-clause?
-                      path-exists-with-binding-clause?
                       path-exists-without-binding-clause?
+                      path-exists-with-binding-clause?
+                      key-matches-without-binding-clause?
+                      key-matches-with-binding-clause?
+                      path-matches-without-binding-clause?
+                      path-matches-with-binding-clause?
                       optional-clause?))
 
 ;; helpers
 (defn clause-lens
-  [key-matches-with-binding-lens
-   key-matches-without-binding-lens
-   path-matches-with-binding-lens
-   path-matches-without-binding-lens
+  [key-exists-without-binding-lens
    key-exists-with-binding-lens
-   key-exists-without-binding-lens
    path-exists-with-binding-lens
-   path-exists-without-binding-lens]
+   path-exists-without-binding-lens
+   key-matches-without-binding-lens
+   key-matches-with-binding-lens
+   path-matches-without-binding-lens
+   path-matches-with-binding-lens]
   (fn [clause]
     (cond
-      (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
-      (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
-      (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
-      (path-matches-without-binding-clause? clause) path-matches-without-binding-lens
-      (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
       (key-exists-without-binding-clause? clause) key-exists-without-binding-lens
-      (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
+      (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
       (path-exists-without-binding-clause? clause)  path-exists-with-binding-lens
+      (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
+      (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
+      (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
+      (path-matches-without-binding-clause? clause) path-matches-without-binding-lens
+      (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
       (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
-                                                                  key-matches-with-binding-lens
-                                                                  key-matches-without-binding-lens
-                                                                  path-matches-with-binding-lens
-                                                                  path-matches-without-binding-lens
-                                                                  key-exists-with-binding-lens
                                                                   key-exists-without-binding-lens
+                                                                  key-exists-with-binding-lens
+                                                                  path-exists-without-binding-lens
                                                                   path-exists-with-binding-lens
-                                                                  path-exists-without-binding-lens)
+                                                                  key-matches-without-binding-lens
+                                                                  key-matches-with-binding-lens
+                                                                  path-matches-without-binding-lens
+                                                                  path-matches-with-binding-lens)
                                                                  (optional-clause-clause clause)))
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
@@ -288,26 +292,26 @@
 (def matcher-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
   the matcher of the clause."
-  (clause-lens key-matches-with-binding-clause-matcher
-               key-matches-without-binding-clause-matcher
-               path-matches-with-binding-clause-matcher
-               path-matches-without-binding-clause-matcher
+  (clause-lens key-exists-without-binding-clause-matcher
                key-exists-with-binding-clause-matcher
-               key-exists-without-binding-clause-matcher
+               path-exists-without-binding-clause-matcher
                path-exists-with-binding-clause-matcher
-               path-exists-without-binding-clause-matcher))
+               key-matches-without-binding-clause-matcher
+               key-matches-with-binding-clause-matcher
+               path-matches-without-binding-clause-matcher
+               path-matches-with-binding-clause-matcher))
 
 (def path-lens
   "Returns a function that when applied to a clause, returns a lens focusing on
   the path of the clause."
-  (clause-lens key-matches-with-binding-clause-key
-               key-matches-without-binding-clause-key
-               path-matches-with-binding-clause-path
-               path-matches-without-binding-clause-path
+  (clause-lens key-exists-without-binding-clause-key
                key-exists-with-binding-clause-key
-               key-exists-without-binding-clause-key
+               path-exists-without-binding-clause-path
                path-exists-with-binding-clause-path
-               path-exists-without-binding-clause-path))
+               key-matches-without-binding-clause-key
+               key-matches-with-binding-clause-key
+               path-matches-without-binding-clause-path
+               path-matches-with-binding-clause-path))
 
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
@@ -701,31 +705,23 @@
 (defn clause->lhs
   [message clause]
   (cond
+    (key-exists-without-binding-clause? clause)
+    (let [key     (key-exists-without-binding-clause-key clause)]
+      `{~key ~'_})
+
     (key-exists-with-binding-clause? clause)
     (let [key     (key-exists-with-binding-clause-key clause)
           binding (key-exists-with-binding-clause-binding clause)]
       {(convert-path-element key) (symbol binding)})
 
-    (key-exists-without-binding-clause? clause)
-    (let [key     (key-exists-without-binding-clause-key clause)]
-      `{~key ~'_})
+    (path-exists-without-binding-clause? clause)
+    (let [path    (path-exists-without-binding-clause-path clause)]
+      (assoc-in {} (map convert-path-element path) '_))
 
     (path-exists-with-binding-clause? clause)
     (let [path    (path-exists-with-binding-clause-path clause)
           binding (path-exists-with-binding-clause-binding clause)]
       (assoc-in {} (map convert-path-element path) (symbol binding)))
-
-    (path-exists-without-binding-clause? clause)
-    (let [path    (path-exists-without-binding-clause-path clause)]
-      (assoc-in {} (map convert-path-element path) '_))
-
-    (key-matches-with-binding-clause? clause)
-    (let [key         (key-matches-with-binding-clause-key clause)
-          matcher     (key-matches-with-binding-clause-matcher clause)
-          match-value (matcher->value matcher)]
-      (if (predicate-matcher? matcher)
-        `({~key ~'_} :guard ~(match-value message [key]))
-        `{~key ~(match-value message [key])}))
 
     (key-matches-without-binding-clause? clause)
     (let [key         (key-matches-without-binding-clause-key clause)
@@ -735,17 +731,25 @@
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
-    (path-matches-with-binding-clause? clause)
-    (let [path        (path-matches-with-binding-clause-path clause)
-          matcher     (path-matches-with-binding-clause-matcher clause)
+    (key-matches-with-binding-clause? clause)
+    (let [key         (key-matches-with-binding-clause-key clause)
+          matcher     (key-matches-with-binding-clause-matcher clause)
+          match-value (matcher->value matcher)]
+      (if (predicate-matcher? matcher)
+        `({~key ~'_} :guard ~(match-value message [key]))
+        `{~key ~(match-value message [key])}))
+
+    (path-matches-without-binding-clause? clause)
+    (let [path        (path-matches-without-binding-clause-path clause)
+          matcher     (path-matches-without-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `(~(fold-path path '_) :guard ~(match-value message path))
         (fold-path path (match-value message path))))
 
-    (path-matches-without-binding-clause? clause)
-    (let [path        (path-matches-without-binding-clause-path clause)
-          matcher     (path-matches-without-binding-clause-matcher clause)
+    (path-matches-with-binding-clause? clause)
+    (let [path        (path-matches-with-binding-clause-path clause)
+          matcher     (path-matches-with-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `(~(fold-path path '_) :guard ~(match-value message path))
@@ -791,29 +795,29 @@
 (defn clause->rhs
   [message bindings clause]
   (cond
+    (key-exists-without-binding-clause? clause)
+    (conj bindings `[])
+
     (key-exists-with-binding-clause? clause)
     (conj bindings (key-exists-with-binding-clause->rhs-match message clause))
 
-    (key-exists-without-binding-clause? clause)
+    (path-exists-without-binding-clause? clause)
     (conj bindings `[])
 
     (path-exists-with-binding-clause? clause)
     (conj bindings (path-exists-with-binding-clause->rhs-match message clause))
 
-    (path-exists-without-binding-clause? clause)
+    (key-matches-without-binding-clause? clause)
     (conj bindings `[])
 
     (key-matches-with-binding-clause? clause)
     (conj bindings (key-matches-with-binding-clause->rhs-match message clause))
 
-    (key-matches-without-binding-clause? clause)
+    (path-matches-without-binding-clause? clause)
     (conj bindings `[])
 
     (path-matches-with-binding-clause? clause)
     (conj bindings (path-matches-with-binding-clause->rhs-match message clause))
-
-    (path-matches-without-binding-clause? clause)
-    (conj bindings `[])
 
     (optional-clause? clause)
     (clause->rhs message bindings (optional-clause-clause clause))))

@@ -113,7 +113,7 @@
 ;;    - optional:  without binding - with binding
 ;; 3. Match a key in a map to some specific value.
 ;;    - without binding - with binding
-;;    - optional:  without binding
+;;    - optional:  without binding - with binding
 ;; 4. Match the value at a path in a map to a specific value.
 ;;    - without binding - with binding
 ;; 5. An optional clause that contains a regular clause and makes the match optional.
@@ -250,6 +250,15 @@
   [key optional-key-matches-without-binding-clause-key
    matcher optional-key-matches-without-binding-clause-matcher])
 
+(define-record-type
+  ^{:doc "A optional clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
+  OptionalKeyMatchesWithBindingClause
+  (make-optional-key-matches-with-binding-clause key matcher binding)
+  optional-key-matches-with-binding-clause?
+  [key optional-key-matches-with-binding-clause-key
+   matcher optional-key-matches-with-binding-clause-matcher
+   binding optional-key-matches-with-binding-clause-binding])
+
 (defn key-matches-without-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`."
   [key matcher]
@@ -268,6 +277,13 @@
   [key matcher]
   {:pre [(matcher? matcher)]}
   (make-optional-key-matches-without-binding-clause key matcher))
+
+(defn optional-key-matches-with-binding-clause
+  "Returns an optional clause that matches a `key` with a certain `matcher`, binding the
+  match to a symbol based on `key`."
+  [key matcher bind]
+  {:pre [(matcher? matcher)]}
+  (make-optional-key-matches-with-binding-clause key matcher bind))
 
 ;; 4.
 (define-record-type
@@ -326,6 +342,7 @@
                       key-matches-without-binding-clause?
                       key-matches-with-binding-clause?
                       optional-key-matches-without-binding-clause?
+                      optional-key-matches-with-binding-clause?
                       path-matches-without-binding-clause?
                       path-matches-with-binding-clause?
                       optional-clause?))
@@ -343,6 +360,7 @@
    key-matches-without-binding-lens
    key-matches-with-binding-lens
    optional-key-matches-without-binding-lens
+   optional-key-matches-with-binding-lens
    path-matches-without-binding-lens
    path-matches-with-binding-lens]
   (fn [clause]
@@ -358,6 +376,7 @@
       (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
       (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
       (optional-key-matches-without-binding-clause? clause)  optional-key-matches-without-binding-lens
+      (optional-key-matches-with-binding-clause? clause)  optional-key-matches-with-binding-lens
       (path-matches-without-binding-clause? clause) path-matches-without-binding-lens
       (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
       (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
@@ -372,6 +391,7 @@
                                                                   key-matches-without-binding-lens
                                                                   key-matches-with-binding-lens
                                                                   optional-key-matches-without-binding-lens
+                                                                  optional-key-matches-with-binding-lens
                                                                   path-matches-without-binding-lens
                                                                   path-matches-with-binding-lens)
                                                                  (optional-clause-clause clause)))
@@ -392,6 +412,7 @@
                key-matches-without-binding-clause-matcher
                key-matches-with-binding-clause-matcher
                optional-key-matches-without-binding-clause-matcher
+               optional-key-matches-with-binding-clause-matcher
                path-matches-without-binding-clause-matcher
                path-matches-with-binding-clause-matcher))
 
@@ -409,6 +430,7 @@
                key-matches-without-binding-clause-key
                key-matches-with-binding-clause-key
                optional-key-matches-without-binding-clause-key
+               optional-key-matches-with-binding-clause-key
                path-matches-without-binding-clause-path
                path-matches-with-binding-clause-path))
 
@@ -573,7 +595,7 @@
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
             (if (optional? mode)
-              `(make-optional-clause (key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b))
+              `(optional-key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)
               `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
           :path-matches-without-binding
@@ -781,6 +803,13 @@
         binding     (key-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
+(defn optional-key-matches-with-binding-clause->rhs-match
+  [message clause]
+  (let [key         (optional-key-matches-with-binding-clause-key clause)
+        match-value (matcher-default-value (optional-key-matches-with-binding-clause-matcher clause))
+        binding     (optional-key-matches-with-binding-clause-binding clause)]
+    `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
+
 (defn path-matches-with-binding-clause->rhs-match
   [message clause]
   (let [path        (path-matches-with-binding-clause-path clause)
@@ -876,6 +905,14 @@
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
+    (optional-key-matches-with-binding-clause? clause)
+    (let [key         (optional-key-matches-with-binding-clause-key clause)
+          matcher     (optional-key-matches-with-binding-clause-matcher clause)
+          match-value (matcher->value matcher)]
+      (if (predicate-matcher? matcher)
+        `({~key ~'_} :guard ~(match-value message [key]))
+        `{~key ~(match-value message [key])}))
+
     (path-matches-without-binding-clause? clause)
     (let [path        (path-matches-without-binding-clause-path clause)
           matcher     (path-matches-without-binding-clause-matcher clause)
@@ -964,6 +1001,9 @@
 
     (optional-key-matches-without-binding-clause? clause)
     (conj bindings `[])
+
+    (optional-key-matches-with-binding-clause? clause)
+    (conj bindings (optional-key-matches-with-binding-clause->rhs-match message clause))
 
     (path-matches-without-binding-clause? clause)
     (conj bindings `[])

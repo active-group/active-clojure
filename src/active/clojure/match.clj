@@ -131,6 +131,13 @@
    matcher key-exists-with-binding-clause-matcher
    binding key-exists-with-binding-clause-binding])
 
+(define-record-type OptionalKeyExistsWithoutBindingClause
+  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`."}
+  (make-optional-key-exists-without-binding-clause key matcher)
+  optional-key-exists-without-binding-clause?
+  [key optional-key-exists-without-binding-clause-key
+   matcher optional-key-exists-without-binding-clause-matcher])
+
 (defn key-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key]
@@ -140,6 +147,11 @@
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key bind]
   (make-key-exists-with-binding-clause key the-existence-matcher bind))
+
+(defn optional-key-exists-without-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [key]
+  (make-optional-key-exists-without-binding-clause key the-existence-matcher))
 
 ;; 2.
 (define-record-type
@@ -248,6 +260,7 @@
 
 (def clause? (some-fn key-exists-without-binding-clause?
                       key-exists-with-binding-clause?
+                      optional-key-exists-without-binding-clause?
                       path-exists-without-binding-clause?
                       path-exists-with-binding-clause?
                       key-matches-without-binding-clause?
@@ -260,6 +273,7 @@
 (defn clause-lens
   [key-exists-without-binding-lens
    key-exists-with-binding-lens
+   optional-key-exists-without-binding-lens
    path-exists-with-binding-lens
    path-exists-without-binding-lens
    key-matches-without-binding-lens
@@ -270,6 +284,7 @@
     (cond
       (key-exists-without-binding-clause? clause) key-exists-without-binding-lens
       (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
+      (optional-key-exists-without-binding-clause? clause) optional-key-exists-without-binding-lens
       (path-exists-without-binding-clause? clause)  path-exists-with-binding-lens
       (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
       (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
@@ -279,6 +294,7 @@
       (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
                                                                   key-exists-without-binding-lens
                                                                   key-exists-with-binding-lens
+                                                                  optional-key-exists-without-binding-lens
                                                                   path-exists-without-binding-lens
                                                                   path-exists-with-binding-lens
                                                                   key-matches-without-binding-lens
@@ -294,6 +310,7 @@
   the matcher of the clause."
   (clause-lens key-exists-without-binding-clause-matcher
                key-exists-with-binding-clause-matcher
+               optional-key-exists-without-binding-clause-matcher
                path-exists-without-binding-clause-matcher
                path-exists-with-binding-clause-matcher
                key-matches-without-binding-clause-matcher
@@ -306,6 +323,7 @@
   the path of the clause."
   (clause-lens key-exists-without-binding-clause-key
                key-exists-with-binding-clause-key
+               optional-key-exists-without-binding-clause-key
                path-exists-without-binding-clause-path
                path-exists-with-binding-clause-path
                key-matches-without-binding-clause-key
@@ -437,7 +455,7 @@
           :key-exists-without-binding
           (if (optional? mode)
             (let [k (make-key (:key body))]
-              `(make-optional-clause (key-exists-without-binding-clause ~k)))
+              `(optional-key-exists-without-binding-clause ~k))
             (let [[mode body] body
                   k (make-key (if (flat? mode) body (:key body)))]
               `(key-exists-without-binding-clause ~k)))
@@ -714,6 +732,10 @@
           binding (key-exists-with-binding-clause-binding clause)]
       {(convert-path-element key) (symbol binding)})
 
+    (optional-key-exists-without-binding-clause? clause)
+    (let [key     (optional-key-exists-without-binding-clause-key clause)]
+      `{~key ~'_})
+
     (path-exists-without-binding-clause? clause)
     (let [path    (path-exists-without-binding-clause-path clause)]
       (assoc-in {} (map convert-path-element path) '_))
@@ -800,6 +822,9 @@
 
     (key-exists-with-binding-clause? clause)
     (conj bindings (key-exists-with-binding-clause->rhs-match message clause))
+
+    (optional-key-exists-without-binding-clause? clause)
+    (conj bindings `[])
 
     (path-exists-without-binding-clause? clause)
     (conj bindings `[])

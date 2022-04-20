@@ -117,7 +117,6 @@
 ;; 4. Match the value at a path in a map to a specific value.
 ;;    - without binding - with binding
 ;;    - optional:  without binding - with binding
-;; 5. An optional clause that contains a regular clause and makes the match optional.
 
 ;; 1.
 (define-record-type KeyExistsWithoutBindingClause
@@ -343,22 +342,6 @@
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-optional-path-matches-with-binding-clause path matcher bind))
 
-;; 5.
-(define-record-type
-  ^{:doc "Represents an optional clause. Contains the original clause."}
-  OptionalClause
-  (make-optional-clause clause)
-  optional-clause?
-  [clause optional-clause-clause])
-
-(defn optional
-  "Takes a `clause` and returns it as an optional clause. If it already was an
-  optional clause, this is the identity function."
-  [clause]
-  (if (optional-clause? clause)
-    clause
-    (make-optional-clause clause)))
-
 (def clause? (some-fn key-exists-without-binding-clause?
                       key-exists-with-binding-clause?
                       optional-key-exists-without-binding-clause?
@@ -374,8 +357,7 @@
                       path-matches-without-binding-clause?
                       path-matches-with-binding-clause?
                       optional-path-matches-without-binding-clause?
-                      optional-path-matches-with-binding-clause?
-                      optional-clause?))
+                      optional-path-matches-with-binding-clause?))
 
 ;; helpers
 (defn clause-lens
@@ -413,24 +395,6 @@
       (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
       (optional-path-matches-without-binding-clause? clause) optional-path-matches-without-binding-lens
       (optional-path-matches-with-binding-clause? clause) optional-path-matches-with-binding-lens
-      (optional-clause? clause) (lens/>> optional-clause-clause ((clause-lens
-                                                                  key-exists-without-binding-lens
-                                                                  key-exists-with-binding-lens
-                                                                  optional-key-exists-without-binding-lens
-                                                                  optional-key-exists-with-binding-lens
-                                                                  path-exists-without-binding-lens
-                                                                  path-exists-with-binding-lens
-                                                                  optional-path-exists-without-binding-lens
-                                                                  optional-path-exists-with-binding-lens
-                                                                  key-matches-without-binding-lens
-                                                                  key-matches-with-binding-lens
-                                                                  optional-key-matches-without-binding-lens
-                                                                  optional-key-matches-with-binding-lens
-                                                                  path-matches-without-binding-lens
-                                                                  path-matches-with-binding-lens
-                                                                  optional-path-matches-without-binding-lens
-                                                                  optional-path-matches-with-binding-lens)
-                                                                 (optional-clause-clause clause)))
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
 
@@ -990,10 +954,7 @@
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
         `(~(fold-path path '_) :guard ~(match-value message path))
-        (fold-path path (match-value message path))))
-
-    (optional-clause? clause)
-    {}))
+        (fold-path path (match-value message path))))))
 
 
 (defn reduce-lhs
@@ -1078,10 +1039,7 @@
     (conj bindings `[])
 
     (optional-path-matches-with-binding-clause? clause)
-    (conj bindings (optional-path-matches-with-binding-clause->rhs-match message clause))
-
-    (optional-clause? clause)
-    (clause->rhs message bindings (optional-clause-clause clause))))
+    (conj bindings (optional-path-matches-with-binding-clause->rhs-match message clause))))
 
 (defn pattern->rhs
   [message pattern rhs]

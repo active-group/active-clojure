@@ -1010,15 +1010,16 @@
              (:y \"y\")
              (:z :as z)
              :w]
-            (println x y z w)
+            (println x z)
             [(:a \"a\" :as a)
              (:b \"b\")
              (:c :as c)
+             ([:d] :as d)
              ([:d Z] 42 :as Z)
              ([:d Y] :as Y)
              ([:d X] 65)
              [:d W foo]]
-            (println a b c Z Y X foo)
+            (println a c d Z Y)
             :else false))
 
         (example-map-matcher {:a \"a\" :b \"b\" :c \"c\"
@@ -1026,8 +1027,7 @@
                                   \"W\" {\"foo\" \"bar\"}}})
 
     prints
-
-     \"a b c d 42 23 65 bar\""
+     \"a c {\"Z\" 42 \"Y\" 23 \"X\" 65 \"W\" {\"foo\" \"bar\"}}  42 23\""
   [& args]
   (when-not (even? (count args))
     (throw (IllegalArgumentException. (str "expecting an even number of arguments " *ns* " " (meta &form)))))

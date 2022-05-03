@@ -360,45 +360,6 @@
                       optional-path-matches-without-binding-clause?
                       optional-path-matches-with-binding-clause?))
 
-;; helpers
-(defn clause-lens
-  [key-exists-without-binding-lens
-   key-exists-with-binding-lens
-   optional-key-exists-without-binding-lens
-   optional-key-exists-with-binding-lens
-   path-exists-without-binding-lens
-   path-exists-with-binding-lens
-   optional-path-exists-without-binding-lens
-   optional-path-exists-with-binding-lens
-   key-matches-without-binding-lens
-   key-matches-with-binding-lens
-   optional-key-matches-without-binding-lens
-   optional-key-matches-with-binding-lens
-   path-matches-without-binding-lens
-   path-matches-with-binding-lens
-   optional-path-matches-without-binding-lens
-   optional-path-matches-with-binding-lens]
-  (fn [clause]
-    (cond
-      (key-exists-without-binding-clause? clause) key-exists-without-binding-lens
-      (key-exists-with-binding-clause? clause)   key-exists-with-binding-lens
-      (optional-key-exists-without-binding-clause? clause) optional-key-exists-without-binding-lens
-      (optional-key-exists-with-binding-clause? clause)   optional-key-exists-with-binding-lens
-      (path-exists-without-binding-clause? clause)  path-exists-without-binding-lens
-      (path-exists-with-binding-clause? clause)  path-exists-with-binding-lens
-      (optional-path-exists-without-binding-clause? clause)  optional-path-exists-without-binding-lens
-      (optional-path-exists-with-binding-clause? clause)  optional-path-exists-with-binding-lens
-      (key-matches-without-binding-clause? clause)  key-matches-without-binding-lens
-      (key-matches-with-binding-clause? clause)  key-matches-with-binding-lens
-      (optional-key-matches-without-binding-clause? clause)  optional-key-matches-without-binding-lens
-      (optional-key-matches-with-binding-clause? clause)  optional-key-matches-with-binding-lens
-      (path-matches-without-binding-clause? clause) path-matches-without-binding-lens
-      (path-matches-with-binding-clause? clause) path-matches-with-binding-lens
-      (optional-path-matches-without-binding-clause? clause) optional-path-matches-without-binding-lens
-      (optional-path-matches-with-binding-clause? clause) optional-path-matches-with-binding-lens
-      :else
-      (c/assertion-violation `clause-lens "not a valid clause" clause))))
-
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
 

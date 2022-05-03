@@ -399,46 +399,6 @@
       :else
       (c/assertion-violation `clause-lens "not a valid clause" clause))))
 
-(def matcher-lens
-  "Returns a function that when applied to a clause, returns a lens focusing on
-  the matcher of the clause."
-  (clause-lens key-exists-without-binding-clause-matcher
-               key-exists-with-binding-clause-matcher
-               optional-key-exists-without-binding-clause-matcher
-               optional-key-exists-with-binding-clause-matcher
-               path-exists-without-binding-clause-matcher
-               path-exists-with-binding-clause-matcher
-               optional-path-exists-without-binding-clause-matcher
-               optional-path-exists-with-binding-clause-matcher
-               key-matches-without-binding-clause-matcher
-               key-matches-with-binding-clause-matcher
-               optional-key-matches-without-binding-clause-matcher
-               optional-key-matches-with-binding-clause-matcher
-               path-matches-without-binding-clause-matcher
-               path-matches-with-binding-clause-matcher
-               optional-path-matches-without-binding-clause-matcher
-               optional-path-matches-with-binding-clause-matcher))
-
-(def path-lens
-  "Returns a function that when applied to a clause, returns a lens focusing on
-  the path of the clause."
-  (clause-lens key-exists-without-binding-clause-key
-               key-exists-with-binding-clause-key
-               optional-key-exists-without-binding-clause-key
-               optional-key-exists-with-binding-clause-key
-               path-exists-without-binding-clause-path
-               path-exists-with-binding-clause-path
-               optional-path-exists-without-binding-clause-path
-               optional-path-exists-with-binding-clause-path
-               key-matches-without-binding-clause-key
-               key-matches-with-binding-clause-key
-               optional-key-matches-without-binding-clause-key
-               optional-key-matches-with-binding-clause-key
-               path-matches-without-binding-clause-path
-               path-matches-with-binding-clause-path
-               optional-path-matches-without-binding-clause-path
-               optional-path-matches-with-binding-clause-path))
-
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
 

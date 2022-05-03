@@ -7,31 +7,31 @@
 (t/deftest parse-clause-test
   (t/testing "key exists without binding clause"
     (t/testing "flat"
-      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause :k)
                (p/parse-clause :k)))
-      (t/is (= (p/make-key-exists-without-binding-clause "k" p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause "k")
                (p/parse-clause k))))
     (t/testing "list"
-      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause :k)
                (p/parse-clause (:k))))
       ;; FIXME: is this also a list - it is not a path?
-      (t/is (= (p/make-key-exists-without-binding-clause :k p/the-existence-matcher)
+      (t/is (= (p/make-key-exists-without-binding-clause :k)
                (p/parse-clause [:k])))))
 
   (t/testing "key exists with binding clause"
-    (t/is (= (p/make-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
+    (t/is (= (p/make-key-exists-with-binding-clause :k "Binding")
              (p/parse-clause (:k :as Binding)))))
 
   (t/testing "path exists without binding clause"
     (t/testing "flat"
-      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
+      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"])
                (p/parse-clause [:k V]))))
     (t/testing "list"
-      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"] p/the-existence-matcher)
+      (t/is (= (p/make-path-exists-without-binding-clause [:k "V"])
                (p/parse-clause ([:k V]))))))
 
   (t/testing "path exists with binding clause"
-    (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] p/the-existence-matcher "Binding")
+    (t/is (= (p/make-path-exists-with-binding-clause [:k "V"] "Binding")
              (p/parse-clause ([:k V] :as Binding)))))
 
   (t/testing "key matches without binding clause"
@@ -75,12 +75,12 @@
 
     (t/is (= (p/make-optional-key-exists-without-binding-clause :k)
              (p/parse-clause (? :k))))
-    (t/is (= (p/make-optional-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
+    (t/is (= (p/make-optional-key-exists-with-binding-clause :k "Binding")
              (p/parse-clause (? :k :as Binding))))
 
-    (t/is (= (p/make-optional-path-exists-without-binding-clause [:k "bar" "baz"] p/the-existence-matcher)
+    (t/is (= (p/make-optional-path-exists-without-binding-clause [:k "bar" "baz"])
              (p/parse-clause (? [:k bar baz]))))
-    (t/is (= (p/make-optional-path-exists-with-binding-clause [:k "bar" "baz"] p/the-existence-matcher "Binding")
+    (t/is (= (p/make-optional-path-exists-with-binding-clause [:k "bar" "baz"] "Binding")
              (p/parse-clause (? [:k bar baz] :as Binding))))
 
     (t/is (= (p/make-optional-key-with-default-binding-clause :k "foo" "Binding")

@@ -63,9 +63,6 @@
   existence-matcher?
   [])
 
-(def the-existence-matcher "Singleton matcher. Match the existence of a value."
-  (make-existence-matcher))
-
 (define-record-type
   ^{:doc "A matcher that matches on one of several options."}
   OptionsMatcher
@@ -121,17 +118,15 @@
 ;; 1.
 (define-record-type KeyExistsWithoutBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`."}
-  (make-key-exists-without-binding-clause key matcher)
+  (make-key-exists-without-binding-clause key)
   key-exists-without-binding-clause?
-  [key key-exists-without-binding-clause-key
-   matcher key-exists-without-binding-clause-matcher])
+  [key key-exists-without-binding-clause-key])
 
 (define-record-type KeyExistsWithBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
-  (make-key-exists-with-binding-clause key matcher binding)
+  (make-key-exists-with-binding-clause key binding)
   key-exists-with-binding-clause?
   [key key-exists-with-binding-clause-key
-   matcher key-exists-with-binding-clause-matcher
    binding key-exists-with-binding-clause-binding])
 
 (define-record-type OptionalKeyExistsWithoutBindingClause
@@ -142,21 +137,20 @@
 
 (define-record-type OptionalKeyExistsWithBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
-  (make-optional-key-exists-with-binding-clause key matcher binding)
+  (make-optional-key-exists-with-binding-clause key binding)
   optional-key-exists-with-binding-clause?
   [key optional-key-exists-with-binding-clause-key
-   matcher optional-key-exists-with-binding-clause-matcher
    binding optional-key-exists-with-binding-clause-binding])
 
 (defn key-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key]
-  (make-key-exists-without-binding-clause key the-existence-matcher))
+  (make-key-exists-without-binding-clause key))
 
 (defn key-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [key bind]
-  (make-key-exists-with-binding-clause key the-existence-matcher bind))
+  (make-key-exists-with-binding-clause key bind))
 
 (defn optional-key-exists-without-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
@@ -166,62 +160,58 @@
 (defn optional-key-exists-with-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [key bind]
-  (make-optional-key-exists-with-binding-clause key the-existence-matcher bind))
+  (make-optional-key-exists-with-binding-clause key bind))
 
 ;; 2.
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
   PathExistsWithoutBindingClause
-  (make-path-exists-without-binding-clause path matcher)
+  (make-path-exists-without-binding-clause path)
   path-exists-without-binding-clause?
-  [path path-exists-without-binding-clause-path
-   matcher path-exists-without-binding-clause-matcher])
+  [path path-exists-without-binding-clause-path])
 
 (define-record-type
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
   PathExistsWithBindingClause
-  (make-path-exists-with-binding-clause path matcher binding)
+  (make-path-exists-with-binding-clause path binding)
   path-exists-with-binding-clause?
   [path path-exists-with-binding-clause-path
-   matcher path-exists-with-binding-clause-matcher
    binding path-exists-with-binding-clause-binding])
 
 (define-record-type
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`."}
   OptionalPathExistsWithoutBindingClause
-  (make-optional-path-exists-without-binding-clause path matcher)
+  (make-optional-path-exists-without-binding-clause path)
   optional-path-exists-without-binding-clause?
-  [path optional-path-exists-without-binding-clause-path
-   matcher optional-path-exists-without-binding-clause-matcher])
+  [path optional-path-exists-without-binding-clause-path])
 
 (define-record-type
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
   OptionalPathExistsWithBindingClause
-  (make-optional-path-exists-with-binding-clause path matcher binding)
+  (make-optional-path-exists-with-binding-clause path binding)
   optional-path-exists-with-binding-clause?
   [path optional-path-exists-with-binding-clause-path
-   matcher optional-path-exists-with-binding-clause-matcher
    binding optional-path-exists-with-binding-clause-binding])
 
 (defn path-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path]
-  (make-path-exists-without-binding-clause path the-existence-matcher))
+  (make-path-exists-without-binding-clause path))
 
 (defn path-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path bind]
-  (make-path-exists-with-binding-clause path the-existence-matcher bind))
+  (make-path-exists-with-binding-clause path bind))
 
 (defn optional-path-exists-without-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [path]
-  (make-optional-path-exists-without-binding-clause path the-existence-matcher))
+  (make-optional-path-exists-without-binding-clause path))
 
 (defn optional-path-exists-with-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [path bind]
-  (make-optional-path-exists-with-binding-clause path the-existence-matcher bind))
+  (make-optional-path-exists-with-binding-clause path bind))
 
 ;; 3.
 (define-record-type
@@ -1072,4 +1062,3 @@
 (defmacro match
   [event & args]
   `((matcher ~@args) ~event))
-

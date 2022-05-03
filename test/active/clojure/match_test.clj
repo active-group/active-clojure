@@ -73,7 +73,7 @@
 
   (t/testing "optional clauses"
 
-    (t/is (= (p/make-optional-key-exists-without-binding-clause :k p/the-existence-matcher)
+    (t/is (= (p/make-optional-key-exists-without-binding-clause :k)
              (p/parse-clause (? :k))))
     (t/is (= (p/make-optional-key-exists-with-binding-clause :k p/the-existence-matcher "Binding")
              (p/parse-clause (? :k :as Binding))))
@@ -83,14 +83,10 @@
     (t/is (= (p/make-optional-path-exists-with-binding-clause [:k "bar" "baz"] p/the-existence-matcher "Binding")
              (p/parse-clause (? [:k bar baz] :as Binding))))
 
-    (t/is (= (p/make-optional-key-matches-without-binding-clause :k (p/make-constant-matcher "foo"))
-             (p/parse-clause (? :k "foo"))))
-    (t/is (= (p/make-optional-key-with-default-binding-clause :k (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-optional-key-with-default-binding-clause :k "foo" "Binding")
              (p/parse-clause (? :k "foo" :as Binding))))
 
-    (t/is (= (p/make-optional-path-matches-without-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo"))
-             (p/parse-clause (? [:k bar baz] "foo"))))
-    (t/is (= (p/make-optional-path-with-default-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-optional-path-with-default-binding-clause [:k "bar" "baz"] "foo" "Binding")
              (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with local binding as match value"
@@ -263,7 +259,7 @@
                               (? :c "C" :as c)
                               (? :C "C" :as C)
                               (? [:d Z] :as Z)
-                              (? [:d Y] "y")
+                              (? [:d Y])
                               (? [:d U])]
                              [a c C Z])
               two-data))))
@@ -275,7 +271,7 @@
                               (? :c "C" :as c)
                               (? :C "C" :as C)
                               (? [:d Z] :as Z)
-                              (? [:d Y] "y")
+                              (? [:d Y])
                               (? [:d U])]
                              [a c C Z])
               {:kind "two" :a "a" :b "b"
@@ -292,9 +288,8 @@
     (t/is (= [nil] ((p/map-matcher [(? :a :as a)] [a]) {})))
     (t/is (= ["a"] ((p/map-matcher [(? :a :as a)] [a]) {:a "a"})))
     ;; key match with default value without binding
-    ;; not bound so it doesn't really make sense to give a default value?
-    (t/is (= [] ((p/map-matcher [(? :a "A")] []) {})))
-    (t/is (= [] ((p/map-matcher [(? :a "A")] []) {:a "a"})))
+    (t/is (= [] ((p/map-matcher [(? :a)] []) {})))
+    (t/is (= [] ((p/map-matcher [(? :a)] []) {:a "a"})))
     ;; key match with default value with binding
     (t/is (= ["A"] ((p/map-matcher [(? :a "A" :as a)] [a]) {})))
     (t/is (= ["a"] ((p/map-matcher [(? :a "A" :as a)] [a]) {:a "a"})))
@@ -314,8 +309,7 @@
     (t/is (= [nil] ((p/map-matcher [(? [:a c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
     (t/is (= ["d"] ((p/map-matcher [(? [:a b c] :as a)] [a]) {:a {"b" {"c" "d"}}})))
     ;; path match without binding with default value
-    ;; not bound so it doesn't really make sense to give a default value?
-    (t/is (= [] ((p/map-matcher [(? [:a b c] "C")] []) {:a {"b" {"c" "d"}}})))
+    (t/is (= [] ((p/map-matcher [(? [:a b c])] []) {:a {"b" {"c" "d"}}})))
     ;; path match with binding with default value
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a "b"})))
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {}}})))

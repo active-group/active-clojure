@@ -134,13 +134,11 @@
    matcher key-exists-with-binding-clause-matcher
    binding key-exists-with-binding-clause-binding])
 
-;; FIXME: matcher needed? is this a default value?
 (define-record-type OptionalKeyExistsWithoutBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`."}
-  (make-optional-key-exists-without-binding-clause key matcher)
+  (make-optional-key-exists-without-binding-clause key)
   optional-key-exists-without-binding-clause?
-  [key optional-key-exists-without-binding-clause-key
-   matcher optional-key-exists-without-binding-clause-matcher])
+  [key optional-key-exists-without-binding-clause-key])
 
 (define-record-type OptionalKeyExistsWithBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
@@ -163,7 +161,7 @@
 (defn optional-key-exists-without-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [key]
-  (make-optional-key-exists-without-binding-clause key the-existence-matcher))
+  (make-optional-key-exists-without-binding-clause key))
 
 (defn optional-key-exists-with-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
@@ -244,15 +242,14 @@
    binding key-matches-with-binding-clause-binding])
 
 (define-record-type
-  ^{:doc "An optional clause that matches the value of `key` of a map using `matcher`."}
+  ^{:doc "An optional clause that matches the value of `key`."}
   OptionalKeyMatchesWithoutBindingClause
-  (make-optional-key-matches-without-binding-clause key matcher)
+  (make-optional-key-matches-without-binding-clause key)
   optional-key-matches-without-binding-clause?
-  [key optional-key-matches-without-binding-clause-key
-   matcher optional-key-matches-without-binding-clause-matcher])
+  [key optional-key-matches-without-binding-clause-key])
 
 (define-record-type
-  ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`."}
+  ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`. If `key` does not exist, binds to `default-value`."}
   OptionalKeyWithDefaultBindingClause
   (make-optional-key-with-default-binding-clause key default-value binding)
   optional-key-with-default-binding-clause?
@@ -275,16 +272,14 @@
 
 (defn optional-key-matches-without-binding-clause
   "Returns an optional clause that matches a `key` with a certain `matcher`."
-  [key matcher]
-  {:pre [(matcher? matcher)]}
-  (make-optional-key-matches-without-binding-clause key matcher))
+  [key]
+  (make-optional-key-matches-without-binding-clause key))
 
 (defn optional-key-with-default-binding-clause
-  "Returns an optional clause that matches a `key` with a certain `matcher`, binding the
-  match to a symbol based on `key`."
-  [key matcher bind]
-  {:pre [(matcher? matcher)]}
-  (make-optional-key-with-default-binding-clause key matcher bind))
+  "Returns an optional clause that matches a `key`, binding the
+  match to a symbol based on `key` or the default value."
+  [key default-value bind]
+  (make-optional-key-with-default-binding-clause key default-value bind))
 
 ;; 4.
 (define-record-type
@@ -307,18 +302,17 @@
 (define-record-type
   ^{:doc "An optional clause that matches the value of a map at the `path` using a `matcher`."}
   OptionalPathMatchesWithoutBindingClause
-  (make-optional-path-matches-without-binding-clause path matcher)
+  (make-optional-path-matches-without-binding-clause path)
   optional-path-matches-without-binding-clause?
-  [path optional-path-matches-without-binding-clause-path
-   matcher optional-path-matches-without-binding-clause-matcher])
+  [path optional-path-matches-without-binding-clause-path])
 
 (define-record-type
-  ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`."}
+  ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`. If `path` does not exist, binds to `default-value`."}
   OptionalPathWithDefaultBindingClause
   (make-optional-path-with-default-binding-clause path default-value binding)
   optional-path-with-default-binding-clause?
   [path optional-path-with-default-binding-clause-path
-   default-value optional-path-with-default-binding-clause-matcher
+   default-value optional-path-with-default-binding-clause-default-value
    binding optional-path-with-default-binding-clause-binding])
 
 (def path? "Is something a valid path?" (some-fn list? vector?))
@@ -334,14 +328,14 @@
   (make-path-matches-with-binding-clause path matcher bind))
 
 (defn optional-path-matches-without-binding-clause
-  [path matcher]
-  {:pre [(and (path? path) (matcher? matcher))]}
-  (make-optional-path-matches-without-binding-clause path matcher))
+  [path]
+  {:pre [(path? path)]}
+  (make-optional-path-matches-without-binding-clause path))
 
 (defn optional-path-with-default-binding-clause
-  [path matcher bind]
-  {:pre [(and (path? path) (matcher? matcher))]}
-  (make-optional-path-with-default-binding-clause path matcher bind))
+  [path default-value bind]
+  {:pre [(path? path)]}
+  (make-optional-path-with-default-binding-clause path default-value bind))
 
 (def clause? (some-fn key-exists-without-binding-clause?
                       key-exists-with-binding-clause?
@@ -390,6 +384,8 @@
                            :compare-fn ::compare-fn
                            :any (any-but regex?)))
 
+(s/def ::default-value any?)
+
 (s/def ::binding-key #{:as})
 (s/def ::binding symbol?)
 
@@ -415,19 +411,19 @@
 
 (s/def ::key-matches-without-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value)
-        :optional (s/cat :qmark ::qmark :key ::key :match-value ::match-value)))
+        :optional (s/cat :qmark ::qmark :key ::key)))
 
 (s/def ::key-matches-with-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+        :optional (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-matches-without-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value)
-        :optional (s/cat :qmark ::qmark :path ::path :match-value ::match-value)))
+        :optional (s/cat :qmark ::qmark :path ::path)))
 
 (s/def ::path-matches-with-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+        :optional (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::clause
   (s/or :key-exists-without-binding ::key-exists-without-binding
@@ -514,27 +510,27 @@
           :key-matches-without-binding
           (let [k (make-key (:key body))]
             (if (optional? mode)
-              `(optional-key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))
+              `(optional-key-matches-without-binding-clause ~k)
               `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))))
 
           :key-matches-with-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
             (if (optional? mode)
-              `(optional-key-with-default-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)
+              `(optional-key-with-default-binding-clause ~k ~(:default-value body) ~b)
               `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
           :path-matches-without-binding
           (let [path (mapv make-key (:path body))]
             (if (optional? mode)
-              `(optional-path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body)))
+              `(optional-path-matches-without-binding-clause ~path)
               `(path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body)))))
 
           :path-matches-with-binding
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
             (if (optional? mode)
-              `(optional-path-with-default-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b)
+              `(optional-path-with-default-binding-clause ~path ~(:default-value body) ~b)
               `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
 
 (defmacro parse-clauses
@@ -623,7 +619,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message [~k] ~match-value)]]
+               `[~(symbol b) (get-in ~message [~k] ~(:default-value body))]]
               predicate?
               [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
                `[~(symbol b) (get-in ~message [~k])]]
@@ -658,7 +654,7 @@
             (cond
               (optional? mode)
               [{}
-               `[~(symbol b) (get-in ~message ~path ~match-value)]]
+               `[~(symbol b) (get-in ~message ~path ~(:default-value body))]]
               predicate?
               [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[~(symbol b) (get-in ~message ~path)]]
@@ -746,7 +742,7 @@
 (defn optional-path-with-default-binding-clause->rhs-match
   [message clause]
   (let [path          (optional-path-with-default-binding-clause-path clause)
-        default-value (optional-path-with-default-binding-clause-matcher clause)
+        default-value (optional-path-with-default-binding-clause-default-value clause)
         binding       (optional-path-with-default-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~default-value)]))
 

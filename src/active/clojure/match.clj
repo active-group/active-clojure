@@ -252,13 +252,13 @@
    matcher optional-key-matches-without-binding-clause-matcher])
 
 (define-record-type
-  ^{:doc "A optional clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
-  OptionalKeyMatchesWithBindingClause
-  (make-optional-key-matches-with-binding-clause key matcher binding)
-  optional-key-matches-with-binding-clause?
-  [key optional-key-matches-with-binding-clause-key
-   matcher optional-key-matches-with-binding-clause-matcher
-   binding optional-key-matches-with-binding-clause-binding])
+  ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`."}
+  OptionalKeyWithDefaultBindingClause
+  (make-optional-key-with-default-binding-clause key default-value binding)
+  optional-key-with-default-binding-clause?
+  [key optional-key-with-default-binding-clause-key
+   default-value optional-key-with-default-binding-clause-default-value
+   binding optional-key-with-default-binding-clause])
 
 (defn key-matches-without-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`."
@@ -279,12 +279,12 @@
   {:pre [(matcher? matcher)]}
   (make-optional-key-matches-without-binding-clause key matcher))
 
-(defn optional-key-matches-with-binding-clause
+(defn optional-key-with-default-binding-clause
   "Returns an optional clause that matches a `key` with a certain `matcher`, binding the
   match to a symbol based on `key`."
   [key matcher bind]
   {:pre [(matcher? matcher)]}
-  (make-optional-key-matches-with-binding-clause key matcher bind))
+  (make-optional-key-with-default-binding-clause key matcher bind))
 
 ;; 4.
 (define-record-type
@@ -354,7 +354,7 @@
                       key-matches-without-binding-clause?
                       key-matches-with-binding-clause?
                       optional-key-matches-without-binding-clause?
-                      optional-key-matches-with-binding-clause?
+                      optional-key-with-default-binding-clause?
                       path-matches-without-binding-clause?
                       path-matches-with-binding-clause?
                       optional-path-matches-without-binding-clause?
@@ -521,7 +521,7 @@
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
             (if (optional? mode)
-              `(optional-key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)
+              `(optional-key-with-default-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)
               `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
 
           :path-matches-without-binding
@@ -729,12 +729,12 @@
         binding     (key-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
 
-(defn optional-key-matches-with-binding-clause->rhs-match
+(defn optional-key-with-default-binding-clause->rhs-match
   [message clause]
-  (let [key         (optional-key-matches-with-binding-clause-key clause)
-        match-value (matcher-default-value (optional-key-matches-with-binding-clause-matcher clause))
-        binding     (optional-key-matches-with-binding-clause-binding clause)]
-    `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~match-value)]))
+  (let [key           (optional-key-with-default-binding-clause-key clause)
+        default-value (optional-key-with-default-binding-clause-default-value clause)
+        binding       (optional-key-with-default-binding-clause clause)]
+    `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~default-value)]))
 
 (defn path-matches-with-binding-clause->rhs-match
   [message clause]
@@ -827,7 +827,7 @@
     (optional-key-matches-without-binding-clause? clause)
     {}
 
-    (optional-key-matches-with-binding-clause? clause)
+    (optional-key-with-default-binding-clause? clause)
     {}
 
     (path-matches-without-binding-clause? clause)
@@ -922,8 +922,8 @@
     (optional-key-matches-without-binding-clause? clause)
     (conj bindings `[])
 
-    (optional-key-matches-with-binding-clause? clause)
-    (conj bindings (optional-key-matches-with-binding-clause->rhs-match message clause))
+    (optional-key-with-default-binding-clause? clause)
+    (conj bindings (optional-key-with-default-binding-clause->rhs-match message clause))
 
     (path-matches-without-binding-clause? clause)
     (conj bindings `[])

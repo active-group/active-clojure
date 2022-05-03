@@ -85,7 +85,7 @@
 
     (t/is (= (p/make-optional-key-matches-without-binding-clause :k (p/make-constant-matcher "foo"))
              (p/parse-clause (? :k "foo"))))
-    (t/is (= (p/make-optional-key-matches-with-binding-clause :k (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-optional-key-with-default-binding-clause :k (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause (? :k "foo" :as Binding))))
 
     (t/is (= (p/make-optional-path-matches-without-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo"))

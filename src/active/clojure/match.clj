@@ -313,13 +313,13 @@
    matcher optional-path-matches-without-binding-clause-matcher])
 
 (define-record-type
-  ^{:doc "An optional clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
-  OptionalPathMatchesWithBindingClause
-  (make-optional-path-matches-with-binding-clause path matcher binding)
-  optional-path-matches-with-binding-clause?
-  [path optional-path-matches-with-binding-clause-path
-   matcher optional-path-matches-with-binding-clause-matcher
-   binding optional-path-matches-with-binding-clause-binding])
+  ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`."}
+  OptionalPathWithDefaultBindingClause
+  (make-optional-path-with-default-binding-clause path default-value binding)
+  optional-path-with-default-binding-clause?
+  [path optional-path-with-default-binding-clause-path
+   default-value optional-path-with-default-binding-clause-matcher
+   binding optional-path-with-default-binding-clause-binding])
 
 (def path? "Is something a valid path?" (some-fn list? vector?))
 
@@ -338,10 +338,10 @@
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-optional-path-matches-without-binding-clause path matcher))
 
-(defn optional-path-matches-with-binding-clause
+(defn optional-path-with-default-binding-clause
   [path matcher bind]
   {:pre [(and (path? path) (matcher? matcher))]}
-  (make-optional-path-matches-with-binding-clause path matcher bind))
+  (make-optional-path-with-default-binding-clause path matcher bind))
 
 (def clause? (some-fn key-exists-without-binding-clause?
                       key-exists-with-binding-clause?
@@ -358,7 +358,7 @@
                       path-matches-without-binding-clause?
                       path-matches-with-binding-clause?
                       optional-path-matches-without-binding-clause?
-                      optional-path-matches-with-binding-clause?))
+                      optional-path-with-default-binding-clause?))
 
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
@@ -534,7 +534,7 @@
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
             (if (optional? mode)
-              `(optional-path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b)
+              `(optional-path-with-default-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b)
               `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
 
 (defmacro parse-clauses
@@ -743,12 +743,12 @@
         binding     (path-matches-with-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
 
-(defn optional-path-matches-with-binding-clause->rhs-match
+(defn optional-path-with-default-binding-clause->rhs-match
   [message clause]
-  (let [path        (optional-path-matches-with-binding-clause-path clause)
-        match-value (matcher-default-value (optional-path-matches-with-binding-clause-matcher clause))
-        binding     (optional-path-matches-with-binding-clause-binding clause)]
-    `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~match-value)]))
+  (let [path          (optional-path-with-default-binding-clause-path clause)
+        default-value (optional-path-with-default-binding-clause-matcher clause)
+        binding       (optional-path-with-default-binding-clause-binding clause)]
+    `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~default-value)]))
 
 (defn matcher->value
   "Takes a `matcher` and returns the value/s it matches on.
@@ -849,7 +849,7 @@
     (optional-path-matches-without-binding-clause? clause)
     {}
 
-    (optional-path-matches-with-binding-clause? clause)
+    (optional-path-with-default-binding-clause? clause)
     {}))
 
 
@@ -934,8 +934,8 @@
     (optional-path-matches-without-binding-clause? clause)
     (conj bindings `[])
 
-    (optional-path-matches-with-binding-clause? clause)
-    (conj bindings (optional-path-matches-with-binding-clause->rhs-match message clause))))
+    (optional-path-with-default-binding-clause? clause)
+    (conj bindings (optional-path-with-default-binding-clause->rhs-match message clause))))
 
 (defn pattern->rhs
   [message pattern rhs]

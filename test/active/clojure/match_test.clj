@@ -90,7 +90,7 @@
 
     (t/is (= (p/make-optional-path-matches-without-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo"))
              (p/parse-clause (? [:k bar baz] "foo"))))
-    (t/is (= (p/make-optional-path-matches-with-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
+    (t/is (= (p/make-optional-path-with-default-binding-clause [:k "bar" "baz"] (p/make-constant-matcher "foo") "Binding")
              (p/parse-clause (? [:k bar baz] "foo" :as Binding)))))
 
   (t/testing "with local binding as match value"

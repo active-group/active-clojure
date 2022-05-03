@@ -866,15 +866,11 @@
           binding (key-exists-with-binding-clause-binding clause)]
       {(convert-path-element key) (symbol binding)})
 
-    ;; FIXME: should this be {}
     (optional-key-exists-without-binding-clause? clause)
-    (let [key     (optional-key-exists-without-binding-clause-key clause)]
-      `{~key ~'_})
+    {}
 
     (optional-key-exists-with-binding-clause? clause)
-    (let [key     (key-exists-with-binding-clause-key clause)
-          binding (key-exists-with-binding-clause-binding clause)]
-      {(convert-path-element key) (symbol binding)})
+    {}
 
     (path-exists-without-binding-clause? clause)
     (let [path    (path-exists-without-binding-clause-path clause)]
@@ -886,13 +882,10 @@
       (assoc-in {} (map convert-path-element path) (symbol binding)))
 
     (optional-path-exists-without-binding-clause? clause)
-    (let [path    (optional-path-exists-without-binding-clause-path clause)]
-      (assoc-in {} (map convert-path-element path) '_))
+    {}
 
     (optional-path-exists-with-binding-clause? clause)
-    (let [path    (optional-path-exists-with-binding-clause-path clause)
-          binding (optional-path-exists-with-binding-clause-binding clause)]
-      (assoc-in {} (map convert-path-element path) (symbol binding)))
+    {}
 
     (key-matches-without-binding-clause? clause)
     (let [key         (key-matches-without-binding-clause-key clause)
@@ -911,20 +904,10 @@
         `{~key ~(match-value message [key])}))
 
     (optional-key-matches-without-binding-clause? clause)
-    (let [key         (optional-key-matches-without-binding-clause-key clause)
-          matcher     (optional-key-matches-without-binding-clause-matcher clause)
-          match-value (matcher->value matcher)]
-      (if (predicate-matcher? matcher)
-        `({~key ~'_} :guard ~(match-value message [key]))
-        `{~key ~(match-value message [key])}))
+    {}
 
     (optional-key-matches-with-binding-clause? clause)
-    (let [key         (optional-key-matches-with-binding-clause-key clause)
-          matcher     (optional-key-matches-with-binding-clause-matcher clause)
-          match-value (matcher->value matcher)]
-      (if (predicate-matcher? matcher)
-        `({~key ~'_} :guard ~(match-value message [key]))
-        `{~key ~(match-value message [key])}))
+    {}
 
     (path-matches-without-binding-clause? clause)
     (let [path        (path-matches-without-binding-clause-path clause)
@@ -943,20 +926,10 @@
         (fold-path path (match-value message path))))
 
     (optional-path-matches-without-binding-clause? clause)
-    (let [path        (optional-path-matches-without-binding-clause-path clause)
-          matcher     (optional-path-matches-without-binding-clause-matcher clause)
-          match-value (matcher->value matcher)]
-      (if (predicate-matcher? matcher)
-        `(~(fold-path path '_) :guard ~(match-value message path))
-        (fold-path path (match-value message path))))
+    {}
 
     (optional-path-matches-with-binding-clause? clause)
-    (let [path        (optional-path-matches-with-binding-clause-path clause)
-          matcher     (optional-path-matches-with-binding-clause-matcher clause)
-          match-value (matcher->value matcher)]
-      (if (predicate-matcher? matcher)
-        `(~(fold-path path '_) :guard ~(match-value message path))
-        (fold-path path (match-value message path))))))
+    {}))
 
 
 (defn reduce-lhs

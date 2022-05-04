@@ -14,20 +14,15 @@
   `(and (not= ~ocr ::match/not-found) (re-matches ~(:regex pat) ~ocr)))
 
 (define-record-type Pattern
-  (make-pattern name clauses) pattern?
-  [name pattern-name
-   clauses pattern-clauses])
+  (make-pattern clauses) pattern?
+  [clauses pattern-clauses])
 
 (defn pattern
   "Takes a name and some `clauses` and returns a [[Pattern]]."
   [& clauses]
-  (make-pattern (str (gensym "pattern-")) clauses))
+  (make-pattern clauses))
 
-(defn named-pattern
-  [pattern the-name]
-  (lens/shove pattern pattern-name the-name))
-
-;;    We differentiate between three kinds of matchers:
+;; We differentiate between three kinds of matchers:
 ;; 1. Constant: Match on exactly one value. The value must be equatable.
 ;; 2. Regex: Match on a regex. The value must be a String.
 ;; 3. Existence: Match on the existence. That is, not nil.
@@ -68,7 +63,6 @@
   OptionsMatcher
   (make-options-matcher options)
   options-matcher?
-  ;; TODO Perhaps this should allow for matchers recursively?
   [options options-matcher-options])
 
 (defn match-options
@@ -101,7 +95,9 @@
     (or (options-matcher? matcher) (existence-matcher? matcher) (predicate-matcher? matcher))
     nil))
 
-;;    There are four kinds of clauses
+(def path? "Is something a valid path?" (some-fn list? vector?))
+
+;; There are different kinds of clauses
 ;; 1. Assert the existence of a value in a map for a key.
 ;;    - without binding - with binding
 ;;    - optional:  without binding - with binding
@@ -122,6 +118,11 @@
   key-exists-without-binding-clause?
   [key key-exists-without-binding-clause-key])
 
+(defn key-exists-without-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [key]
+  (make-key-exists-without-binding-clause key))
+
 (define-record-type KeyExistsWithBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
   (make-key-exists-with-binding-clause key binding)
@@ -129,11 +130,21 @@
   [key key-exists-with-binding-clause-key
    binding key-exists-with-binding-clause-binding])
 
+(defn key-exists-with-binding-clause
+  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  [key binding]
+  (make-key-exists-with-binding-clause key binding))
+
 (define-record-type OptionalKeyExistsWithoutBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`."}
   (make-optional-key-exists-without-binding-clause key)
   optional-key-exists-without-binding-clause?
   [key optional-key-exists-without-binding-clause-key])
+
+(defn optional-key-exists-without-binding-clause
+  "Returns an optional clause that asserts the existence of a non-nil value at `key`."
+  [key]
+  (make-optional-key-exists-without-binding-clause key))
 
 (define-record-type OptionalKeyExistsWithBindingClause
   ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `key`. When evaluated, binds it's result to `binding`."}
@@ -142,71 +153,52 @@
   [key optional-key-exists-with-binding-clause-key
    binding optional-key-exists-with-binding-clause-binding])
 
-(defn key-exists-without-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
-  [key]
-  (make-key-exists-without-binding-clause key))
-
-(defn key-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
-  [key bind]
-  (make-key-exists-with-binding-clause key bind))
-
-(defn optional-key-exists-without-binding-clause
-  "Returns an optional clause that asserts the existence of a non-nil value at `key`."
-  [key]
-  (make-optional-key-exists-without-binding-clause key))
-
 (defn optional-key-exists-with-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [key bind]
   (make-optional-key-exists-with-binding-clause key bind))
 
 ;; 2.
-(define-record-type
+(define-record-type PathExistsWithoutBindingClause
   ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`."}
-  PathExistsWithoutBindingClause
   (make-path-exists-without-binding-clause path)
   path-exists-without-binding-clause?
   [path path-exists-without-binding-clause-path])
-
-(define-record-type
-  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
-  PathExistsWithBindingClause
-  (make-path-exists-with-binding-clause path binding)
-  path-exists-with-binding-clause?
-  [path path-exists-with-binding-clause-path
-   binding path-exists-with-binding-clause-binding])
-
-(define-record-type
-  ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`."}
-  OptionalPathExistsWithoutBindingClause
-  (make-optional-path-exists-without-binding-clause path)
-  optional-path-exists-without-binding-clause?
-  [path optional-path-exists-without-binding-clause-path])
-
-(define-record-type
-  ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
-  OptionalPathExistsWithBindingClause
-  (make-optional-path-exists-with-binding-clause path binding)
-  optional-path-exists-with-binding-clause?
-  [path optional-path-exists-with-binding-clause-path
-   binding optional-path-exists-with-binding-clause-binding])
 
 (defn path-exists-without-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path]
   (make-path-exists-without-binding-clause path))
 
+(define-record-type PathExistsWithBindingClause
+  ^{:doc "A clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
+  (make-path-exists-with-binding-clause path binding)
+  path-exists-with-binding-clause?
+  [path path-exists-with-binding-clause-path
+   binding path-exists-with-binding-clause-binding])
+
 (defn path-exists-with-binding-clause
   "Returns a clause that asserts the existence of a non-nil value at `key`."
   [path bind]
   (make-path-exists-with-binding-clause path bind))
 
+(define-record-type OptionalPathExistsWithoutBindingClause
+  ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`."}
+  (make-optional-path-exists-without-binding-clause path)
+  optional-path-exists-without-binding-clause?
+  [path optional-path-exists-without-binding-clause-path])
+
 (defn optional-path-exists-without-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
   [path]
   (make-optional-path-exists-without-binding-clause path))
+
+(define-record-type OptionalPathExistsWithBindingClause
+  ^{:doc "An optional clause that asserts the existence of a non-nil value in a map at the `path`. When evaluated, binds it's result to `binding`."}
+  (make-optional-path-exists-with-binding-clause path binding)
+  optional-path-exists-with-binding-clause?
+  [path optional-path-exists-with-binding-clause-path
+   binding optional-path-exists-with-binding-clause-binding])
 
 (defn optional-path-exists-with-binding-clause
   "Returns an optional clause that asserts the existence of a non-nil value at `key`."
@@ -214,44 +206,26 @@
   (make-optional-path-exists-with-binding-clause path bind))
 
 ;; 3.
-(define-record-type
+(define-record-type KeyMatchesWithoutBindingClause
   ^{:doc "A clause that matches the value of `key` of a map using `matcher`."}
-  KeyMatchesWithoutBindingClause
   (make-key-matches-without-binding-clause key matcher)
   key-matches-without-binding-clause?
   [key key-matches-without-binding-clause-key
    matcher key-matches-without-binding-clause-matcher])
-
-(define-record-type
-  ^{:doc "A clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
-  KeyMatchesWithBindingClause
-  (make-key-matches-with-binding-clause key matcher binding)
-  key-matches-with-binding-clause?
-  [key key-matches-with-binding-clause-key
-   matcher key-matches-with-binding-clause-matcher
-   binding key-matches-with-binding-clause-binding])
-
-(define-record-type
-  ^{:doc "An optional clause that matches the value of `key`."}
-  OptionalKeyMatchesWithoutBindingClause
-  (make-optional-key-matches-without-binding-clause key)
-  optional-key-matches-without-binding-clause?
-  [key optional-key-matches-without-binding-clause-key])
-
-(define-record-type
-  ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`. If `key` does not exist, binds to `default-value`."}
-  OptionalKeyWithDefaultBindingClause
-  (make-optional-key-with-default-binding-clause key default-value binding)
-  optional-key-with-default-binding-clause?
-  [key optional-key-with-default-binding-clause-key
-   default-value optional-key-with-default-binding-clause-default-value
-   binding optional-key-with-default-binding-clause])
 
 (defn key-matches-without-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`."
   [key matcher]
   {:pre [(matcher? matcher)]}
   (make-key-matches-without-binding-clause key matcher))
+
+(define-record-type KeyMatchesWithBindingClause
+  ^{:doc "A clause that matches the value of `key` of a map using `matcher`. When evaluated, binds it's result to `binding`."}
+  (make-key-matches-with-binding-clause key matcher binding)
+  key-matches-with-binding-clause?
+  [key key-matches-with-binding-clause-key
+   matcher key-matches-with-binding-clause-matcher
+   binding key-matches-with-binding-clause-binding])
 
 (defn key-matches-with-binding-clause
   "Returns a clause that matches a `key` with a certain `matcher`, binding the
@@ -260,10 +234,24 @@
   {:pre [(matcher? matcher)]}
   (make-key-matches-with-binding-clause key matcher bind))
 
-(defn optional-key-matches-without-binding-clause
+(define-record-type OptionalKeyMatchesWithoutBindingClause
+  ^{:doc "An optional clause that matches the value of `key`."}
+  (make-optional-key-without-binding-clause key)
+  optional-key-without-binding-clause?
+  [key optional-key-without-binding-clause-key])
+
+(defn optional-key-without-binding-clause
   "Returns an optional clause that matches a `key` with a certain `matcher`."
   [key]
-  (make-optional-key-matches-without-binding-clause key))
+  (make-optional-key-without-binding-clause key))
+
+(define-record-type OptionalKeyWithDefaultBindingClause
+  ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`. If `key` does not exist, binds to `default-value`."}
+  (make-optional-key-with-default-binding-clause key default-value binding)
+  optional-key-with-default-binding-clause?
+  [key optional-key-with-default-binding-clause-key
+   default-value optional-key-with-default-binding-clause-default-value
+   binding optional-key-with-default-binding-clause])
 
 (defn optional-key-with-default-binding-clause
   "Returns an optional clause that matches a `key`, binding the
@@ -272,77 +260,77 @@
   (make-optional-key-with-default-binding-clause key default-value bind))
 
 ;; 4.
-(define-record-type
+(define-record-type PathMatchesWithoutBindingClause
   ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`."}
-  PathMatchesWithoutBindingClause
   (make-path-matches-without-binding-clause path matcher)
   path-matches-without-binding-clause?
   [path path-matches-without-binding-clause-path
    matcher path-matches-without-binding-clause-matcher])
-
-(define-record-type
-  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
-  PathMatchesWithBindingClause
-  (make-path-matches-with-binding-clause path matcher binding)
-  path-matches-with-binding-clause?
-  [path path-matches-with-binding-clause-path
-   matcher path-matches-with-binding-clause-matcher
-   binding path-matches-with-binding-clause-binding])
-
-(define-record-type
-  ^{:doc "An optional clause that matches the value of a map at the `path` using a `matcher`."}
-  OptionalPathMatchesWithoutBindingClause
-  (make-optional-path-matches-without-binding-clause path)
-  optional-path-matches-without-binding-clause?
-  [path optional-path-matches-without-binding-clause-path])
-
-(define-record-type
-  ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`. If `path` does not exist, binds to `default-value`."}
-  OptionalPathWithDefaultBindingClause
-  (make-optional-path-with-default-binding-clause path default-value binding)
-  optional-path-with-default-binding-clause?
-  [path optional-path-with-default-binding-clause-path
-   default-value optional-path-with-default-binding-clause-default-value
-   binding optional-path-with-default-binding-clause-binding])
-
-(def path? "Is something a valid path?" (some-fn list? vector?))
 
 (defn path-matches-without-binding-clause
   [path matcher]
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-path-matches-without-binding-clause path matcher))
 
+(define-record-type PathMatchesWithBindingClause
+  ^{:doc "A clause that matches the value of a map at the `path` using a `matcher`. When evaluated, binds it's result to `binding`."}
+  (make-path-matches-with-binding-clause path matcher binding)
+  path-matches-with-binding-clause?
+  [path path-matches-with-binding-clause-path
+   matcher path-matches-with-binding-clause-matcher
+   binding path-matches-with-binding-clause-binding])
+
 (defn path-matches-with-binding-clause
   [path matcher bind]
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-path-matches-with-binding-clause path matcher bind))
 
-(defn optional-path-matches-without-binding-clause
+(define-record-type OptionalPathMatchesWithoutBindingClause
+  ^{:doc "An optional clause that matches the value of a map at the `path` using a `matcher`."}
+  (make-optional-path-without-binding-clause path)
+  optional-path-without-binding-clause?
+  [path optional-path-without-binding-clause-path])
+
+(defn optional-path-without-binding-clause
   [path]
   {:pre [(path? path)]}
-  (make-optional-path-matches-without-binding-clause path))
+  (make-optional-path-without-binding-clause path))
+
+(define-record-type OptionalPathWithDefaultBindingClause
+  ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`. If `path` does not exist, binds to `default-value`."}
+  (make-optional-path-with-default-binding-clause path default-value binding)
+  optional-path-with-default-binding-clause?
+  [path optional-path-with-default-binding-clause-path
+   default-value optional-path-with-default-binding-clause-default-value
+   binding optional-path-with-default-binding-clause-binding])
 
 (defn optional-path-with-default-binding-clause
   [path default-value bind]
   {:pre [(path? path)]}
   (make-optional-path-with-default-binding-clause path default-value bind))
 
-(def clause? (some-fn key-exists-without-binding-clause?
-                      key-exists-with-binding-clause?
-                      optional-key-exists-without-binding-clause?
-                      optional-key-exists-with-binding-clause?
-                      path-exists-without-binding-clause?
-                      path-exists-with-binding-clause?
-                      optional-path-exists-without-binding-clause?
-                      optional-path-exists-with-binding-clause?
-                      key-matches-without-binding-clause?
-                      key-matches-with-binding-clause?
-                      optional-key-matches-without-binding-clause?
-                      optional-key-with-default-binding-clause?
-                      path-matches-without-binding-clause?
-                      path-matches-with-binding-clause?
-                      optional-path-matches-without-binding-clause?
-                      optional-path-with-default-binding-clause?))
+;; Predicates for clauses
+(def mandatory-clause?
+  (some-fn key-exists-without-binding-clause?
+           key-exists-with-binding-clause?
+           path-exists-without-binding-clause?
+           path-exists-with-binding-clause?
+           key-matches-without-binding-clause?
+           key-matches-with-binding-clause?
+           path-matches-without-binding-clause?
+           path-matches-with-binding-clause?))
+
+(def optional-clause?
+  (some-fn optional-key-exists-without-binding-clause?
+           optional-key-exists-with-binding-clause?
+           optional-path-exists-without-binding-clause?
+           optional-path-exists-with-binding-clause?
+           optional-key-without-binding-clause?
+           optional-key-with-default-binding-clause?
+           optional-path-without-binding-clause?
+           optional-path-with-default-binding-clause?))
+
+(def clause? (some-fn mandatory-clause? optional-clause?))
 
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
@@ -381,6 +369,7 @@
 
 (s/def ::qmark #{'?})
 
+;; FIXME: represent optionals as full-fledged terminal symbols in this grammar
 (s/def ::key-exists-without-binding
   (s/or :required (s/or :flat ::key
                         :list (s/cat :key ::key))
@@ -500,7 +489,7 @@
           :key-matches-without-binding
           (let [k (make-key (:key body))]
             (if (optional? mode)
-              `(optional-key-matches-without-binding-clause ~k)
+              `(optional-key-without-binding-clause ~k)
               `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))))
 
           :key-matches-with-binding
@@ -513,7 +502,7 @@
           :path-matches-without-binding
           (let [path (mapv make-key (:path body))]
             (if (optional? mode)
-              `(optional-path-matches-without-binding-clause ~path)
+              `(optional-path-without-binding-clause ~path)
               `(path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body)))))
 
           :path-matches-with-binding
@@ -674,12 +663,10 @@
         ~rhs)]))
 
 (defmacro parse-pattern
-  "Parse the argument to `defpattern` as a [[Pattern]].
-  Optionally accepts a `name` (String) that names the pattern. If none is
-  provided, automatically assigns a name."
+  "Parse the argument to `defpattern` as a [[Pattern]]."
   [pattern]
   (if (vector? pattern)
-    `(make-pattern ~(str (gensym "pattern-")) (parse-clauses ~pattern))
+    `(make-pattern (parse-clauses ~pattern))
     pattern))
 
 ;; Match
@@ -810,7 +797,7 @@
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
-    (optional-key-matches-without-binding-clause? clause)
+    (optional-key-without-binding-clause? clause)
     {}
 
     (optional-key-with-default-binding-clause? clause)
@@ -832,12 +819,11 @@
         `(~(fold-path path '_) :guard ~(match-value message path))
         (fold-path path (match-value message path))))
 
-    (optional-path-matches-without-binding-clause? clause)
+    (optional-path-without-binding-clause? clause)
     {}
 
     (optional-path-with-default-binding-clause? clause)
     {}))
-
 
 (defn reduce-lhs
   [lhss]
@@ -863,7 +849,6 @@
               (c/assertion-violation `reduce-lhs "not a valid lhs pattern:" lhs)))
           {}
           lhss))
-
 
 (defn pattern->lhs
   [message pattern]
@@ -905,7 +890,7 @@
     (key-matches-with-binding-clause? clause)
     (conj bindings (key-matches-with-binding-clause->rhs-match message clause))
 
-    (optional-key-matches-without-binding-clause? clause)
+    (optional-key-without-binding-clause? clause)
     (conj bindings `[])
 
     (optional-key-with-default-binding-clause? clause)
@@ -917,7 +902,7 @@
     (path-matches-with-binding-clause? clause)
     (conj bindings (path-matches-with-binding-clause->rhs-match message clause))
 
-    (optional-path-matches-without-binding-clause? clause)
+    (optional-path-without-binding-clause? clause)
     (conj bindings `[])
 
     (optional-path-with-default-binding-clause? clause)

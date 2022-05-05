@@ -113,7 +113,6 @@
   ;; lhs doesn't care about bindings
 
   (t/testing "key exists with binding"
-    ;; FIXME: what are we testing here?
     (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "x"))))
     (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "rebind")))))
 
@@ -241,8 +240,6 @@
     (t/testing "map-matcher-regex-key-not-found"
       (t/is (= false (example-matcher three-data)))))
   (t/testing "Paths"
-    (t/is (= [] ((p/map-matcher [([:x])] []) {:x {}})))
-    ;; FIXME: key exists on a list?
     (t/is (= [{}] ((p/map-matcher [([:a] :as a)] [a]) {:a {}})))
     (t/is (= [] ((p/map-matcher [([:a b] "c")] []) {:a { "b" "c"}})))
     (t/is (= [] ((p/map-matcher [([:a b c] "d")] []) {:a { "b" {"c" "d"}}})))

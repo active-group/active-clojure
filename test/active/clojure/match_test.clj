@@ -132,9 +132,8 @@
   (t/testing "key matches with binding"
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind"))))
-    ;; FIXME: what is wrong with that test?
-    #_(t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
-             (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?))))))
+    (t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
+             (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?) "x")))))
 
   (t/testing "key matches without binding"
     (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-without-binding-clause :x (p/match-const "b"))))))
@@ -144,9 +143,8 @@
              (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
     (t/is (= {:x {:y {:z "b"}}}
              (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind"))))
-    ;; FIXME: what is wrong with that test?
-    #_(t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
-             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?))))))
+    (t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
+             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?) "Z")))))
 
   (t/testing "path matches without binding"
     (t/is (= {:x {:y {:z "b"}}}

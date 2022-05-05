@@ -301,20 +301,6 @@
              (example-or-matcher two-data)))
     (t/is (= false (example-or-matcher {:kind "none"})))))
 
-;; FIXME: one-guard and example-guard-matcher not used
-#_(p/defpattern one-guard
-  [(:kind #"one")
-   (:x (:compare-fn #(= % (last ["a" "b" "c" "x"]))) :as x)
-   (:y (:compare-fn #(= % (:y {:x "x" :y "y" :z "z"}))))
-   (:z :as z)
-   :w])
-
-#_(def example-guard-matcher
-  (p/map-matcher
-   one-guard [x z]
-   two [a c Z Y]
-   :else false))
-
 (p/defpattern predicate-pattern
   [(:x (:compare-fn even?))])
 

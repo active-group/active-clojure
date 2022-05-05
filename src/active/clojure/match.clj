@@ -100,16 +100,16 @@
 ;; There are different kinds of clauses
 ;; 1. Assert the existence of a value in a map for a key.
 ;;    - without binding - with binding
-;;    - optional:  without binding - with binding
+;;    - optional: with binding
 ;; 2. Assert the existence of a value in a map for a path.
 ;;    - without binding - with binding
-;;    - optional:  without binding - with binding
+;;    - optional: with binding
 ;; 3. Match a key in a map to some specific value.
 ;;    - without binding - with binding
-;;    - optional:  without binding - with binding
+;;    - optional:  with binding
 ;; 4. Match the value at a path in a map to a specific value.
 ;;    - without binding - with binding
-;;    - optional:  without binding - with binding
+;;    - optional:  with binding
 
 ;; 1.
 (define-record-type KeyExistsWithoutBindingClause
@@ -234,17 +234,6 @@
   {:pre [(matcher? matcher)]}
   (make-key-matches-with-binding-clause key matcher bind))
 
-(define-record-type OptionalKeyMatchesWithoutBindingClause
-  ^{:doc "An optional clause that matches the value of `key`."}
-  (make-optional-key-without-binding-clause key)
-  optional-key-without-binding-clause?
-  [key optional-key-without-binding-clause-key])
-
-(defn optional-key-without-binding-clause
-  "Returns an optional clause that matches a `key` with a certain `matcher`."
-  [key]
-  (make-optional-key-without-binding-clause key))
-
 (define-record-type OptionalKeyWithDefaultBindingClause
   ^{:doc "An optional clause with a default value for `key`. When evaluated, binds it's result to `binding`. If `key` does not exist, binds to `default-value`."}
   (make-optional-key-with-default-binding-clause key default-value binding)
@@ -285,17 +274,6 @@
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-path-matches-with-binding-clause path matcher bind))
 
-(define-record-type OptionalPathMatchesWithoutBindingClause
-  ^{:doc "An optional clause that matches the value of a map at the `path` using a `matcher`."}
-  (make-optional-path-without-binding-clause path)
-  optional-path-without-binding-clause?
-  [path optional-path-without-binding-clause-path])
-
-(defn optional-path-without-binding-clause
-  [path]
-  {:pre [(path? path)]}
-  (make-optional-path-without-binding-clause path))
-
 (define-record-type OptionalPathWithDefaultBindingClause
   ^{:doc "An optional clause with a default value at the `path`. When evaluated, binds it's result to `binding`. If `path` does not exist, binds to `default-value`."}
   (make-optional-path-with-default-binding-clause path default-value binding)
@@ -321,13 +299,9 @@
            path-matches-with-binding-clause?))
 
 (def optional-clause?
-  (some-fn optional-key-exists-without-binding-clause?
-           optional-key-exists-with-binding-clause?
-           optional-path-exists-without-binding-clause?
+  (some-fn optional-key-exists-with-binding-clause?
            optional-path-exists-with-binding-clause?
-           optional-key-without-binding-clause?
            optional-key-with-default-binding-clause?
-           optional-path-without-binding-clause?
            optional-path-with-default-binding-clause?))
 
 (def clause? (some-fn mandatory-clause? optional-clause?))
@@ -335,6 +309,7 @@
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
 
+(s/def ::qmark #{'?})
 (s/def ::key (s/or :keyword keyword? :symbol symbol? :string string?))
 (s/def ::path (s/coll-of ::key :kind vector?))
 
@@ -367,13 +342,10 @@
 (s/def ::binding-key #{:as})
 (s/def ::binding symbol?)
 
-(s/def ::qmark #{'?})
-
 ;; FIXME: represent optionals as full-fledged terminal symbols in this grammar
 (s/def ::key-exists-without-binding
   (s/or :required (s/or :flat ::key
-                        :list (s/coll-of ::key :count 1 :kind list?))
-        :optional (s/cat :qmark ::qmark :key ::key)))
+                        :list (s/coll-of ::key :count 1 :kind list?))))
 
 (s/def ::key-exists-with-binding
   (s/or :required (s/cat :key ::key :binding-key ::binding-key :binding ::binding)
@@ -381,24 +353,21 @@
 
 (s/def ::path-exists-without-binding
   (s/or :required (s/or :flat ::path
-                        :list (s/cat :path ::path))
-        :optional (s/cat :qmark ::qmark :path ::path)))
+                        :list (s/cat :path ::path))))
 
 (s/def ::path-exists-with-binding
   (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)
         :optional (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::key-matches-without-binding
-  (s/or :required (s/cat :key ::key :match-value ::match-value)
-        :optional (s/cat :qmark ::qmark :key ::key)))
+  (s/or :required (s/cat :key ::key :match-value ::match-value)))
 
 (s/def ::key-matches-with-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)
         :optional (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-matches-without-binding
-  (s/or :required (s/cat :path ::path :match-value ::match-value)
-        :optional (s/cat :qmark ::qmark :path ::path)))
+  (s/or :required (s/cat :path ::path :match-value ::match-value)))
 
 (s/def ::path-matches-with-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)
@@ -457,12 +426,9 @@
             [mode body]   parse]
         (case match
           :key-exists-without-binding
-          (if (optional? mode)
-            (let [k (make-key (:key body))]
-              `(optional-key-exists-without-binding-clause ~k))
-            (let [[mode body] body
-                  k (make-key (if (flat? mode) body (first body)))]
-              `(key-exists-without-binding-clause ~k)))
+          (let [[mode body] body
+                k           (make-key (if (flat? mode) body (first body)))]
+            `(key-exists-without-binding-clause ~k))
 
           :key-exists-with-binding
           (let [k (make-key (:key body))
@@ -472,12 +438,9 @@
               `(key-exists-with-binding-clause ~k ~b)))
 
           :path-exists-without-binding
-          (if (optional? mode)
-            (let [path (mapv make-key (:path body))]
-              `(optional-path-exists-without-binding-clause ~path))
-            (let [[mode body] body
-                  path (mapv make-key (if (flat? mode) body (:path body)))]
-              `(path-exists-without-binding-clause ~path)))
+          (let [[mode body] body
+                path        (mapv make-key (if (flat? mode) body (:path body)))]
+            `(path-exists-without-binding-clause ~path))
 
           :path-exists-with-binding
           (let [path (mapv make-key (:path body))
@@ -488,9 +451,7 @@
 
           :key-matches-without-binding
           (let [k (make-key (:key body))]
-            (if (optional? mode)
-              `(optional-key-without-binding-clause ~k)
-              `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body)))))
+            `(key-matches-without-binding-clause ~k (match-value->matcher ~(:match-value body))))
 
           :key-matches-with-binding
           (let [k (make-key (:key body))
@@ -501,9 +462,7 @@
 
           :path-matches-without-binding
           (let [path (mapv make-key (:path body))]
-            (if (optional? mode)
-              `(optional-path-without-binding-clause ~path)
-              `(path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body)))))
+            `(path-matches-without-binding-clause ~path (match-value->matcher ~(:match-value body))))
 
           :path-matches-with-binding
           (let [path (mapv make-key (:path body))
@@ -543,11 +502,9 @@
             [mode body]   parse]
         (case match
           :key-exists-without-binding
-          (if (optional? mode)
-            [{} `[]]
-            (let [[mode body] body
-                  k (make-key (if (flat? mode) body (first body)))]
-              [`{~k ~'_} `[]]))
+          (let [[mode body] body
+                k           (make-key (if (flat? mode) body (first body)))]
+            [`{~k ~'_} `[]])
 
           :key-exists-with-binding
           (let [k (make-key (:key body))
@@ -559,11 +516,9 @@
                `[~(symbol b) (get-in ~message [~k])]]))
 
           :path-exists-without-binding
-          (if (optional? mode)
-            [{} `[]]
-            (let [[mode body] body
-                  path (mapv make-key (if (flat? mode) body (:path body)))]
-              [`{~path ~'_} `[]]))
+          (let [[mode body] body
+                path        (mapv make-key (if (flat? mode) body (:path body)))]
+            [`{~path ~'_} `[]])
 
           :path-exists-with-binding
           (let [path     (mapv make-key (:path body))
@@ -579,9 +534,6 @@
                 predicate?  (= :compare-fn (first match))
                 match-value (second match)]
             (cond
-              (optional? mode)
-              [{}
-               `[]]
               predicate?
               [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
                `[]]
@@ -613,9 +565,6 @@
                 match-value (second match)
                 path-map    (assoc-in {} path match-value)]
             (cond
-              (optional? mode)
-              [{}
-               `[]]
               predicate?
               [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[]]
@@ -760,9 +709,6 @@
           binding (key-exists-with-binding-clause-binding clause)]
       {(convert-path-element key) (symbol binding)})
 
-    (optional-key-exists-without-binding-clause? clause)
-    {}
-
     (optional-key-exists-with-binding-clause? clause)
     {}
 
@@ -774,9 +720,6 @@
     (let [path    (path-exists-with-binding-clause-path clause)
           binding (path-exists-with-binding-clause-binding clause)]
       (assoc-in {} (map convert-path-element path) (symbol binding)))
-
-    (optional-path-exists-without-binding-clause? clause)
-    {}
 
     (optional-path-exists-with-binding-clause? clause)
     {}
@@ -797,9 +740,6 @@
         `({~key ~'_} :guard ~(match-value message [key]))
         `{~key ~(match-value message [key])}))
 
-    (optional-key-without-binding-clause? clause)
-    {}
-
     (optional-key-with-default-binding-clause? clause)
     {}
 
@@ -818,9 +758,6 @@
       (if (predicate-matcher? matcher)
         `(~(fold-path path '_) :guard ~(match-value message path))
         (fold-path path (match-value message path))))
-
-    (optional-path-without-binding-clause? clause)
-    {}
 
     (optional-path-with-default-binding-clause? clause)
     {}))
@@ -866,9 +803,6 @@
     (key-exists-with-binding-clause? clause)
     (conj bindings (key-exists-with-binding-clause->rhs-match message clause))
 
-    (optional-key-exists-without-binding-clause? clause)
-    (conj bindings `[])
-
     (optional-key-exists-with-binding-clause? clause)
     (conj bindings (optional-key-exists-with-binding-clause->rhs-match message clause))
 
@@ -877,9 +811,6 @@
 
     (path-exists-with-binding-clause? clause)
     (conj bindings (path-exists-with-binding-clause->rhs-match message clause))
-
-    (optional-path-exists-without-binding-clause? clause)
-    (conj bindings `[])
 
     (optional-path-exists-with-binding-clause? clause)
     (conj bindings (optional-path-exists-with-binding-clause->rhs-match message clause))
@@ -890,9 +821,6 @@
     (key-matches-with-binding-clause? clause)
     (conj bindings (key-matches-with-binding-clause->rhs-match message clause))
 
-    (optional-key-without-binding-clause? clause)
-    (conj bindings `[])
-
     (optional-key-with-default-binding-clause? clause)
     (conj bindings (optional-key-with-default-binding-clause->rhs-match message clause))
 
@@ -901,9 +829,6 @@
 
     (path-matches-with-binding-clause? clause)
     (conj bindings (path-matches-with-binding-clause->rhs-match message clause))
-
-    (optional-path-without-binding-clause? clause)
-    (conj bindings `[])
 
     (optional-path-with-default-binding-clause? clause)
     (conj bindings (optional-path-with-default-binding-clause->rhs-match message clause))))
@@ -932,42 +857,30 @@
   - `(<key> <value> :as <name>)` which requires the key `<key>` to be
     mapped to `<value>` in the map and binds `<name>` to `<value>`.
 
-  - `(<key-and-name> <value>)` which requires the key `<key-and-name>`
-    to be mapped to `<value>` in the map and binds `<key-and-name>` to
-    `<value>`.
+  - `(<key> <value>)` which requires the key `<key>` to be mapped to `<value>`
+    in the map.
 
   - `(<key> :as <name>)` which requires `<key>` to be present in the map
     and binds `<name>` to its value.
 
-  - `<key-and-name>` which requires `<key-and-name>` to be present in
-    the map and binds `<key-and-name>` to its value
+  - `<key>` which requires `<key>` to be present in the map.
 
   The map matcher also supports optional keys:
 
   - `(? <key> <default> :as <name>)` binds `<name>` to to the value of
     `<key>` in the map or to `<default>` if `<key>` is not in the map.
 
-  - `(? <key-and-name> <default>)` binds `<key-and-name>` to the value of
-    `<key-and-name>` in the map or to `<default>` if `<key-and-name>` is not
-    in the map.
-
   - `(? <key> :as <name>)` binds `<name>` to to the value of `<key>`
     in the map or to `nil` if `<key>` is not in the map.
-
-  - `(? <key-and-name>)` binds `<key-and-name>` to the value of
-    `<key-and-name>` in the map or to `nil` if `<key-and-name>` is not
-    in the map.
 
   Access to nested values is also possible. Use `[<key>+]` to access
   a nested value, where `[<key>+]` is a sequence of keys. When no
   `:as <name>` clause is given, the last `<key>` of the sequence of
   keys is used as a name to bind the value.
 
-  `<key>` and `<key-and-name>` can be either a symbol or a keyword.
-  If `<key-and-name>` is a symbol, it is converted to a string when
-  used as a key (and used as symbol for binding the value). If
-  `<key-and-name>` is a keyword, it is converted to a name for binding
-  the value (and usesd as keyword when used as a key).
+  `<key>` can be either a symbol or a keyword.
+  If `<key>` is a symbol, it is converted to a string when
+  used as a key.
 
   `<value>` can be:
 
@@ -978,7 +891,7 @@
 
   - a custom compare function in the form of:
     `(:compare-fn <compare-fn>)` where `<compare-fn>` accepts the value that
-    is mapped to `<key>` or `<key-and-name>`.
+    is mapped to `<key>`.
 
   `map-matcher` returns a function that accepts a map and evaluates
   `<consequent>` with all the `<name>`s bound when the message matches
@@ -986,7 +899,6 @@
   throws `IllegalArgumentException` if no `<clause>` matches and no
   `<alternative>` is given.
 
-  FIXME: Example with-bindings / without-bindings.
   Example:
 
         (def example-map-matcher

@@ -278,9 +278,6 @@
                :d {"Z" 42 "X" 65
                    "W" {"foo" "bar"}}}))))
   (t/testing "More optionals"
-    ;; FIXME: Is this a flat-key-exist matched on the symbol '?'?
-    ;; error: java.lang.IllegalArgumentException: No matching clause: {}
-    ;; (t/is (= [] ((p/map-matcher [? :a] []) {})))
     ;; key match without binding
     (t/is (= [] ((p/map-matcher [(? :a)] []) {})))
     (t/is (= [] ((p/map-matcher [(? :a)] []) {:a "a"})))

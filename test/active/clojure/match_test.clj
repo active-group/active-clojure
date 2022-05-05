@@ -14,9 +14,10 @@
     (t/testing "list"
       (t/is (= (p/make-key-exists-without-binding-clause :k)
                (p/parse-clause (:k))))
-      ;; FIXME: is this also a list - it is not a path?
-      (t/is (= (p/make-key-exists-without-binding-clause :k)
-               (p/parse-clause [:k])))))
+      (t/is (= (p/make-path-exists-without-binding-clause [:k])
+               (p/parse-clause [:k])))
+      (t/is (= (p/make-path-exists-without-binding-clause [:k])
+               (p/parse-clause ([:k]))))))
 
   (t/testing "key exists with binding clause"
     (t/is (= (p/make-key-exists-with-binding-clause :k "Binding")
@@ -240,10 +241,7 @@
     (t/testing "map-matcher-regex-key-not-found"
       (t/is (= false (example-matcher three-data)))))
   (t/testing "Paths"
-    ;; FIXME: path without binding not possible?
-    ;; compiler exception: class clojure.lang.PersistentVector cannot be cast to class clojure.lang.Named
-    ;; parse-emit-syntax?
-    ;; (t/is (= [] ((p/map-matcher [([:x])] []) {:x {}})))
+    (t/is (= [] ((p/map-matcher [([:x])] []) {:x {}})))
     ;; FIXME: key exists on a list?
     (t/is (= [{}] ((p/map-matcher [([:a] :as a)] [a]) {:a {}})))
     (t/is (= [] ((p/map-matcher [([:a b] "c")] []) {:a { "b" "c"}})))

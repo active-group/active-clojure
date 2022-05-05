@@ -372,7 +372,7 @@
 ;; FIXME: represent optionals as full-fledged terminal symbols in this grammar
 (s/def ::key-exists-without-binding
   (s/or :required (s/or :flat ::key
-                        :list (s/cat :key ::key))
+                        :list (s/coll-of ::key :count 1 :kind list?))
         :optional (s/cat :qmark ::qmark :key ::key)))
 
 (s/def ::key-exists-with-binding
@@ -461,7 +461,7 @@
             (let [k (make-key (:key body))]
               `(optional-key-exists-without-binding-clause ~k))
             (let [[mode body] body
-                  k (make-key (if (flat? mode) body (:key body)))]
+                  k (make-key (if (flat? mode) body (first body)))]
               `(key-exists-without-binding-clause ~k)))
 
           :key-exists-with-binding
@@ -546,7 +546,7 @@
           (if (optional? mode)
             [{} `[]]
             (let [[mode body] body
-                  k (make-key (if (flat? mode) body (:key body)))]
+                  k (make-key (if (flat? mode) body (first body)))]
               [`{~k ~'_} `[]]))
 
           :key-exists-with-binding

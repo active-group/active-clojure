@@ -1,8 +1,6 @@
 (ns active.clojure.match
   "Syntactic sugar for map matching around `core.match`."
   (:require [active.clojure.condition :as c]
-            [active.clojure.functions :as f]
-            [active.clojure.lens :as lens]
             [active.clojure.record :refer [define-record-type]]
 
             [clojure.spec.alpha :as s]

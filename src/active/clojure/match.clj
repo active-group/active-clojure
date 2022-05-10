@@ -897,8 +897,7 @@
              ([:d] :as d)
              ([:d Z] 42 :as Z)
              ([:d Y] :as Y)
-             ([:d X] 65)
-             [:d W foo]]
+             ([:d X] 65)]
             (println a c d Z Y)
             :else false))
 
@@ -907,7 +906,7 @@
                                   \"W\" {\"foo\" \"bar\"}}})
 
     prints
-     \"a c {\"Z\" 42 \"Y\" 23 \"X\" 65 \"W\" {\"foo\" \"bar\"}}  42 23\""
+     \"a c {Z 42, Y 23, X 65, W {foo bar}} 42 23\""
   [& args]
   (when-not (even? (count args))
     (throw (IllegalArgumentException. (str "expecting an even number of arguments " *ns* " " (meta &form)))))

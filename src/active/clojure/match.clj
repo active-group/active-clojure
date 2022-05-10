@@ -18,11 +18,11 @@
   [clauses pattern-clauses])
 
 (defn pattern
-  "Takes a name and some `clauses` and returns a [[Pattern]]."
+  "Takes some `clauses` and returns a [[Pattern]]."
   [& clauses]
   (make-pattern clauses))
 
-;; We differentiate between three kinds of matchers:
+;; We differentiate between different kinds of matchers:
 ;; 1. Constant: Match on exactly one value. The value must be equatable.
 ;; 2. Regex: Match on a regex. The value must be a String.
 ;; 3. Existence: Match on the existence. That is, not nil.
@@ -106,10 +106,10 @@
 ;;    - optional: with binding
 ;; 3. Match a key in a map to some specific value.
 ;;    - without binding - with binding
-;;    - optional:  with binding
+;;    - optional: with binding
 ;; 4. Match the value at a path in a map to a specific value.
 ;;    - without binding - with binding
-;;    - optional:  with binding
+;;    - optional: with binding
 
 ;; 1.
 (define-record-type KeyExistsWithoutBindingClause
@@ -131,7 +131,7 @@
    binding key-exists-with-binding-clause-binding])
 
 (defn key-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  "Returns a clause that asserts the existence of a non-nil value at `key`. When evaluated, binds it's result to `binding`."
   [key binding]
   (make-key-exists-with-binding-clause key binding))
 
@@ -154,7 +154,7 @@
    binding optional-key-exists-with-binding-clause-binding])
 
 (defn optional-key-exists-with-binding-clause
-  "Returns an optional clause that asserts the existence of a non-nil value at `key`."
+  "Returns an optional clause that asserts the existence of a non-nil value at `key`. When evaluated, binds it's result to `binding`."
   [key bind]
   (make-optional-key-exists-with-binding-clause key bind))
 
@@ -166,7 +166,7 @@
   [path path-exists-without-binding-clause-path])
 
 (defn path-exists-without-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  "Returns a clause that asserts the existence of a non-nil value at `path`."
   [path]
   (make-path-exists-without-binding-clause path))
 
@@ -178,7 +178,7 @@
    binding path-exists-with-binding-clause-binding])
 
 (defn path-exists-with-binding-clause
-  "Returns a clause that asserts the existence of a non-nil value at `key`."
+  "Returns a clause that asserts the existence of a non-nil value at `path`. When evaluated, binds it's result to `binding`."
   [path bind]
   (make-path-exists-with-binding-clause path bind))
 
@@ -189,7 +189,7 @@
   [path optional-path-exists-without-binding-clause-path])
 
 (defn optional-path-exists-without-binding-clause
-  "Returns an optional clause that asserts the existence of a non-nil value at `key`."
+  "Returns an optional clause that asserts the existence of a non-nil value at `path`."
   [path]
   (make-optional-path-exists-without-binding-clause path))
 
@@ -201,7 +201,7 @@
    binding optional-path-exists-with-binding-clause-binding])
 
 (defn optional-path-exists-with-binding-clause
-  "Returns an optional clause that asserts the existence of a non-nil value at `key`."
+  "Returns an optional clause that asserts the existence of a non-nil value at `path`. When evaluated, binds it's result to `binding`."
   [path bind]
   (make-optional-path-exists-with-binding-clause path bind))
 
@@ -244,7 +244,7 @@
 
 (defn optional-key-with-default-binding-clause
   "Returns an optional clause that matches a `key`, binding the
-  match to a symbol based on `key` or the default value."
+  match to a symbol based on `key` or the `default-value`."
   [key default-value bind]
   (make-optional-key-with-default-binding-clause key default-value bind))
 
@@ -257,6 +257,7 @@
    matcher path-matches-without-binding-clause-matcher])
 
 (defn path-matches-without-binding-clause
+  "Returns a clause that matches a `path` with a certain `matcher`."
   [path matcher]
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-path-matches-without-binding-clause path matcher))
@@ -270,6 +271,8 @@
    binding path-matches-with-binding-clause-binding])
 
 (defn path-matches-with-binding-clause
+  "Returns a clause that matches a `path` with a certain `matcher`, binding the
+  match to a symbol based on `path`."
   [path matcher bind]
   {:pre [(and (path? path) (matcher? matcher))]}
   (make-path-matches-with-binding-clause path matcher bind))
@@ -283,6 +286,8 @@
    binding optional-path-with-default-binding-clause-binding])
 
 (defn optional-path-with-default-binding-clause
+  "Returns an optional clause that matches a `path`, binding the
+  match to a symbol based on `path` or the `default-value`."
   [path default-value bind]
   {:pre [(path? path)]}
   (make-optional-path-with-default-binding-clause path default-value bind))

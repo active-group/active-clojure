@@ -335,7 +335,6 @@
 (s/def ::binding-key #{:as})
 (s/def ::binding symbol?)
 
-;; FIXME: represent optionals as full-fledged terminal symbols in this grammar
 (s/def ::key-exists-without-binding
   (s/or :required (s/or :flat ::key
                         :list (s/coll-of ::key :count 1 :kind list?))))

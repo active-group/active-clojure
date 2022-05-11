@@ -354,7 +354,7 @@
   (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::optional-path-exists-with-binding
-  (s/or :optional (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
+  (s/or :required (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::key-matches-without-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value)))

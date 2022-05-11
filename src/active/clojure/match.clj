@@ -369,8 +369,10 @@
   (s/or :required (s/cat :path ::path :match-value ::match-value)))
 
 (s/def ::path-matches-with-binding
-  (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
+  (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+
+(s/def ::optional-path-matches-with-binding
+  (s/or :required (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::clause
   (s/or :key-exists-without-binding ::key-exists-without-binding
@@ -383,7 +385,8 @@
         :path-matches-with-binding ::path-matches-with-binding
         :optional-key-exists-with-binding ::optional-key-exists-with-binding
         :optional-path-exists-with-binding ::optional-path-exists-with-binding
-        :optional-key-matches-with-binding ::optional-key-matches-with-binding))
+        :optional-key-matches-with-binding ::optional-key-matches-with-binding
+        :optional-path-matches-with-binding ::optional-path-matches-with-binding))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -478,9 +481,12 @@
           :path-matches-with-binding
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
-            (if (optional? mode)
-              `(optional-path-with-default-binding-clause ~path ~(:default-value body) ~b)
-              `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))))))))
+            `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))
+
+          :optional-path-matches-with-binding
+          (let [path (mapv make-key (:path body))
+                b    (make-binding (:binding body))]
+              `(optional-path-with-default-binding-clause ~path ~(:default-value body) ~b)))))))
 
 (defmacro parse-clauses
   [cs]
@@ -597,15 +603,17 @@
                 match-value (second match)
                 path-map    (assoc-in {} path match-value)]
             (cond
-              (optional? mode)
-              [{}
-               `[~(symbol b) (get-in ~message ~path ~(:default-value body))]]
               predicate?
               [`(~(fold-path path '_) :guard [(constantly (~(:fn match-value) (get-in ~message ~path)))])
                `[~(symbol b) (get-in ~message ~path)]]
               :else
               [`~path-map
-               `[~(symbol b) (get-in ~message ~path)]])))))))
+               `[~(symbol b) (get-in ~message ~path)]]))
+
+          :optional-path-matches-with-binding
+          (let [path        (mapv make-key (:path body))
+                b           (make-binding (:binding body))]
+            [{} `[~(symbol b) (get-in ~message ~path ~(:default-value body))]]))))))
 
 (defn deep-merge [v & vs]
   (letfn [(rec-merge [v1 v2]

@@ -351,8 +351,10 @@
                         :list (s/cat :path ::path))))
 
 (s/def ::path-exists-with-binding
-  (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
+  (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)))
+
+(s/def ::optional-path-exists-with-binding
+  (s/or :optional (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::key-matches-without-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value)))
@@ -377,7 +379,8 @@
         :key-matches-with-binding ::key-matches-with-binding
         :path-matches-without-binding ::path-matches-without-binding
         :path-matches-with-binding ::path-matches-with-binding
-        :optional-key-exists-with-binding ::optional-key-exists-with-binding))
+        :optional-key-exists-with-binding ::optional-key-exists-with-binding
+        :optional-path-exists-with-binding ::optional-path-exists-with-binding))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -444,9 +447,12 @@
           :path-exists-with-binding
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
-            (if (optional? mode)
-              `(optional-path-exists-with-binding-clause ~path ~b)
-              `(path-exists-with-binding-clause ~path ~b)))
+            `(path-exists-with-binding-clause ~path ~b))
+
+          :optional-path-exists-with-binding
+          (let [path (mapv make-key (:path body))
+                b    (make-binding (:binding body))]
+            `(optional-path-exists-with-binding-clause ~path ~b))
 
           :key-matches-without-binding
           (let [k (make-key (:key body))]
@@ -524,9 +530,13 @@
           (let [path     (mapv make-key (:path body))
                 b        (make-binding (:binding body))
                 path-map (assoc-in {} path (symbol b))]
-            [`~(if (optional? mode)
-                 {} path-map)
-             `[~(symbol b) (get-in ~message ~path)]])
+            [path-map `[~(symbol b) (get-in ~message ~path)]])
+
+          :optional-path-exists-with-binding
+          (let [path     (mapv make-key (:path body))
+                b        (make-binding (:binding body))
+                path-map (assoc-in {} path (symbol b))]
+            [{} `[~(symbol b) (get-in ~message ~path)]])
 
           :key-matches-without-binding
           (let [k           (make-key (:key body))

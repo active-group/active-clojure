@@ -360,8 +360,10 @@
   (s/or :required (s/cat :key ::key :match-value ::match-value)))
 
 (s/def ::key-matches-with-binding
-  (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
+  (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+
+(s/def ::optional-key-matches-with-binding
+  (s/or :required (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-matches-without-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value)))
@@ -380,7 +382,8 @@
         :path-matches-without-binding ::path-matches-without-binding
         :path-matches-with-binding ::path-matches-with-binding
         :optional-key-exists-with-binding ::optional-key-exists-with-binding
-        :optional-path-exists-with-binding ::optional-path-exists-with-binding))
+        :optional-path-exists-with-binding ::optional-path-exists-with-binding
+        :optional-key-matches-with-binding ::optional-key-matches-with-binding))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -461,9 +464,12 @@
           :key-matches-with-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
-            (if (optional? mode)
-              `(optional-key-with-default-binding-clause ~k ~(:default-value body) ~b)
-              `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b)))
+            `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b))
+
+          :optional-key-matches-with-binding
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
+            `(optional-key-with-default-binding-clause ~k ~(:default-value body) ~b))
 
           :path-matches-without-binding
           (let [path (mapv make-key (:path body))]
@@ -557,15 +563,17 @@
                 predicate?  (= :compare-fn (first match))
                 match-value (second match)]
             (cond
-              (optional? mode)
-              [{}
-               `[~(symbol b) (get-in ~message [~k] ~(:default-value body))]]
               predicate?
               [`({~k ~'_} :guard [(constantly (~(:fn match-value) (get-in ~message [~k])))])
                `[~(symbol b) (get-in ~message [~k])]]
               :else
               [`{~k ~match-value}
                `[~(symbol b) (get-in ~message [~k])]]))
+
+          :optional-key-matches-with-binding
+          (let [k           (make-key (:key body))
+                b           (make-binding (:binding body))]
+              [{} `[~(symbol b) (get-in ~message [~k] ~(:default-value body))]])
 
           :path-matches-without-binding
           (let [path        (mapv make-key (:path body))

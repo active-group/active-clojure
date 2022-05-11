@@ -290,8 +290,20 @@
 ;;;; Parse
 ;; Translate pattern expressions for `active.clojure.match` to clauses
 
+(def ^:private reserved-symbols
+  ;; Some symbols have a special meaning and must not be matched as
+  ;; plain symbols.
+  #{'?})
+
+(defn valid-symbol?
+  "Is a thing a valid symbol?"
+  [s]
+  (and (symbol? s) (not (reserved-symbols s))))
+
 (s/def ::qmark #{'?})
-(s/def ::key (s/or :keyword keyword? :symbol symbol? :string string?))
+(s/def ::key (s/or :keyword keyword?
+                   :symbol valid-symbol?
+                   :string string?))
 (s/def ::path (s/coll-of ::key :kind vector?))
 
 (defn regex?

@@ -4,6 +4,11 @@
             [clojure.core.match.regex]
             [clojure.test :as t]))
 
+(t/deftest valid-symbol?-test
+  (t/is (true? (p/valid-symbol? 'symbol)))
+  (t/is (false? (p/valid-symbol? '?)))
+  (t/is (false? (p/valid-symbol? "foo"))))
+
 (t/deftest parse-clause-test
   (t/testing "key exists without binding clause"
     (t/testing "flat"

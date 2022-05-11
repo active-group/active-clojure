@@ -362,7 +362,7 @@
 (s/def ::key-matches-with-binding
   (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
 
-(s/def ::optional-key-matches-with-binding
+(s/def ::optional-key-with-default-binding
   (s/or :required (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-matches-without-binding
@@ -371,7 +371,7 @@
 (s/def ::path-matches-with-binding
   (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
 
-(s/def ::optional-path-matches-with-binding
+(s/def ::optional-path-with-default-binding
   (s/or :required (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::clause
@@ -385,8 +385,8 @@
         :path-matches-with-binding ::path-matches-with-binding
         :optional-key-exists-with-binding ::optional-key-exists-with-binding
         :optional-path-exists-with-binding ::optional-path-exists-with-binding
-        :optional-key-matches-with-binding ::optional-key-matches-with-binding
-        :optional-path-matches-with-binding ::optional-path-matches-with-binding))
+        :optional-key-with-default-binding ::optional-key-matches-with-binding
+        :optional-path-with-default-binding ::optional-path-with-default-binding))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -469,7 +469,7 @@
                 b (make-binding (:binding body))]
             `(key-matches-with-binding-clause ~k (match-value->matcher ~(:match-value body)) ~b))
 
-          :optional-key-matches-with-binding
+          :optional-key-with-default-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
             `(optional-key-with-default-binding-clause ~k ~(:default-value body) ~b))
@@ -483,7 +483,7 @@
                 b    (make-binding (:binding body))]
             `(path-matches-with-binding-clause ~path (match-value->matcher ~(:match-value body)) ~b))
 
-          :optional-path-matches-with-binding
+          :optional-path-with-default-binding
           (let [path (mapv make-key (:path body))
                 b    (make-binding (:binding body))]
               `(optional-path-with-default-binding-clause ~path ~(:default-value body) ~b)))))))
@@ -576,7 +576,7 @@
               [`{~k ~match-value}
                `[~(symbol b) (get-in ~message [~k])]]))
 
-          :optional-key-matches-with-binding
+          :optional-key-with-default-binding
           (let [k           (make-key (:key body))
                 b           (make-binding (:binding body))]
               [{} `[~(symbol b) (get-in ~message [~k] ~(:default-value body))]])
@@ -610,7 +610,7 @@
               [`~path-map
                `[~(symbol b) (get-in ~message ~path)]]))
 
-          :optional-path-matches-with-binding
+          :optional-path-with-default-binding
           (let [path        (mapv make-key (:path body))
                 b           (make-binding (:binding body))]
             [{} `[~(symbol b) (get-in ~message ~path ~(:default-value body))]]))))))

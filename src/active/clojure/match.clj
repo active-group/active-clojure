@@ -329,8 +329,10 @@
                         :list (s/coll-of ::key :count 1 :kind list?))))
 
 (s/def ::key-exists-with-binding
-  (s/or :required (s/cat :key ::key :binding-key ::binding-key :binding ::binding)
-        :optional (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding)))
+  (s/or :required (s/cat :key ::key :binding-key ::binding-key :binding ::binding)))
+
+(s/def ::optional-key-exists-with-binding
+  (s/or :required (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding)))
 
 (s/def ::path-exists-without-binding
   (s/or :required (s/or :flat ::path
@@ -362,7 +364,8 @@
         :key-matches-without-binding ::key-matches-without-binding
         :key-matches-with-binding ::key-matches-with-binding
         :path-matches-without-binding ::path-matches-without-binding
-        :path-matches-with-binding ::path-matches-with-binding))
+        :path-matches-with-binding ::path-matches-with-binding
+        :optional-key-exists-with-binding ::optional-key-exists-with-binding))
 
 (defn match-value->matcher
   [[kind match-value]]
@@ -414,9 +417,12 @@
           :key-exists-with-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
-            (if (optional? mode)
-              `(optional-key-exists-with-binding-clause ~k ~b)
-              `(key-exists-with-binding-clause ~k ~b)))
+            `(key-exists-with-binding-clause ~k ~b))
+
+          :optional-key-exists-with-binding
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
+            `(optional-key-exists-with-binding-clause ~k ~b))
 
           :path-exists-without-binding
           (let [[mode body] body
@@ -490,11 +496,12 @@
           :key-exists-with-binding
           (let [k (make-key (:key body))
                 b (make-binding (:binding body))]
-            (if (optional? mode)
-              [{}
-               `[~(symbol b) (get-in ~message [~k])]]
-              [`{~k ~(symbol b)}
-               `[~(symbol b) (get-in ~message [~k])]]))
+            [`{~k ~(symbol b)} `[~(symbol b) (get-in ~message [~k])]])
+
+          :optional-key-exists-with-binding
+          (let [k (make-key (:key body))
+                b (make-binding (:binding body))]
+            [{} `[~(symbol b) (get-in ~message [~k])]])
 
           :path-exists-without-binding
           (let [[mode body] body

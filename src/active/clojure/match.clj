@@ -534,8 +534,7 @@
 
           :optional-path-exists-with-binding
           (let [path     (mapv make-key (:path body))
-                b        (make-binding (:binding body))
-                path-map (assoc-in {} path (symbol b))]
+                b        (make-binding (:binding body))]
             [{} `[~(symbol b) (get-in ~message ~path)]])
 
           :key-matches-without-binding

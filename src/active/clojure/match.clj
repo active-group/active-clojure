@@ -384,7 +384,7 @@
         :path-matches-with-binding ::path-matches-with-binding
         :optional-key-exists-with-binding ::optional-key-exists-with-binding
         :optional-path-exists-with-binding ::optional-path-exists-with-binding
-        :optional-key-with-default-binding ::optional-key-matches-with-binding
+        :optional-key-with-default-binding ::optional-key-with-default-binding
         :optional-path-with-default-binding ::optional-path-with-default-binding))
 
 (defn match-value->matcher

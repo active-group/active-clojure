@@ -532,8 +532,9 @@
 
           :path-exists-without-binding
           (let [[mode body] body
-                path        (mapv make-key (if (flat? mode) body (:path body)))]
-            [`{~path ~'_} `[]])
+                path        (mapv make-key (if (flat? mode) body (:path body)))
+                path-map    (assoc-in {} path '_)]
+            [path-map `[]])
 
           :path-exists-with-binding
           (let [path     (mapv make-key (:path body))

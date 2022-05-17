@@ -336,42 +336,42 @@
 (s/def ::binding symbol?)
 
 (s/def ::key-exists-without-binding
-  (s/or :required (s/or :flat ::key
-                        :list (s/coll-of ::key :count 1 :kind list?))))
+  (s/or :flat ::key
+        :list (s/coll-of ::key :count 1 :kind list?)))
 
 (s/def ::key-exists-with-binding
-  (s/or :required (s/cat :key ::key :binding-key ::binding-key :binding ::binding)))
+  (s/cat :key ::key :binding-key ::binding-key :binding ::binding))
 
 (s/def ::optional-key-exists-with-binding
-  (s/or :required (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding)))
+  (s/cat :qmark ::qmark :key ::key :binding-key ::binding-key :binding ::binding))
 
 (s/def ::path-exists-without-binding
-  (s/or :required (s/or :flat ::path
-                        :list (s/cat :path ::path))))
+  (s/or :flat ::path
+                        :list (s/cat :path ::path)))
 
 (s/def ::path-exists-with-binding
-  (s/or :required (s/cat :path ::path :binding-key ::binding-key :binding ::binding)))
+  (s/cat :path ::path :binding-key ::binding-key :binding ::binding))
 
 (s/def ::optional-path-exists-with-binding
-  (s/or :required (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding)))
+  (s/cat :qmark ::qmark :path ::path :binding-key ::binding-key :binding ::binding))
 
 (s/def ::key-matches-without-binding
-  (s/or :required (s/cat :key ::key :match-value ::match-value)))
+  (s/cat :key ::key :match-value ::match-value))
 
 (s/def ::key-matches-with-binding
-  (s/or :required (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+  (s/cat :key ::key :match-value ::match-value :binding-key ::binding-key :binding ::binding))
 
 (s/def ::optional-key-with-default-binding
-  (s/or :required (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
+  (s/cat :qmark ::qmark :key ::key :default-value ::default-value :binding-key ::binding-key :binding ::binding))
 
 (s/def ::path-matches-without-binding
-  (s/or :required (s/cat :path ::path :match-value ::match-value)))
+  (s/cat :path ::path :match-value ::match-value))
 
 (s/def ::path-matches-with-binding
-  (s/or :required (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding)))
+  (s/cat :path ::path :match-value ::match-value :binding-key ::binding-key :binding ::binding))
 
 (s/def ::optional-path-with-default-binding
-  (s/or :required (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding)))
+  (s/cat :qmark ::qmark :path ::path :default-value ::default-value :binding-key ::binding-key :binding ::binding))
 
 (s/def ::clause
   (s/or :key-exists-without-binding ::key-exists-without-binding
@@ -426,8 +426,7 @@
     (if (s/invalid? parse)
       (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
 
-      (let [[match parse] parse
-            [mode body]   parse]
+      (let [[match body] parse]
         (case match
           :key-exists-without-binding
           (let [[mode body] body
@@ -509,13 +508,12 @@
 
 ;; syntax emitter
 (defn parse-emit-syntax
-  [message p rhs]
+  [message p]
   (let [parse (s/conform ::clause p)]
     (if (s/invalid? parse)
       (c/assertion-violation `match-pattern->clause "not a valid pattern" p (s/explain-str ::clause p))
 
-      (let [[match parse] parse
-            [mode body]   parse]
+      (let [[match body] parse]
         (case match
           :key-exists-without-binding
           (let [[mode body] body
@@ -626,7 +624,7 @@
 (defn parse-emit-match-syntax
   [message [pattern rhs]]
   (let [[lhss rhss] (reduce (fn [[clauses bindings] c]
-                           (let [[clause binding] (parse-emit-syntax message c rhs)]
+                           (let [[clause binding] (parse-emit-syntax message c)]
                              [(conj clauses clause)
                               (conj bindings binding)]))
                          [[] []]

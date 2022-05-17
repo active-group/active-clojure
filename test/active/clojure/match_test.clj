@@ -386,3 +386,28 @@
                ;; Caused by java.lang.UnsupportedOperationException Can't eval locals
                ((p/map-matcher p x)
                 evt))))))
+
+(def doc-string-example-map-matcher
+  (p/map-matcher
+   [(:x "x" :as x)
+    (:y "y")
+    (:z :as z)
+    :w]
+   (println x z)
+    [(:a "a" :as a)
+     (:b "b")
+     (:c :as c)
+     ([:d] :as d)
+     ([:d Z] 42 :as Z)
+     ([:d Y] :as Y)
+     ([:d X] 65)
+     [:d W foo]]
+   (println a c d Z Y)
+   :else false))
+
+(t/deftest doc-string-test
+  (t/is (= "a c {Z 42, Y 23, X 65, W {foo bar}} 42 23\n"
+           (with-out-str
+             (doc-string-example-map-matcher {:a "a" :b "b" :c "c"
+                                              :d {"Z" 42 "Y" 23 "X" 65
+                                                  "W" {"foo" "bar"}}})))))

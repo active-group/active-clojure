@@ -937,7 +937,8 @@
              ([:d] :as d)
              ([:d Z] 42 :as Z)
              ([:d Y] :as Y)
-             ([:d X] 65)]
+             ([:d X] 65)
+             [:d W foo]]
             (println a c d Z Y)
             :else false))
 

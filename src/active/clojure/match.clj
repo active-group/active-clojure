@@ -216,7 +216,7 @@
   optional-key-with-default-binding-clause?
   [key optional-key-with-default-binding-clause-key
    default-value optional-key-with-default-binding-clause-default-value
-   binding optional-key-with-default-binding-clause])
+   binding optional-key-with-default-binding-clause-binding])
 
 (defn optional-key-with-default-binding-clause
   "Returns an optional clause that matches a `key`, binding the
@@ -678,7 +678,7 @@
   [message clause]
   (let [key           (optional-key-with-default-binding-clause-key clause)
         default-value (optional-key-with-default-binding-clause-default-value clause)
-        binding       (optional-key-with-default-binding-clause clause)]
+        binding       (optional-key-with-default-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message [~(convert-path-element key)] ~default-value)]))
 
 (defn path-matches-with-binding-clause->rhs-match

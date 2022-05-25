@@ -377,10 +377,10 @@ in the library:
                     label))
 ```
 
-`make-validator` returns a function that checks if the value is valid
-and returns either a `ValidationSuccess` or a `ValidationFailure`.
-This can then be combined with other validators to create a validated
-constructor for `Config`:
+`make-validator` returns a function that checks if the candidate is
+valid and returns either a `ValidationSuccess` or a
+`ValidationFailure`.  This can then be combined with other validators
+to create a validated constructor for `Config`:
 
 ```clojure
 (defn create-config
@@ -390,32 +390,31 @@ constructor for `Config`:
   [host port mode admin-users]
   (v/validation make-config
                 (v/validate-non-empty-string host :host)
-                ;; NOTE: We could also check for pos-int int
-                ;; `validate-port`, this is intended to show the
+                ;; NOTE: We could also check for pos-int in
+                ;; `validate-port`.  This is intended to show the
                 ;; `validate-all` combinator.
                 (v/validate-all [v/validate-pos-int validate-port] port :port)
                 (v/validate-one-of #{:dev :test :prod} mode :mode)
                 (v/sequence-of v/validate-non-empty-string admin-users :admin-users)))
 ```
 
-This is in large parts pretty straight forward.  We will go through
-the parts of this expression one by one.
+We will go through the parts of this expression one by one.
 
 - `(v/validation make-config <validations>)` means that, given all
   `<validations>` are `ValidationSuccess`es, call the function
   `make-config` with the validated candidate values.  The
   `make-config` function is curried automatically.
-- `(v/validate-non-empty-string host :host)` usese the
-  `validate-non-empty-string` form the validation library and checks
+- `(v/validate-non-empty-string host :host)` uses
+  `validate-non-empty-string` from the validation library and checks
   if `host` is a string and not empty.  If it fails, it will keep
   `:host` as a label to refer back to the argument.  All labels are
   optional, but it is a good idea to state a label if you want to map
   back from error to cause.
 - `(v/validate-all [v/validate-pos-int validate-port] port :port)`
   uses the `v/validate-all` combinator to say that 'the candidate must
-  satisfy all validations, `v/validate-pos-int` and `validate-port`.
-  It will use both validators on the candidate and combine both errors
-  if there are any into one `ValidationFailure`.
+  satisfy all of the following validations, `v/validate-pos-int` and
+  `validate-port`'.  It will use both validators on the candidate and
+  combine both errors if there are any into one `ValidationFailure`.
 - `(v/validate-one-of #{:dev :test :prod} mode :mode)` validates that
   `mode` is in the specified set of values.
 - `(v/sequence-of v/validate-non-empty-string admin-userse

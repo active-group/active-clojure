@@ -326,6 +326,168 @@ which can optimize work based on the equality of values.
 
 An example usage of the `active.clojure.monad` namespace can be found at https://github.com/active-group/active-clojure-monad-example
 
+### Applicative Validation
+
+The `active.clojure.validation` namespace provides utlities for
+applicative data validation.  It is useful to create validation
+functions that collect all errors that occured (as opposed to finding
+only specific or one error) in a purely functional way.
+
+The main building-blocks are the `validate-*` functions and
+`validate`.
+
+#### Applicative Validation: Example
+An idiomatic example, hiding the actual record constructor and
+exposing only a validated record constructor:
+
+```clojure
+(ns validation
+  (:require [active.clojure.record :as r]
+            [active.clojure.validation :as v]))
+
+(r/define-record-type Config
+  ^:private make-config config?
+  [host        config-host
+   port        config-port
+   mode        config-mode
+   admin-users config-admin-users])
+```
+
+Here, we define the record-type `Config`.  We want to have the
+following rules:
+
+- The `host` is a non-empty string
+- The `port` must be an integer between 0 -- 65536
+- The `mode` must be one of `:dev`, `:test`, and `:prod`
+- the `admin-users` must be a sequence of non-empty strings.
+
+First, we define a validator for ports which is not already included
+in the library:
+
+```clojure
+(defn validate-port
+  "Given a `candidate` value and an optional `label`, validates that
+  `candidate` is between ]0 65536[."
+  [candidate & [label]]
+  (v/make-validator candidate
+                    (fn [candidate]
+                      (and (< 0 candidate)
+                           (> 65536 candidate)))
+                    ::port
+                    label))
+```
+
+`make-validator` returns a function that checks if the value is valid
+and returns either a `ValidationSuccess` or a `ValidationFailure`.
+This can then be combined with other validators to create a validated
+constructor for `Config`:
+
+```clojure
+(defn create-config
+  "Creates a validated [[Config]], wrapped in a 'ValidationSuccess'.  If
+  any arguments are invalid, returns a 'ValidationFailure' holding all
+  'ValidationError's."
+  [host port mode admin-users]
+  (v/validation make-config
+                (v/validate-non-empty-string host :host)
+                ;; NOTE: We could also check for pos-int int
+                ;; `validate-port`, this is intended to show the
+                ;; `validate-all` combinator.
+                (v/validate-all [v/validate-pos-int validate-port] port :port)
+                (v/validate-one-of #{:dev :test :prod} mode :mode)
+                (v/sequence-of v/validate-non-empty-string admin-users :admin-users)))
+```
+
+This is in large parts pretty straight forward.  We will go through
+the parts of this expression one by one.
+
+- `(v/validation make-config <validations>)` means that, given all
+  `<validations>` are `ValidationSuccess`es, call the function
+  `make-config` with the validated candidate values.  The
+  `make-config` function is curried automatically.
+- `(v/validate-non-empty-string host :host)` usese the
+  `validate-non-empty-string` form the validation library and checks
+  if `host` is a string and not empty.  If it fails, it will keep
+  `:host` as a label to refer back to the argument.  All labels are
+  optional, but it is a good idea to state a label if you want to map
+  back from error to cause.
+- `(v/validate-all [v/validate-pos-int validate-port] port :port)`
+  uses the `v/validate-all` combinator to say that 'the candidate must
+  satisfy all validations, `v/validate-pos-int` and `validate-port`.
+  It will use both validators on the candidate and combine both errors
+  if there are any into one `ValidationFailure`.
+- `(v/validate-one-of #{:dev :test :prod} mode :mode)` validates that
+  `mode` is in the specified set of values.
+- `(v/sequence-of v/validate-non-empty-string admin-userse
+  :admin-users`) also pretty much does what it says on the label: It
+  validates that `admin-users` is a sequence of values, each of which
+  satisfy the `validate-non-empty-string` validation.
+
+Lets look at some results:
+
+```clojure
+;; Valid arguments, returns a ValidationSuccess holding the validated candidate.
+(create-config "host" 8888 :dev ["user1" "user2"])
+;; => #active.clojure.validation/ValidationSuccess{:candidate
+;;      #validation/Config{:host        "host"
+;;                         :port        8888
+;;                         :dev-mode?   true
+;;                         :admin-users ["user1" "user"2]}}
+```
+
+Hopefully the most common case: All arguments are valid, therefore the
+whole validation succeeds and returns the validated candidate value,
+wrapped in a `ValidationSuccess`.
+
+```clojure
+;; Every argument is invalid, returns a ValidationFailure with all ValidationErrors.
+(create-config "" -1 :staging ["user1" ""])
+;; => #active.clojure.validation/ValidationFailure{:errors
+;;      [#active.clojure.validation/ValidationError{:candidate ""
+;;                                                  :message   :active.clojure.validation/non-empty-string
+;;                                                  :label     :host}
+;;       #active.clojure.validation/ValidationError{:candidate -1
+;;                                                  :message   :active.clojure.validation/pos-int
+;;                                                  :label     :port}
+;;       #active.clojure.validation/ValidationError{:candidate -1
+;;                                                  :message   :validation/port
+;;                                                  :label     :port}
+;;       #active.clojure.validation/ValidationError{:candidate :staging
+;;                                                  :message   [:active.clojure.validation/one-of #{:prod :test :dev}]
+;;                                                  :label     :port}
+;;       #active.clojure.validation/ValidationError{:candidate ""
+;;                                                  :message   :active.clojure.validation/one-of #{:prod :test :dev}
+;;                                                  :label     [:admin-users 1]}]}
+```
+
+The dire case in which each argument is invalid.  Note that the result
+is a `ValidationFailure` that contains a sequence of
+`ValidationError`s.  Each error tells us which candidate was causing
+the error (`:candidate`), which validation was violated (`:message`)
+and gives us a `:label` to refer back to the cause of the error.  Also
+note that the `-1` shows up twice.  This is to be expected, because it
+violates both validations of our `validate-all` clause.
+
+```clojure
+;; Only some arguments are invalid
+(create-config "" 65537 :dev ["user1" ""])
+;; => #active.clojure.validation/ValidationFailure{:errors
+;;      [#active.clojure.validation/ValidationError{:candidate ""
+;;                                                  :message   :active.clojure.validation/non-empty-string
+;;                                                  :label     :host}
+;;       #active.clojure.validation/ValidationError{:candidate 65537
+;;                                                  :message   :validation/port
+;;                                                  :label     :port}
+;;       #active.clojure.validation/ValidationError{:candidate ""
+;;                                                  :message   :active.clojure.validation/one-of #{:prod :test :dev}
+;;                                                  :label     [:admin-users 1]}]}
+```
+
+This case shows the result of only some validations failing.  Take
+note of the `:port` validation again.  This time it is only one error.
+This is because it satisfies the `validate-pos-int` validation but not
+our custom validation specifying the legal port range.
+
 ## Development
 
 ### Testing

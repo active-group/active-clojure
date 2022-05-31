@@ -133,7 +133,7 @@ usually a namespaced keyword representing the error works well."}
 
 (defn seq-validation
   "Apply two validations sequentially, from left to right.  Analogous
-  to `Either` where `ValidationFailure` ts `Left` and
+  to `Either` where `ValidationFailure` is `Left` and
   `ValidationSuccess` is `Right`."
   [v-1 v-2]
   (cond

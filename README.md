@@ -402,8 +402,7 @@ We will go through the parts of this expression one by one.
 
 - `(v/validation make-config <validations>)` means that, given all
   `<validations>` are `ValidationSuccess`es, call the function
-  `make-config` with the validated candidate values.  The
-  `make-config` function is curried automatically.
+  `make-config` with the validated candidate values.
 - `(v/validate-non-empty-string host :host)` uses
   `validate-non-empty-string` from the validation library and checks
   if `host` is a string and not empty.  If it fails, it will keep

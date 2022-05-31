@@ -416,7 +416,7 @@ We will go through the parts of this expression one by one.
   combine both errors if there are any into one `ValidationFailure`.
 - `(v/validate-one-of #{:dev :test :prod} mode :mode)` validates that
   `mode` is in the specified set of values.
-- `(v/sequence-of v/validate-non-empty-string admin-userse
+- `(v/sequence-of v/validate-non-empty-string admin-users
   :admin-users`) also pretty much does what it says on the label: It
   validates that `admin-users` is a sequence of values, each of which
   satisfy the `validate-non-empty-string` validation.

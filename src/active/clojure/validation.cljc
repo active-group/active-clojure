@@ -305,7 +305,7 @@ usually a namespaced keyword representing the error works well."}
 
 (defn make-validator
   "Takes a `candidate` value and a `predicate` the candidate will be
-  applied to.  If the `(predicate candidate)` returns false, returns
+  applied to.  If `(predicate candidate)` returns false, returns
   a [[ValidationFailure]] with `error-message` as
   the [[ValidationError]], using `label` as the label if provided."
   [candidate predicate error-message & [label]]

@@ -89,8 +89,8 @@ validation."}
   a [[ValidationFailure]]"
   [f-success f-failure result]
   (cond
-    (validation-failure? result) (fmap-failure f-success result)
-    (validation-success? result) (fmap-success f-failure result)))
+    (validation-failure? result) (fmap-failure f-failure result)
+    (validation-success? result) (fmap-success f-success result)))
 
 ;; Validation specifics
 (define-record-type ^{:doc "Signifies a the error of a failed

@@ -12,6 +12,13 @@
     (t/is (= failure (v/fmap-success identity failure)))
     (t/is (= success (v/fmap-success identity success)))))
 
+(t/deftest fmap-result-test
+  (letfn [(f [validation-result]
+            (v/fmap-result str (fn [error] (v/validation-error-label error :new-label)) validation-result))]
+    (t/is (= (v/make-validation-success "42") (f (v/validate-pos-int 42))))
+    (t/is (= (v/make-validation-failure [(v/make-validation-error -23 ::v/pos-int :new-label)])
+             (f (v/validate-pos-int -23))))))
+
 (t/deftest seq-validation-test
   (let [failure (v/make-validation-failure
                  [(v/make-validation-error "candidate" "message" nil)])

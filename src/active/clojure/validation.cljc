@@ -247,7 +247,7 @@ usually a namespaced keyword representing the error works well."}
   "Takes a sequence of `validation` functions and a `candidate`
   and applies each validation function to the `candidate`.
 
-  If exactly one validation succeeds, reutrns a [[ValidationSuccess]].
+  If exactly one validation succeeds, returns a [[ValidationSuccess]].
   Otherwise, returns a [[ValidationFailure]] with all failed
   validations.
 

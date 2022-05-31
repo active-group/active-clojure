@@ -367,7 +367,7 @@ in the library:
 ```clojure
 (defn validate-port
   "Given a `candidate` value and an optional `label`, validates that
-  `candidate` is between ]0 65536[."
+  `candidate` is in [1 65535]."
   [candidate & [label]]
   (v/make-validator candidate
                     (fn [candidate]

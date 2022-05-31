@@ -233,15 +233,45 @@
                                                      v/validate-int]
                                                     candidate
                                                     label))]
-    (t/is (= (v/make-validation-success "string")
-             (validate-string-or-int "string")))
-    (t/is (= (v/make-validation-success 42)
-             (validate-string-or-int 42)))
+    (t/testing "exactly one success leads to success"
+      (t/is (= (v/make-validation-success "string")
+               (validate-string-or-int "string")))
+      (t/is (= (v/make-validation-success 42)
+               (validate-string-or-int 42))))
+    (t/testing "every error is returned"
+      (t/is (= (v/make-validation-failure
+                [(v/make-validation-error :key ::v/string nil)
+                 (v/make-validation-error :key ::v/int nil)])
+               (validate-string-or-int :key)))))
 
-    (t/is (= (v/make-validation-failure
-              [(v/make-validation-error :key ::v/string nil)
-               (v/make-validation-error :key ::v/int nil)])
-             (validate-string-or-int :key)))))
+  (t/testing "more than one success is a failure, too"
+    (let [validate-even
+          (fn [candidate & [label]]
+            (v/make-validator candidate even? ::even label))
+
+          validate-either-even-or-positive-number
+          (fn [candidate & [label]]
+            (v/validate-choice [v/validate-pos-int
+                                validate-even]
+                               candidate
+                               label))]
+      (t/is (= (v/make-validation-failure
+                [(v/make-validation-error 2 [::v/choice ::v/more-than-one-success] nil)])
+               (validate-either-even-or-positive-number 2)))
+
+      (t/testing "more than once success is a failure combined with other failures"
+        (let [v (fn [candidate & [label]]
+                  (v/validate-choice [v/validate-pos-int
+                                      validate-even
+                                      v/validate-boolean
+                                      v/validate-keyword]
+                                     candidate
+                                     label))]
+          (t/is (= (v/make-validation-failure
+                    [(v/make-validation-error 2 [::v/choice ::v/more-than-one-success] nil)
+                     (v/make-validation-error 2 ::v/boolean nil)
+                     (v/make-validation-error 2 ::v/keyword nil)])
+                   (v 2))))))))
 
 (t/deftest validate-all-test
   (let [v (fn [c]

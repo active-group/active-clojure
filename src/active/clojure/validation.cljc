@@ -257,13 +257,29 @@ usually a namespaced keyword representing the error works well."}
   [validators candidate & [label]]
   ;; Choice is interesting because we need to have exactly one
   ;; validator successfully validate the candidate.
-  (let [validation-results   (mapv (fn [validate] (validate candidate label)) validators)
-        groups               (group-by validation-success? validation-results)
-        successes            (get groups true)
-        [failure & failures] (get groups false)]
-    (if (= 1 (count successes))
+  (let [validation-results (mapv (fn [validate] (validate candidate label)) validators)
+        groups             (group-by validation-success? validation-results)
+        successes          (get groups true)
+        [error & errors]   (get groups false)
+        ;; All validation errors combined.
+        base-failure       (reduce mappend-validation-failure error errors)]
+    (cond
+      ;; We get a success if we have exactly one successful match.
+      (= 1 (count successes))
       (first successes)
-      (reduce mappend-validation-failure failure failures))))
+
+      ;; More than one success is a failure.  Communicate the cause
+      ;; (::more-than-one-success) and append the rest of the
+      ;; failures (`base-failure`).
+      (< 1 (count successes))
+      (let [choice-failure (make-validation-failure
+                            [(make-validation-error candidate [::choice ::more-than-one-success] label)])]
+        (if (nil? error)
+          choice-failure
+          (mappend-validation-failure choice-failure base-failure)))
+
+      :else  ;; There was no success at all, return the base failure.
+      base-failure)))
 
 (defn validate-all
   "Takes a sequence of `validations` and a `candidate` and applies all

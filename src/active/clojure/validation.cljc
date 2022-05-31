@@ -217,7 +217,7 @@ usually a namespaced keyword representing the error works well."}
   ;; TODO chose a better name that doesnt remind johannes of monads.
 
   "Takes a validation function and a sequence of candidates and
-  validates each vandidate and returns the combined result.
+  validates each candidate and returns the combined result.
 
   If any one validation validation fails, reutrns a
   `ValidationFailure`, containing _all_ failures.

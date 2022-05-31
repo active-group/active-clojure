@@ -100,7 +100,7 @@ validation."}
   make-validation-error validation-error?
   [^{:doc "The candidate value that was being validated."}
    candidate validation-error-candidate
-   ^{:doc "A message signifying was kind of error occured.  It should
+   ^{:doc "A message signifying what kind of error occured.  It should
 possible for the user to interpret the message as they please, so
 usually a namespaced keyword representing the error works well."}
    message validation-error-message

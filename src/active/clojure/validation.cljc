@@ -256,7 +256,7 @@ usually a namespaced keyword representing the error works well."}
   of the value that could not be validated."
   [validators candidate & [label]]
   ;; Choice is interesting because we need to have exactly one
-  ;; validator validate the candidate.
+  ;; validator successfully validate the candidate.
   (let [validation-results   (mapv (fn [validate] (validate candidate label)) validators)
         groups               (group-by validation-success? validation-results)
         successes            (get groups true)

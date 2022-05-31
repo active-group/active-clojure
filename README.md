@@ -328,7 +328,7 @@ An example usage of the `active.clojure.monad` namespace can be found at https:/
 
 ### Applicative Validation
 
-The `active.clojure.validation` namespace provides utlities for
+The `active.clojure.validation` namespace provides utilities for
 applicative data validation.  It is useful to create validation
 functions that collect all errors that occured (as opposed to finding
 only specific or one error) in a purely functional way.

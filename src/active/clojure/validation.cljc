@@ -219,7 +219,7 @@ usually a namespaced keyword representing the error works well."}
   "Takes a validation function and a sequence of candidates and
   validates each candidate and returns the combined result.
 
-  If any one validation validation fails, reutrns a
+  If any one validation fails, returns a
   `ValidationFailure`, containing _all_ failures.
 
   All failures' [[validation-error-label]]s are prepended with a tuple

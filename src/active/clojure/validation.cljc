@@ -260,6 +260,9 @@ usually a namespaced keyword representing the error works well."}
   "Takes a sequence of `validation` functions and a `candidate`
   and applies each validation function to the `candidate`.
 
+  If `validations` is empty, the validation will always fail with the
+  `[::choice ::no-validators]` message.
+
   If exactly one validation succeeds, returns a [[ValidationSuccess]].
   Otherwise, returns a [[ValidationFailure]] with all failed
   validations.
@@ -270,29 +273,32 @@ usually a namespaced keyword representing the error works well."}
   [validators candidate & [label]]
   ;; Choice is interesting because we need to have exactly one
   ;; validator successfully validate the candidate.
-  (let [validation-results (mapv (fn [validate] (validate candidate label)) validators)
-        groups             (group-by validation-success? validation-results)
-        successes          (get groups true)
-        [error & errors]   (get groups false)
-        ;; All validation errors combined.
-        base-failure       (reduce mappend-validation-failure error errors)]
-    (cond
-      ;; We get a success if we have exactly one successful match.
-      (= 1 (count successes))
-      (first successes)
+  (if (empty? validators)
+    (make-validation-failure
+     [(make-validation-error candidate [::choice ::no-validators] label)])
+    (let [validation-results (mapv (fn [validate] (validate candidate label)) validators)
+          groups             (group-by validation-success? validation-results)
+          successes          (get groups true)
+          [error & errors]   (get groups false)
+          ;; All validation errors combined.
+          base-failure       (reduce mappend-validation-failure error errors)]
+      (cond
+        ;; We get a success if we have exactly one successful match.
+        (= 1 (count successes))
+        (first successes)
 
-      ;; More than one success is a failure.  Communicate the cause
-      ;; (::more-than-one-success) and append the rest of the
-      ;; failures (`base-failure`).
-      (< 1 (count successes))
-      (let [choice-failure (make-validation-failure
-                            [(make-validation-error candidate [::choice ::more-than-one-success] label)])]
-        (if (nil? error)
-          choice-failure
-          (mappend-validation-failure choice-failure base-failure)))
+        ;; More than one success is a failure.  Communicate the cause
+        ;; (::more-than-one-success) and append the rest of the
+        ;; failures (`base-failure`).
+        (< 1 (count successes))
+        (let [choice-failure (make-validation-failure
+                              [(make-validation-error candidate [::choice ::more-than-one-success] label)])]
+          (if (nil? error)
+            choice-failure
+            (mappend-validation-failure choice-failure base-failure)))
 
-      :else  ;; There was no success at all, return the base failure.
-      base-failure)))
+        :else  ;; There was no success at all, return the base failure.
+        base-failure))))
 
 (defn validate-all
   "Takes a sequence of `validations` and a `candidate` and applies all
@@ -300,22 +306,25 @@ usually a namespaced keyword representing the error works well."}
   all [[ValidationFailure]]s or returns a [[ValidationSuccess]] for
   the candidate."
   [validations candidate & [label]]
-  (reduce (fn [acc v]
-            (let [res (v candidate label)]
-              (cond
-                (and (validation-success? acc)
-                     (validation-success? res))
-                acc
-                
-                (and (validation-failure? acc)
-                     (validation-failure? res))
-                (make-validation-failure (concat (validation-failure-errors acc)
-                                                 (validation-failure-errors res)))
-                (validation-failure? acc) acc
+  (if (empty? validations)
+    (make-validation-failure
+     [(make-validation-error candidate [::all ::no-validators] label)])
+    (reduce (fn [acc v]
+              (let [res (v candidate label)]
+                (cond
+                  (and (validation-success? acc)
+                       (validation-success? res))
+                  acc
+                  
+                  (and (validation-failure? acc)
+                       (validation-failure? res))
+                  (make-validation-failure (concat (validation-failure-errors acc)
+                                                   (validation-failure-errors res)))
+                  (validation-failure? acc) acc
 
-                (validation-failure? res) res)))
-          (pure-validation candidate)
-          validations))
+                  (validation-failure? res) res)))
+            (pure-validation candidate)
+            validations)))
 
 (defn optional
   "Takes a validation function `validate` and returns a validation

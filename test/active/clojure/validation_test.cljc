@@ -201,6 +201,9 @@
                 (v/sequence-of validate-node neighbors :neighbors)))
 
 (t/deftest sequence-of-test
+  (t/testing "an empty collection is always a valid `sequence-of`"
+    (t/is (= (v/make-validation-success [])
+             (v/sequence-of v/validate-non-empty-string []))))
   (t/is (= (v/make-validation-success ["a" "b" "c"])
            (v/sequence-of v/validate-non-empty-string ["a" "b" "c"])))
   (t/is (= (v/make-validation-failure
@@ -241,6 +244,10 @@
                                                      v/validate-int]
                                                     candidate
                                                     label))]
+    (t/testing "an empty choice can never have a valid result"
+      (t/is (= (v/make-validation-failure
+                [(v/make-validation-error 42 [::v/choice ::v/no-validators] :label)])
+               (v/validate-choice [] 42 :label))))
     (t/testing "exactly one success leads to success"
       (t/is (= (v/make-validation-success "string")
                (validate-string-or-int "string")))
@@ -290,6 +297,10 @@
                                  (v/make-validation-failure [(v/make-validation-error candidate ::not-clojure label)])))]
                           c
                           :non-empty-and-clojure))]
+    (t/testing "validating with an empty seq of validators is always successful"
+      (t/is (= (v/make-validation-failure
+                [(v/make-validation-error 42 [::v/all ::v/no-validators] :label)])
+               (v/validate-all [] 42 :label))))
     (t/is (= (v/make-validation-failure
               [(v/make-validation-error "" ::v/non-empty-string :non-empty-and-clojure)
                (v/make-validation-error "" ::not-clojure :non-empty-and-clojure)])

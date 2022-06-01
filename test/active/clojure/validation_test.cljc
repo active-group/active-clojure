@@ -9,8 +9,9 @@
   (let [failure (v/make-validation-failure
                  [(v/make-validation-error "candidate" "message" nil)])
         success (v/make-validation-success "candidate")]
-    (t/is (= failure (v/fmap-success identity failure)))
-    (t/is (= success (v/fmap-success identity success)))))
+    (t/is (= failure (v/fmap-success clojure.string/upper-case failure)))
+    (t/is (= (v/make-validation-success "CANDIDATE")
+             (v/fmap-success clojure.string/upper-case success)))))
 
 (t/deftest fmap-result-test
   (letfn [(f [validation-result]

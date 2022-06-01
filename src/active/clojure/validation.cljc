@@ -149,9 +149,10 @@ usually a namespaced keyword representing the error works well."}
     (validation-success? v-1)
     (fmap-success (validation-success-candidate v-1) v-2)))
 
-(defn and-then
-  "Apply validations in sequence.  Takes a validation `e` and a function
-  `f` and applies `e`'s candidate iff `e` is a [[ValidationSuccess]]."
+(defn- bind
+  ;; Apply validations in sequence (aka monadic bind).  Takes a validation
+  ;; `e` and a function `f` and applies `e`'s candidate iff `e` is
+  ;; a [[ValidationSuccess]].
   [e f]
   (cond
     (validation-failure? e) e
@@ -159,6 +160,12 @@ usually a namespaced keyword representing the error works well."}
 
     :else
     (condition/assertion-violation `and-then "not a validation-result" e)))
+
+(defn and-then
+  "Apply validations in sequence.  Takes a validation `e` and a function
+  `f` and applies `e`'s candidate iff `e` is a [[ValidationSuccess]]."
+  [e f]
+  (bind e f))
 
 (defn curry-n
   "Curry a function `f` of arity `n`."

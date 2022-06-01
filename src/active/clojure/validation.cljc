@@ -221,8 +221,8 @@ usually a namespaced keyword representing the error works well."}
   Else it returns a [[ValidationFailure]] with all errors accumulated. "
   [validation-results]
   (if (empty? validation-results) 
-    (make-validation-success validation-results)
-    (apply validation (fn [& args] (vec args)) validation-results)))
+    (make-validation-success [])
+    (apply validation vector validation-results)))
 
 ;; Combinators
 

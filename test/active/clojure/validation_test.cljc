@@ -298,3 +298,25 @@
               [(v/make-validation-error "clj" ::not-clojure :non-empty-and-clojure)])
              (v "clj")))
     (t/is (= (v/make-validation-success "clojure") (v "clojure")))))
+
+(t/deftest sequence-test
+  (t/testing "the empty sequence"
+    (t/is (= (v/make-validation-success [])
+             (v/sequence []))))
+  (t/testing "only successes"
+    (t/is (= (v/make-validation-success ['a 'b])
+             (v/sequence [(v/make-validation-success 'a)
+                          (v/make-validation-success 'b)]))))
+  (t/testing "mixed success and failure"
+    (t/is (= (v/make-validation-failure
+              [(v/make-validation-error 'a :msg :label)])
+             (v/sequence [(v/make-validation-failure [(v/make-validation-error 'a :msg :label)])
+                          (v/make-validation-success 'b)]))))
+ (t/testing "only failure"
+    (t/is (= (v/make-validation-failure
+              [(v/make-validation-error 'a :msg :label)
+               (v/make-validation-error 'b :msg :label)
+               (v/make-validation-error 'c :msg :label)])
+             (v/sequence [(v/make-validation-failure [(v/make-validation-error 'a :msg :label)])
+                          (v/make-validation-failure [(v/make-validation-error 'b :msg :label)
+                                                      (v/make-validation-error 'c :msg :label)])])))))

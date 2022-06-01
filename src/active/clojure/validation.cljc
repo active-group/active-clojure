@@ -185,7 +185,11 @@ usually a namespaced keyword representing the error works well."}
   they were validated.
 
   If any one validation fails, returns a `ValidationFailure`,
-  containing _all_ failures."
+  containing _all_ failures.
+
+  The number of arguments `make-result` expects must match the `(count
+  validations`).  Supplying a wrong number of arguments considered
+  undefined behaviour."
   [make-result & validations]
   (reduce (fn [res v] (seq-validation res v))
           (pure-validation (curry-n make-result (count validations)))

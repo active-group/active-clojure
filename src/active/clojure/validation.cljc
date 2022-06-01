@@ -34,7 +34,9 @@
             [active.clojure.condition :as condition]
             [active.clojure.lens :as lens]))
 
-;;; A ValidationResult is either a ValidationSuccess or a ValidationFailure.
+;;; A ValidationResult is one of the following
+;; - a ValidationSuccess
+;; - a ValidationFailure.
 (define-record-type ^{:doc "Signifies a failured validation.  Holds
   the [[ValidationError]]."}
   ValidationFailure

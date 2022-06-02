@@ -268,8 +268,8 @@ usually a namespaced keyword representing the error works well."}
   validations.
 
   All failures' [[validation-error-label]]s are prepended with a tuple
-  of `label` if present (otherwise, defaults to `::seq`) and the index
-  of the value that could not be validated."
+  of `label` if present (otherwise, defaults to `::choice`) and the
+  index of the value that could not be validated."
   [validators candidate & [label]]
   ;; Choice is interesting because we need to have exactly one
   ;; validator successfully validate the candidate.

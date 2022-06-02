@@ -170,12 +170,12 @@ usually a namespaced keyword representing the error works well."}
 (defn curry-n
   "Curry a function `f` of arity `n`."
   [f n]
-  (if (zero? n)
+  (if (or (zero? n) (= n 1))
+    ;; There's nothing to do.
     f
+    ;; Partially apply f to x and 'wait' for the rest of the args.
     (fn [x]
-      (if (= n 1)
-        (f x)
-        (curry-n (partial f x) (dec n))))))
+      (curry-n (partial f x) (dec n)))))
 
 (defn validation
   "Takes a result construtor function and a sequence of validations.

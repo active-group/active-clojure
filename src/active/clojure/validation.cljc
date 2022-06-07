@@ -300,6 +300,8 @@ usually a namespaced keyword representing the error works well."}
         :else  ;; There was no success at all, return the base failure.
         base-failure))))
 
+(declare succeed)
+
 (defn validate-all
   "Takes a sequence of `validations` and a `candidate` and applies all
   `validations` to `candidate` sequentially.  Collects either
@@ -309,22 +311,11 @@ usually a namespaced keyword representing the error works well."}
   (if (empty? validations)
     (make-validation-failure
      [(make-validation-error candidate [::all ::no-validators] label)])
-    (reduce (fn [acc v]
-              (let [res (v candidate label)]
-                (cond
-                  (and (validation-success? acc)
-                       (validation-success? res))
-                  acc
-                  
-                  (and (validation-failure? acc)
-                       (validation-failure? res))
-                  (make-validation-failure (concat (validation-failure-errors acc)
-                                                   (validation-failure-errors res)))
-                  (validation-failure? acc) acc
-
-                  (validation-failure? res) res)))
-            (pure-validation candidate)
-            validations)))
+    ;; missing labels
+    (let [labelled-validations (mapv (fn [v] (fn [c] (v c label))) validations)
+          validated            ((apply juxt labelled-validations) candidate)]
+       (and-then (apply validation vector validated)
+                 (constantly (succeed candidate))))))
 
 (defn optional
   "Takes a validation function `validate` and returns a validation

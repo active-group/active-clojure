@@ -133,11 +133,17 @@ usually a namespaced keyword representing the error works well."}
   "Lift a value into the validation applicative."
   make-validation-success)
 
+(defn- assert-validation-result [e]
+  (condition/assert (validation-result? e)
+                    (str "not a validation-result" (pr-str e))))
+
 (defn seq-validation
   "Apply two validations sequentially, from left to right.  Analogous
   to `Either` where `ValidationFailure` is `Left` and
   `ValidationSuccess` is `Right`."
   [v-1 v-2]
+  (assert-validation-result v-1)
+  (assert-validation-result v-2)
   (cond
     (and (validation-failure? v-1)
          (validation-failure? v-2))
@@ -154,12 +160,10 @@ usually a namespaced keyword representing the error works well."}
   ;; `e` and a function `f` and applies `e`'s candidate iff `e` is
   ;; a [[ValidationSuccess]].
   [e f]
+  (assert-validation-result e)
   (cond
     (validation-failure? e) e
-    (validation-success? e) (f (validation-success-candidate e))
-
-    :else
-    (condition/assertion-violation `and-then "not a validation-result" e)))
+    (validation-success? e) (f (validation-success-candidate e))))
 
 (defn and-then
   "Apply validations in sequence.  Takes a validation `e` and a function

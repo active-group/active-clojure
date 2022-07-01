@@ -239,22 +239,12 @@ usually a namespaced keyword representing the error works well."}
   of `label` if present (otherwise, defaults to `::seq`) and the index
   of the value that could not be validated."
   [validation candidates & [label]]
-  (if (empty? candidates)
-    (make-validation-success candidates)
-    (->> candidates
-         (map-indexed
-          (fn [idx candidate]
-            (let [res (validation candidate)]
-              (cond
-                (validation-success? res)
-                res
-
-                (validation-failure? res)
-                (lens/overhaul
-                 res
-                 validation-failure-errors
-                 (partial mapv #(augment-validation-error-label % [(or label ::seq) idx])))))))
-         (reduce seq-validation (pure-validation (curry-n vector (count candidates)))))))
+  (sequence
+   (map-indexed
+    (fn [idx candidate]
+      (->> (validation candidate)
+           (fmap-failure #(augment-validation-error-label % [(or label ::seq) idx]))))
+    candidates)))
 
 (defn validate-choice
   "Takes a sequence of `validation` functions and a `candidate`

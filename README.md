@@ -9,8 +9,7 @@ A library with various basic utilities for programming with Clojure.
 ### Breaking changes in version `0.40.0`
 
 - `active.clojure.monad/run-monadic-swiss-army` was renamed to
-  `active.clojure.monad/run-monadic`.  This change was introduced in
-  96216542d4b8953c8896f145f8004bb362c46be6.
+  `active.clojure.monad/run-monadic`.
 
 ### Breaking changes in version `0.38`
 

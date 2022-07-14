@@ -6,6 +6,12 @@ A library with various basic utilities for programming with Clojure.
 [![Actions Status](https://github.com/active-group/active-clojure/workflows/Tests/badge.svg)](https://github.com/active-group/active-clojure/actions)
 [![cljdoc badge](https://cljdoc.org/badge/de.active-group/active-clojure)](https://cljdoc.org/d/de.active-group/active-clojure/CURRENT)
 
+### Breaking changes in version `0.40.0`
+
+- `active.clojure.monad/run-monadic-swiss-army` was renamed to
+  `active.clojure.monad/run-monadic`.  This change was introduced in
+  96216542d4b8953c8896f145f8004bb362c46be6.
+
 ### Breaking changes in version 0.38
 
 - For an RTD record `MyRecord`, `(MyRecord :meta)` will no longer

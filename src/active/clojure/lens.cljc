@@ -166,7 +166,10 @@
   (if (= dflt v) nil v))
 
 (defn default
-  "Returns a lens that shows nil as the given default value, but does not change any other value."
+  "Returns a lens that shows nil as the given default value, but does
+  not change any other value. Note that this lens changed the type of
+  the underlying data from `Maybe a` to `a` and thus you must not
+  shove `nil` into it."
   [dflt]
   (xmap default-yank default-shove dflt))
 

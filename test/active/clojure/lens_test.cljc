@@ -196,8 +196,13 @@
 (deftest default
   (let [l (lens/default 42)]
     (lens-laws-hold l nil 3 7)
-    ;; default is not a proper lens
-    (lens-laws-hold l 42 3 7)
+
+    ;; default is not a "very well behaved" lens [1]
+    #_(lens-laws-hold l 42 3 7)
+    ;; but it's probably "well behaved" [1]
+    (law-1-holds l nil 3)
+    (law-2-holds l nil)
+
     (is (= 42
            (lens/yank nil l)))
     (is (= 13
@@ -542,3 +547,9 @@
                           :list [5]}
                          proj
                          {:flup {:shmup -1 :blub "abc"}}))))))
+
+;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
+;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for
+;; Bidirectional Tree Transformations: A Linguistic Approach to the
+;; View Update Problem”. In: Principles of Programming Languages. ACM
+;; Press, 2005, pages 233-246. doi: 10.1145/1040305.1040325.

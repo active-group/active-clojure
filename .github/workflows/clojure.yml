@@ -26,7 +26,7 @@ jobs:
       if: failure()
       env:
         SECRET: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
-        CHANNEL: "active-group"
+        CHANNEL: "active-clojure"
         USERNAME: "GitHub"
       run: |
         URL=https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}

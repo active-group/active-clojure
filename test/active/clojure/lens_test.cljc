@@ -196,6 +196,8 @@
 (deftest default
   (let [l (lens/default 42)]
     (lens-laws-hold l nil 3 7)
+    ;; default is not a proper lens
+    (lens-laws-hold l 42 3 7)
     (is (= 42
            (lens/yank nil l)))
     (is (= 13

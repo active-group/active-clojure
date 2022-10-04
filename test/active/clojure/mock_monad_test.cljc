@@ -53,3 +53,13 @@
           (ex1)
           (ex1)))]
     (is (= "I don't care, I am mocking you." result))))
+
+(def reified-command
+  (monad/reify-as (ask nil) ::reification))
+
+(deftest mock-reified
+  (let [result
+        (mock/mock-run-monad
+          [(mock/mock-result ::reification true)]
+          reified-command)]
+    (is (true? result))))

@@ -286,7 +286,7 @@ Each profile has the same format as the top-level configuration itself
     (seq thing)
     true
     (catch #?(:clj Throwable) #?(:cljs js/Error) e
-      false)))
+           false)))
 
 (defn sequence-of-range
   "Range for a sequence of values of an underlying range."
@@ -420,7 +420,7 @@ Each profile has the same format as the top-level configuration itself
               (map-of-ranges-diff-fn val-range)))
 
 #?(:clj (def slurpable-range
-  "Range for something that may be passed to [[slurp]]."
+          "Range for something that may be passed to [[slurp]]."
           (make-scalar-range "Slurpable"
                              (fn [range path val]
                                (cond
@@ -964,3 +964,26 @@ Each profile has the same format as the top-level configuration itself
 the remainder of the lines the field holds \".\"."
   [r]
   (any-range (one-of-range #{"."} nil) r))
+
+
+(defn unparse-configuration-object
+  "Unparses a configuration object according to a given configuration scheme."
+  [schema object]
+  (cond
+    (map-schema? schema)
+    (reduce-kv (fn [res key section]
+                 (assoc res key (unparse-configuration-object (section-schema section)
+                                                              (get object key))))
+               (reduce-kv (fn [res key _setting]
+                            (assoc res key (get object key)))
+                          {}
+                          (map-schema-settings-map schema))
+               (map-schema-sections-map schema))
+    (sequence-schema? schema)
+    (mapv #(unparse-configuration-object (sequence-schema-element-schema schema) %)
+          object)))
+
+(defn unparse-configuration
+  "Unparses a configuration."
+  [config]
+  (unparse-configuration-object (configuration-schema config) (configuration-object config)))

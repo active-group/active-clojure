@@ -5,7 +5,6 @@ A configuration is a nested key-value map.
 
 It contains top-level settings and sections of qualified settings, like so:
 
-
     {:top-level-setting-key 'foo
      {:section-key
       {:section-setting 'bar}}}
@@ -47,12 +46,12 @@ Each profile has the same format as the top-level configuration itself
   ValueRange ; used to be called Range, but conflicts with cljs.core/->Range
   (^{:doc "Make a [[Range]] range object.
   - `description' is a human-readable string
-  - `completer' is a function that accepts a range, a key, and a value,
+  - `completer' is a function that accepts a range, a path, and a value,
      and either returns a \"completed\" value that takes defaults etc. into account,
      or a [[RangeError]] object.
-  - `reduce` is a function accepting a range, a key, a function, an initial result,
+  - `reduce` is a function accepting a range, a path, a function, an initial result,
      and a value, reducing collection values similar to clojure [[reduce]], calling
-     `(f range key res v)` on all scalar values.
+     `(f range path res v)` on all scalar values.
   - `diff` is a function accepting two values that returns a sequence of `[path v1 v2]`, see
     diff functions below"
      }

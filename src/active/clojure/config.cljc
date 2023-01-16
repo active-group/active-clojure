@@ -262,6 +262,12 @@ Each profile has the same format as the top-level configuration itself
 
                            :else (make-range-error range path val))))))
 
+(defn or-dot-range
+  "Given range `r` is required in the first line,
+the remainder of the lines the field holds \".\"."
+  [r]
+  (any-range (one-of-range #{"."} nil) r))
+
 (defn one-of-range-custom-compare
   "Range for one of a set of values, with custom compare function,
   with explicit default."
@@ -957,10 +963,4 @@ Each profile has the same format as the top-level configuration itself
                   (fn [cf]
                     (really-make-configuration cf
                                                (section-schema (last sections))))))
-
-(defn or-dot-range
-  "Given range `r` is required in the first line,
-the remainder of the lines the field holds \".\"."
-  [r]
-  (any-range (one-of-range #{"."} nil) r))
 

@@ -456,31 +456,3 @@
               "2" "fortytwo"
               "3" "three"}}))))))
 
-(deftest unparse
-  (let [schema+example-configs
-        [[schema3
-          {:inherits {:foo 5}, :outer {:inherits {:foo 5}}}]
-         [map-of-range-schema
-          {:mp
-           {"1" "one"
-            "2" "two"
-            "3" "three"}}]
-         [strings-schema
-          {:strings
-           [{:string "foo"}
-            {:string "bar"}]}]
-         [schema2
-          {:mode :production
-           :initialize? false
-           :section2
-           {:initialize? false
-            :programmable-counters {:initialize? true}}}]
-         [schema1
-          {:mode :development
-           :initialize? false
-           :programmable-counters {:initialize? true}}]]]
-    (doseq [[schema example-config] schema+example-configs]
-      (is (= example-config (c/unparse-configuration
-                             (c/make-configuration
-                              schema
-                              [] example-config)))))))

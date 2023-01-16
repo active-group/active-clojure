@@ -964,25 +964,3 @@ the remainder of the lines the field holds \".\"."
   [r]
   (any-range (one-of-range #{"."} nil) r))
 
-
-(defn unparse-configuration-object
-  "Unparses a configuration object according to a given configuration scheme."
-  [schema object]
-  (cond
-    (map-schema? schema)
-    (reduce-kv (fn [res key section]
-                 (assoc res key (unparse-configuration-object (section-schema section)
-                                                              (get object key))))
-               (reduce-kv (fn [res key _setting]
-                            (assoc res key (get object key)))
-                          {}
-                          (map-schema-settings-map schema))
-               (map-schema-sections-map schema))
-    (sequence-schema? schema)
-    (mapv #(unparse-configuration-object (sequence-schema-element-schema schema) %)
-          object)))
-
-(defn unparse-configuration
-  "Unparses a configuration."
-  [config]
-  (unparse-configuration-object (configuration-schema config) (configuration-object config)))

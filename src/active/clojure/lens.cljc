@@ -310,7 +310,7 @@
 (defn ++
   "Returns a lens over some data structure that shows a sequence of
   elements that each of the given lenses show on that. Note that the
-  behaviour is undefined if those lenses do not show distrinct parts
+  behaviour is undefined if those lenses do not show distinct parts
   of the data structure."
   [& lenses]
   (lens plus-yank

@@ -1,7 +1,10 @@
 (ns ^:config active.clojure.config-test
   (:require [active.clojure.config :as c]
+            #?(:cljs [active.clojure.cljs.record :refer [define-record-type]])
+            #?(:clj [active.clojure.record :refer :all])
             #?(:cljs [cljs.test :as t])
-            #?(:clj [clojure.test :refer :all]))
+            #?(:clj [clojure.test :refer :all])
+            [active.clojure.lens :as lens])
   #?(:cljs (:require-macros [cljs.test :refer (is deftest run-tests testing)])))
 
 
@@ -399,7 +402,19 @@
                    {:string "bar"}
                    {:string "baz"}]]})]
     (is (= [["foo" "bar" "baz"] ["foo" "bar" "baz"]]
-           (c/access config string-setting nested-sequences-section)))))
+           (c/access config string-setting nested-sequences-section))))
+  (let [config (c/make-configuration
+                nested-sequences-schema
+                []
+                {:nested-sequences
+                 [[{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]
+                  [{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]]})]
+    (is (= "bar"
+           (c/access config string-setting nested-sequences-section 0 1)))))
 
 (deftest sequence-diff
   (is (= '([[:strings 2] nil {:string "baz"}]
@@ -512,3 +527,153 @@
               "2" "fortytwo"
               "3" "three"}}))))))
 
+(def a-setting
+  (c/setting
+    :a
+    "a example setting"
+    c/string-range))
+
+(def b-setting
+  (c/setting
+    :b
+    "b example setting"
+    (c/boolean-range true)))
+
+(def pare-schema
+  (c/schema
+    "map-schema that is the basis for the record"
+    a-setting
+    b-setting))
+
+(def pare-section
+  (c/section
+    :pare
+    pare-schema))
+
+(def map-schema
+    (c/schema
+    "record example schema"
+    pare-section))
+
+(def pare-example-map-schema-config-map
+  {:pare {:a "Yeah!" :b true}})
+
+(def pare-sequence-schema
+  (c/sequence-schema
+    "sequence-schema that is the basis for the record"
+    pare-schema))
+
+(deftest lens-pare-map-test
+  (is (= pare-example-map-schema-config-map
+         (c/normalize&check-config-object map-schema [] pare-example-map-schema-config-map)))
+  (let [conf (c/make-configuration map-schema [] pare-example-map-schema-config-map)
+        l (c/access-lens pare-section)]
+    (is (= {:a "Yeah!" :b true} (lens/yank conf l)))
+    (is (= {:a "Changed!" :b true}
+           (lens/yank (lens/shove conf l {:a "Changed!"}) l))))
+  (let [conf (c/make-configuration map-schema [] pare-example-map-schema-config-map)
+        l (c/access-lens a-setting pare-section)]
+    (is (= "Yeah!" (lens/yank conf l)))
+    (is (= "Changed!" (lens/yank (lens/shove conf l "Changed!") l)))))
+
+(def pares-section
+  (c/section
+      :pares
+      pare-sequence-schema))
+
+(def sequence-schema
+  (c/schema
+    "record example schema"
+    pares-section))
+
+(def pare-example-sequence-schema-config-map
+  {:pares [{:a "Oh!" :b false} {:a "Yeah!" :b true}]})
+
+(deftest lens-pare-sequence-test
+  (is (= pare-example-sequence-schema-config-map
+         (c/normalize&check-config-object sequence-schema [] pare-example-sequence-schema-config-map)))
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (c/access-lens pares-section)]
+    (is (= [{:a "Oh!" :b false} {:a "Yeah!" :b true}] (lens/yank conf l)))
+    (is (= [{:a "Oh!" :b true} {:a "No!" :b false}]
+           (lens/yank (lens/shove conf l [{:a "Oh!"}{:a "No!" :b false}]) l))))
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (c/access-lens 1 pares-section)]
+    (is (= {:a "Yeah!" :b true} (lens/yank conf l)))
+    (is (= {:a "Changed!" :b true} (lens/yank (lens/shove conf l {:a "Changed!"}) l))))
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (c/access-lens a-setting pares-section)]
+    (is (= ["Oh!" "Yeah!"] (lens/yank conf l)))
+    (is (= ["Changed!" "Cool!"] (lens/yank (lens/shove conf l ["Changed!" "Cool!"]) l))))
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (c/access-lens a-setting pares-section 1)]
+    (is (= "Yeah!" (lens/yank conf l)))
+    (is (= "Changed!" (lens/yank (lens/shove conf l "Changed!") l)))))
+
+(deftest lens-nested-strings-schemas-test
+  (let [config (c/make-configuration
+                nested-strings-schema
+                []
+                {:nested-strings
+                 [{:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}
+                  {:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}]})
+        l (c/access-lens string-setting nested-strings-section strings-section)]
+    (is (= [["foo" "bar" "baz"] ["foo" "bar" "baz"]]
+           (l config)))
+    (is (= [["1" "2" "3"] ["4" "5" "6"]]
+           (l (l config [["1" "2" "3"] ["4" "5" "6"]])))))
+  (let [config (c/make-configuration
+                nested-strings-schema
+                []
+                {:nested-strings
+                 [{:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}
+                  {:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}]})
+        l (c/access-lens string-setting nested-strings-section strings-section 1)]
+    (is (= ["bar" "bar"]
+           (l config)))
+    (is (= ["2" "5"]
+           (l (l config ["2" "5"]))))))
+
+(deftest lens-nested-sequence-schemas-test
+  (let [config (c/make-configuration
+                nested-sequences-schema
+                []
+                {:nested-sequences
+                 [[{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]
+                  [{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]]})
+        l (c/access-lens string-setting nested-sequences-section)]
+    (is (= [["foo" "bar" "baz"] ["foo" "bar" "baz"]]
+           (l config)))
+    (is (= [["1" "2" "3"] ["4" "5" "6"]]
+           (l (l config [["1" "2" "3"] ["4" "5" "6"]])))))
+  (let [config (c/make-configuration
+                nested-sequences-schema
+                []
+                {:nested-sequences
+                 [[{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]
+                  [{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]]})
+        l (c/access-lens string-setting nested-sequences-section 0 1)]
+    (is (= "bar"
+           (l config)))
+    (is (= "2"
+           (l (l config "2"))))))

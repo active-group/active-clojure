@@ -29,12 +29,14 @@ Each profile has the same format as the top-level configuration itself
     [(:require
       [active.clojure.condition :as c]
       [active.clojure.record :refer :all]
+      [active.clojure.lens :as lens]
       [clojure.set :as set])
      (:import java.net.URL)]
     :cljs
     [(:require [active.clojure.condition :as c]
-               [clojure.set :as set]
-               active.clojure.cljs.record)
+               active.clojure.cljs.record
+               [active.clojure.lens :as lens]
+               [clojure.set :as set])
      (:require-macros
       [active.clojure.cljs.record :refer [define-record-type]])]))
 
@@ -991,3 +993,50 @@ the remainder of the lines the field holds \".\"."
                     (really-make-configuration cf
                                                (section-schema (last sections))))))
 
+(defn sections->lens
+  [sections]
+  (letfn [(recurse [sections lens]
+            (if (empty? sections)
+              lens
+              (let [section-or-index (first sections)]
+                (cond
+                  (sequence-schema-index? section-or-index)
+                  (recurse (rest sections) (lens/>> lens (lens/at-index section-or-index)))
+
+                  (setting? section-or-index)
+                  (recurse (rest sections) (lens/>> lens (setting-key section-or-index)))
+
+                  :else
+                  (let [schema (section-schema section-or-index)]
+                    (letfn [(schemarec [schema sections lens]
+                              (cond
+                                (map-schema? schema)
+                                (recurse sections lens)
+
+                                (sequence-schema? schema)
+                                (if (sequence-schema-index? (first sections))
+                                  (recurse sections lens)
+                                  (lens/>> lens (lens/mapl (schemarec (sequence-schema-element-schema schema) sections lens/id))))))]
+                      (schemarec schema (rest sections) (lens/>> lens (section-key section-or-index)))))))))]
+    (recurse sections lens/id)))
+
+(defn access-lens
+  "A lens focussing on the value of a setting or map of a section.
+  Both the yanker and the shover use [[access]] to check the validity of the
+  structure of the given configuration object and to signal errors otherwise.
+  Additionally, the shover completes the given value according to the range or
+  schema.
+
+  Note that the setting comes first, followed by the access path.
+
+  - `setting-or-section` is either a setting, section or an index into a sequence schema.
+  - `sections` is a list of sections and indices into sequence schemas"
+  [setting-or-section & sections]
+  (let [lens (lens/>> configuration-object (sections->lens (conj (vec sections) setting-or-section)))]
+    (lens/lens (fn access-yanker [config]
+                 (apply access config setting-or-section sections)
+                 (lens config))
+               (fn access-shover [config v]
+                 (apply access config setting-or-section sections)
+                 (let [changed-config (lens config v)]
+                   (make-configuration (configuration-schema changed-config) [] (configuration-object changed-config)))))))

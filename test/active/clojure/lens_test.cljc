@@ -295,6 +295,14 @@
     (is (= [[4 3 nil 1 0] {1 "a" 42 42} nil]
            (lens/shove [[4 3 2 1 0] {1 "a" 42 "b"} 'dflt] l [nil 42 'dflt])))))
 
+(deftest mapl
+  (let [l (lens/mapl :a)]
+    (lens-laws-hold l [{:a 23} {:a 42} {:a 65}] [1 2 3] [4 5 6])
+    (is (= [23 42 65]
+           (lens/yank [{:a 23} {:a 42} {:a 65}] l)))
+    (is (= [{:a 1} {:a 2} {:a 3}]
+           (lens/shove [{:a 23} {:a 42} {:a 65}] l [1 2 3] )))))
+
 (deftest explicit
   (let [car (lens/lens first (fn [l v] (cons v (rest l))))]
     (is (= 'foo

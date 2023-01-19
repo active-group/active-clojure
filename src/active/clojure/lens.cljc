@@ -317,6 +317,18 @@
         plus-shove
         lenses))
 
+(defn mapl
+  "Returns a lens that maps a given lens over a collection."
+  [l]
+  (lens (fn mapl-yank
+          [data]
+          (map yank
+               data (repeat l)))
+        (fn mapl-shove
+          [data v]
+          (map shove
+               data (repeat l) v))))
+
 (defn- at-index-shove [coll v n]
   (if (associative? coll)
     ;; hitting vectors and map-entries

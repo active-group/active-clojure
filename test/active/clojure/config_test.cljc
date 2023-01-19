@@ -306,7 +306,9 @@
             []
             {:strings [{} {} {}]})))
     (is (= ["foo" "bar" "baz"]
-           (c/access config string-setting strings-section)))))
+           (c/access config string-setting strings-section)))
+    (is (= "bar"
+           (c/access config string-setting strings-section 1)))))
 
 (def nonempty-strings-section
   (c/section :strings
@@ -343,7 +345,61 @@
             []
             {:strings [{} {} {}]})))
     (is (= ["foo" "bar" "baz"]
-           (c/access config string-setting strings-section)))))
+           (c/access config string-setting strings-section)))
+    (is (= "bar"
+           (c/access config string-setting strings-section 1)))))
+
+(def nested-strings-section
+  (c/section :nested-strings
+             (c/sequence-schema
+              "Sequence of nested strings sections"
+              strings-schema)))
+
+(def nested-strings-schema
+  (c/schema "Nested mapping access"
+            nested-strings-section))
+
+(deftest nested-strings-schemas-test
+  (let [config (c/make-configuration
+                nested-strings-schema
+                []
+                {:nested-strings
+                 [{:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}
+                  {:strings
+                   [{:string "foo"}
+                    {:string "bar"}
+                    {:string "baz"}]}]})]
+    (is (= [["foo" "bar" "baz"] ["foo" "bar" "baz"]]
+           (c/access config string-setting nested-strings-section strings-section)))))
+
+(def nested-sequences-section
+  (c/section :nested-sequences
+             (c/sequence-schema
+              "Sequence of nested sequences"
+              (c/sequence-schema "inner strings" (c/schema
+                                                   "String section"
+                                                   string-setting)))))
+
+(def nested-sequences-schema
+  (c/schema "Nested sequences access"
+            nested-sequences-section))
+
+(deftest nested-sequence-schemas-test
+  (let [config (c/make-configuration
+                nested-sequences-schema
+                []
+                {:nested-sequences
+                 [[{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]
+                  [{:string "foo"}
+                   {:string "bar"}
+                   {:string "baz"}]]})]
+    (is (= [["foo" "bar" "baz"] ["foo" "bar" "baz"]]
+           (c/access config string-setting nested-sequences-section)))))
 
 (deftest sequence-diff
   (is (= '([[:strings 2] nil {:string "baz"}]

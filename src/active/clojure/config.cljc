@@ -904,34 +904,51 @@ the remainder of the lines the field holds \".\"."
                               (configuration-object config-1)
                               (configuration-object config-2)))
 
+(defn- sequence-schema-index?
+  [thing]
+  (and (number? thing) (>= thing 0)))
+
+(defn- section-key-or-index
+  [thing]
+  (if (sequence-schema-index? thing)
+    thing
+    (section-key thing)))
+
 (defn- access-section
   "Access the settings of a section.
-
+  - `sections` is a list of sections and indices into sequence schemas
   - `on-last` is a function to be applied the config object at the end of the path"
   [config sections on-last]
-  (letfn [(recurse [sections cf]
+  (letfn [(recurse [sections cf path]
             (if (empty? sections)
               (on-last cf)
               (let [sec (first sections)
-                    cf (get cf (section-key sec) ::section-not-found)]
-                (case cf
+                    sec-key (section-key-or-index sec)
+                    sec-cf (get cf sec-key ::section-not-found)]
+                (case sec-cf
                   ::section-not-found
-                  (let [path (map section-key sections)]
-                    (c/assertion-violation `access-section
-                                           (str "section " (vec path) " not found")
-                                           path config))
-                  (letfn [(schemarec [schema cf]
+                  (c/assertion-violation `access-section
+                                         (str (if (sequence-schema-index? sec-key)
+                                                "index " "section ")
+                                              sec-key " not found at path " path  ": " cf)
+                                         sec path config)
+                  (if (sequence-schema-index? sec-key)
+                    (recurse (rest sections) sec-cf (conj path sec-key))
+                  (letfn [(schemarec [sections schema cf path]
                             (cond
                               (map-schema? schema)
-                              (recurse (rest sections) cf)
+                              (recurse sections cf path)
 
                               (sequence-schema? schema)
-                              (map (fn [subcf]
-                                     (schemarec (sequence-schema-element-schema schema)
-                                                subcf))
-                                   cf)))]
-                    (schemarec (section-schema sec) cf))))))]
-    (recurse sections (configuration-object config))))
+                              (if (sequence-schema-index? (first sections))
+                                (recurse sections cf path)
+                                (map-indexed
+                                  (fn [idx subcf]
+                                    (schemarec sections (sequence-schema-element-schema schema)
+                                               subcf (conj path idx)))
+                                  cf))))]
+                    (schemarec (rest sections) (section-schema sec) sec-cf (conj path sec-key))))))))]
+    (recurse sections (configuration-object config) [])))
 
 (defn- setting-or-section-key
   [sos]
@@ -939,20 +956,30 @@ the remainder of the lines the field holds \".\"."
     (setting? sos) (setting-key sos)
     (section? sos) (section-key sos)))
 
+(defn- setting-or-section-key-or-index
+  [thing]
+  (if (sequence-schema-index? thing)
+    thing
+    (setting-or-section-key thing)))
+
 (defn access
   "Access the value of a setting or map of a section.
 
-  Note that the setting comes first, followed by the access path."
+  Note that the setting comes first, followed by the access path.
+
+  - `setting-or-section` is either a setting, section or an index into a sequence schema.
+  - `sections` is a list of sections and indices into sequence schemas"
   [config setting-or-section & sections]
   (access-section config sections
                   (fn [cf]
-                    (let [key (setting-or-section-key setting-or-section)
+                    (let [key (setting-or-section-key-or-index setting-or-section)
                           val (get cf key ::setting-not-found)]
                       (if (= val ::setting-not-found)
-                        (let [path (map section-key sections)]
+                        (let [path (map section-key-or-index sections)]
                           (c/assertion-violation `access
-                                                 (str "setting " key
-                                                      " not found at path " (vec path))
+                                                 (str (if (sequence-schema-index? key)
+                                                        "index " "setting ") key
+                                                      " not found at path " (vec path) ": " cf)
                                                  path setting-or-section config))
                         val)))))
 

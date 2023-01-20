@@ -881,16 +881,18 @@
   (is (= (rwfosdt 1)          ; 1 :: java.lang.Long
          (rwfosdt (int 1))))) ; 1 :: java.lang.Integer
 
-(define-record-type RecordWithProjectionLens
-  {:projection-lens 'my-projection-lens}
-  rwpl
-  rwpl?
-  [a rwpl-a
-   b rwpl-b])
+#?(:clj
+   (define-record-type RecordWithProjectionLens
+     {:projection-lens 'my-projection-lens}
+     rwpl
+     rwpl?
+     [a rwpl-a
+      b rwpl-b]))
 
-(deftest projection-lens-test
-  (let [data {:pare {:a "Foo" :b "Bar"}}
-        l (my-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
-    (is (= (rwpl "Foo" "Bar") (lens/yank data l)))
-    (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (rwpl "Bar" "Baz"))))
-    (is (= (rwpl "Bar" "Baz") (lens/yank (lens/shove data l (rwpl "Bar" "Baz")) l)))))
+#?(:clj
+   (deftest projection-lens-test
+     (let [data {:pare {:a "Foo" :b "Bar"}}
+           l (my-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+       (is (= (rwpl "Foo" "Bar") (lens/yank data l)))
+       (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (rwpl "Bar" "Baz"))))
+       (is (= (rwpl "Bar" "Baz") (lens/yank (lens/shove data l (rwpl "Bar" "Baz")) l))))))

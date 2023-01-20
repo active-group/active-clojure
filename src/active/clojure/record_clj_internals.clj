@@ -311,8 +311,6 @@
 
 (defn make-projection-lens
   [projection-lens-name constructor field-lenses]
-  (println projection-lens-name
-           field-lenses)
   `(def ~(second projection-lens-name) (apply record-projection-lens ~constructor ~field-lenses)))
 
 (defn make-get-accessor-from-field-tuple-fn

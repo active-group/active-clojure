@@ -456,3 +456,10 @@ right-most element where they were before."}  merge
   This is useful for invariants in data structures."
   [& lenses]
   (projection nil (mapv (fn [l] [id l]) lenses)))
+
+(defn record-projection-lens
+  "A lens that projects a data structure into a record."
+  [constructor & field-lenses]
+  (fn [& lenses]
+    (projection (apply constructor (mapv (constantly nil) field-lenses))
+                (mapv (fn [fl l] [fl l]) field-lenses lenses))))

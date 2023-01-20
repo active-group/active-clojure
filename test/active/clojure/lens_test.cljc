@@ -1,10 +1,11 @@
 (ns active.clojure.lens-test
   (:require [active.clojure.lens :as lens]
+            #?(:clj [active.clojure.record :refer [define-record-type]])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test :as t]))
   #?(:cljs
-  (:require-macros [cljs.test
-                    :refer (is deftest run-tests testing)])))
+     (:require-macros [cljs.test :refer (is deftest run-tests testing)]
+                      [active.clojure.cljs.record :refer [define-record-type]])))
 
 #?(:cljs
 (enable-console-print!))
@@ -568,6 +569,22 @@
     (is (= {:a "Marcus"
             :b ["Marcus" "Bar" "Baz"]}
            (l data "Marcus")))))
+
+(define-record-type Pare
+  kons
+  pare?
+  [a kar
+   b kdr])
+
+(def pare-projection-lens
+  (lens/record-projection-lens kons kar kdr))
+
+(deftest record-projection-lens-test
+  (let [data {:pare {:a "Foo" :b "Bar"}}
+        l (pare-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+    (is (= (kons "Foo" "Bar") (lens/yank data l)))
+    (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
+    (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
 
 ;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
 ;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for

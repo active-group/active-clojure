@@ -306,6 +306,8 @@
 
 
        `(do
+          ~(when-let [projection-lens (:projection-lens options)]
+             `(declare ~projection-lens))
           (declare ~@(map second field-tuples))
 
           ~(define-record-type-descriptor meta-data type fields rtd-symbol)
@@ -332,4 +334,8 @@
              (add-spec-code spec-name predicate field-tuples constructor-args constructor))
 
           ~(define-type-function type rtd-symbol predicate constructor constructor-args field-tuples)
-          ))))
+
+          ;; Projection lens
+          ~(when-let [projection-lens (:projection-lens options)]
+             `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
+                (apply lens/record-projection-lens ~constructor ~(mapv second field-tuples))))))))

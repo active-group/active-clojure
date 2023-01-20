@@ -20,7 +20,7 @@
                       [active.clojure.record-test :refer [throws-exception? is-in-registry?]])))
 
 #?(:cljs
-(enable-console-print!))
+   (enable-console-print!))
 
 (define-record-type Pare
   (kons a b)
@@ -195,7 +195,7 @@
    [^{:spec ::IntString} value container-value])
 
 (defn includes?
-   [^Exception e & subs]
+  [^Exception e & subs]
   #?(:clj (every? #(clojure.string/includes? (.getMessage e) %)
                   subs)
      :cljs (every? #(clojure.string/includes? (.toString e) %)
@@ -382,10 +382,10 @@
 ;;; ----
 ;;; (CLJS) In CLJS you have to provide an `IEquiv` implementation
 (define-record-type FirstImportant
-   (make-first-important a b)
-   s?
-   [a first-important-a
-    b first-important-b]
+  (make-first-important a b)
+  s?
+  [a first-important-a
+   b first-important-b]
   #?@(:clj
       [clojure.lang.IPersistentMap
        (equiv [this other] (= (first-important-a this) (first-important-a other)))
@@ -407,17 +407,17 @@
 (define-record-type RecordWithoutInterfaces
   {:remove-interfaces [#?(:clj java.util.Map :cljs IMap)
                        #?(:clj clojure.lang.IPersistentMap :cljs IAssociative)]}
-   (make-rwi a)
-   rwi?
-   [a rwi-a])
+  (make-rwi a)
+  rwi?
+  [a rwi-a])
 
 (deftest remove-interfaces-test
-   (is (= false
-          (map? (make-rwi 3))))
-   (is (thrown? #?(:clj Exception :cljs js/Error)
-                (assoc (make-rwi 3) :c 4)))
-   (is (thrown? #?(:clj Exception :cljs js/Error)
-                (dissoc (make-rwi 3) :a))))
+  (is (= false
+         (map? (make-rwi 3))))
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (assoc (make-rwi 3) :c 4)))
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (dissoc (make-rwi 3) :a))))
 
 ;;; implement user made protocol
 
@@ -880,3 +880,33 @@
 (deftest records-fields-different-types-equality-test
   (is (= (rwfosdt 1)          ; 1 :: java.lang.Long
          (rwfosdt (int 1))))) ; 1 :: java.lang.Integer
+
+(define-record-type RecordWithProjectionLens
+  {:projection-lens my-projection-lens}
+  rwpl
+  rwpl?
+  [a rwpl-a
+   b rwpl-b])
+
+(deftest projection-lens-test
+  (let [data {:pare {:a "Foo" :b "Bar"}}
+        l (my-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+    (is (= (rwpl "Foo" "Bar") (lens/yank data l)))
+    (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (rwpl "Bar" "Baz"))))
+    (is (= (rwpl "Bar" "Baz") (lens/yank (lens/shove data l (rwpl "Bar" "Baz")) l)))))
+
+(define-record-type RTDRecordWithProjectionLens
+  {:projection-lens my-rtd-projection-lens
+   :rtd-record? true
+   :java-class? false}
+  rrwpl
+  rrwpl?
+  [a rrwpl-a
+   b rrwpl-b])
+
+(deftest rtd-projection-lens-test
+  (let [data {:pare {:a "Foo" :b "Bar"}}
+        l (my-rtd-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+    (is (= (rrwpl "Foo" "Bar") (lens/yank data l)))
+    (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (rrwpl "Bar" "Baz"))))
+    (is (= (rrwpl "Bar" "Baz") (lens/yank (lens/shove data l (rrwpl "Bar" "Baz")) l)))))

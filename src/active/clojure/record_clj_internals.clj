@@ -1,7 +1,6 @@
 (ns ^:no-doc active.clojure.record-clj-internals
   (:require [active.clojure.condition :as c]
             [active.clojure.lens :as lens]
-            [active.clojure.record-runtime :as rrun]
             [active.clojure.record-helper :as r-help])
   (:import clojure.lang.IPersistentMap
            clojure.lang.RT
@@ -303,8 +302,6 @@
 
 ;;; Emit-*-record-definitions
 
-
-
 (defn make-get-accessor-from-field-tuple-fn
   [type docref constructor field-tuples meta-info]
   (fn [[field accessor lens]]
@@ -330,6 +327,8 @@
         constructor-args-set (set constructor-args)
         meta-data            (meta type)]
      `(do
+        ~(when-let [projection-lens (:projection-lens options)]
+           `(declare ~projection-lens))
         ;; This block is copy pasted from the original defrecord implementation & slightly altered
         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-tuples))
         ~(let [fields (mapv first field-tuples)
@@ -388,6 +387,9 @@
                 (.write ~w (str ~(str "#" *ns* "." type)
                                 (into {} ~(mapv (fn [[?field ?accessor _]]
                                                   `(vector ~(keyword ?field) (~?accessor ~v)))
-                                                field-tuples))))))))))
+                                                field-tuples)))))))
 
-
+        ;; Projection lens
+        ~(when-let [projection-lens (:projection-lens options)]
+           `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
+              (apply lens/record-projection-lens ~constructor ~(mapv second field-tuples)))))))

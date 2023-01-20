@@ -346,6 +346,8 @@
            meta-data (meta type)]
        (validate-fields "defrecord" type fields)
        `(do
+          ~(when-let [projection-lens (:projection-lens options)]
+             `(declare ~projection-lens))
           ;; direct use of `defrecord` - to be replaced in the future
           ;; (defrecord ~type ~fields ~@opt+specs)
           (declare ~@(map (fn [[field accessor lens]] accessor) field-triples))
@@ -395,4 +397,9 @@
                    `(cljs.spec.alpha/fdef ~constructor
                       :args (cljs.spec.alpha/cat ~@c-specs)
                       :ret ~spec-name))))
+
+          ;; Projection lens
+          ~(when-let [projection-lens (:projection-lens options)]
+           `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
+              (apply lens/record-projection-lens ~constructor ~(mapv second field-triples))))
           ~r))))

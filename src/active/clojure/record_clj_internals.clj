@@ -303,7 +303,17 @@
 
 ;;; Emit-*-record-definitions
 
+(defn record-projection-lens
+  [constructor & field-lenses]
+  (fn [& lenses]
+    (lens/projection (apply constructor (mapv (constantly nil) field-lenses))
+                     (mapv (fn [fl l] [fl l]) field-lenses lenses))))
 
+(defn make-projection-lens
+  [projection-lens-name constructor field-lenses]
+  (println projection-lens-name
+           field-lenses)
+  `(def ~(second projection-lens-name) (apply record-projection-lens ~constructor ~field-lenses)))
 
 (defn make-get-accessor-from-field-tuple-fn
   [type docref constructor field-tuples meta-info]
@@ -388,6 +398,8 @@
                 (.write ~w (str ~(str "#" *ns* "." type)
                                 (into {} ~(mapv (fn [[?field ?accessor _]]
                                                   `(vector ~(keyword ?field) (~?accessor ~v)))
-                                                field-tuples))))))))))
+                                                field-tuples)))))))
+        ~(when-let [projection-lens (:projection-lens options)]
+           (make-projection-lens projection-lens constructor (mapv second field-tuples))))))
 
 

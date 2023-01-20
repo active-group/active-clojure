@@ -556,6 +556,19 @@
                          proj
                          {:flup {:shmup -1 :blub "abc"}}))))))
 
+(deftest prism-lens-test
+  (lens-laws-hold (lens/prism :a (lens/>> :b (lens/at-index 0)))
+                  {:a "Foo"
+                   :b ["Foo" "Bar" "Baz"]}
+                  "Marcus" "Crestani")
+  (let [data {:a "Foo"
+              :b ["Foo" "Bar" "Baz"]}
+        l (lens/prism :a (lens/>> :b (lens/at-index 0)))]
+    (is (= "Foo" (l data)))
+    (is (= {:a "Marcus"
+            :b ["Marcus" "Bar" "Baz"]}
+           (l data "Marcus")))))
+
 ;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
 ;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for
 ;; Bidirectional Tree Transformations: A Linguistic Approach to the

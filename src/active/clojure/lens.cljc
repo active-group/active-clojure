@@ -450,3 +450,9 @@ right-most element where they were before."}  merge
                                               [(at-index idx) f])
                                             p))
     :else (assert false "Pattern must be a map or a vector.")))
+
+(defn prism
+  "A lens that focuses on many values in a data structure that should be identical.
+  This is useful for invariants in data structures."
+  [& lenses]
+  (projection nil (mapv (fn [l] [id l]) lenses)))

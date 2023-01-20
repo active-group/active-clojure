@@ -677,3 +677,36 @@
            (l config)))
     (is (= "2"
            (l (l config "2"))))))
+
+(define-record-type Pare
+  make-pare
+  pare?
+  [a pare-a
+   b pare-b])
+
+(deftest lens-record-projection-test
+  (let [conf (c/make-configuration map-schema [] pare-example-map-schema-config-map)
+        l (lens/projection (make-pare nil nil) [[pare-a (c/access-lens a-setting pare-section)]
+                                                [pare-b (c/access-lens b-setting pare-section)]])]
+    (is (= (make-pare "Yeah!" true) (lens/yank conf l))))
+
+  (let [conf (c/make-configuration map-schema [] pare-example-map-schema-config-map)
+        l (lens/projection (make-pare nil nil) [[pare-a (c/access-lens a-setting pare-section)]
+                                                [pare-b (c/access-lens b-setting pare-section)]])]
+    (is (= (make-pare "Oh!" false) (lens/yank (lens/shove conf l (make-pare "Oh!" false)) l))))
+
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (lens/>> (c/access-lens pares-section)
+                   (lens/mapl (lens/projection (make-pare nil nil) [[pare-a (c/setting-key a-setting)]
+                                                                    [pare-b (c/setting-key b-setting)]])))]
+    (is (= [(make-pare "Oh!" false) (make-pare "Yeah!" true)] (lens/yank conf l)))
+    (is (= [(make-pare "Oh!" true) (make-pare "No!" false)]
+           (lens/yank (lens/shove conf l [(make-pare "Oh!" true) (make-pare "No!" false)]) l))))
+
+  (let [conf (c/make-configuration sequence-schema [] pare-example-sequence-schema-config-map)
+        l (lens/>> (c/sequence-schema-subconfig-lens pares-section)
+                   (lens/mapl (lens/projection (make-pare nil nil) [[pare-a (c/access-lens a-setting)]
+                                                                    [pare-b (c/access-lens b-setting)]])))]
+    (is (= [(make-pare "Oh!" false) (make-pare "Yeah!" true)] (lens/yank conf l)))
+    (is (= [(make-pare "Oh!" true) (make-pare "No!" false)]
+           (lens/yank (lens/shove conf l [(make-pare "Oh!" true) (make-pare "No!" false)]) l)))))

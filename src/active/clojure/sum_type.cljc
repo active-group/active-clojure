@@ -274,10 +274,11 @@
   (let [arg-symbol        (gensym)
         constr-lookup-sym (gensym)]
     (list 'let [arg-symbol arg]
-      (list 'if (list (symbol (:predicate st)) arg-symbol)
-        (apply list 'cond
-          (mapcat #(expand-clause-cljs constr-lookup arg-symbol %) parsed-clauses))
-        (list 'active.clojure.sum-type/runtime-error (str "Argument not of type " (:predicate st)))))))
+          (list 'if (list (symbol (:predicate st)) arg-symbol)
+                (apply list 'cond
+                       (mapcat #(expand-clause-cljs constr-lookup arg-symbol %) parsed-clauses))
+                (list 'active.clojure.sum-type/runtime-error `(str "Argument not of type " ~(:predicate st)
+                                                                   ". Argument: " ~arg-symbol))))))
 
 
 #?(:clj

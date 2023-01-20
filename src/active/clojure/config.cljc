@@ -1040,3 +1040,18 @@ the remainder of the lines the field holds \".\"."
                  (apply access config setting-or-section sections)
                  (let [changed-config (lens config v)]
                    (make-configuration (configuration-schema changed-config) [] (configuration-object changed-config)))))))
+
+(defn section-subconfig-lens
+  [& sections]
+  (assert (last sections) (section? (last sections)))
+  (lens/>> (apply access-lens sections)
+           (lens/xmap #(make-configuration (section-schema (last sections)) [] %)
+                      configuration-object)))
+
+(defn sequence-schema-subconfig-lens
+  [& sections]
+  (assert (and (last sections) (section? (last sections)) (sequence-schema? (section-schema (last sections)))))
+  (lens/>> (apply access-lens sections)
+           (lens/mapl
+            (lens/xmap #(make-configuration (sequence-schema-element-schema (section-schema (last sections))) [] %)
+                       configuration-object))))

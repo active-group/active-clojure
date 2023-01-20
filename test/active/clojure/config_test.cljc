@@ -679,6 +679,7 @@
            (l (l config "2"))))))
 
 (define-record-type Pare
+  {:projection-lens pare-projection-lens}
   make-pare
   pare?
   [a pare-a
@@ -709,4 +710,8 @@
                                                                     [pare-b (c/access-lens b-setting)]])))]
     (is (= [(make-pare "Oh!" false) (make-pare "Yeah!" true)] (lens/yank conf l)))
     (is (= [(make-pare "Oh!" true) (make-pare "No!" false)]
-           (lens/yank (lens/shove conf l [(make-pare "Oh!" true) (make-pare "No!" false)]) l)))))
+           (lens/yank (lens/shove conf l [(make-pare "Oh!" true) (make-pare "No!" false)]) l))))
+
+  (let [conf (c/make-configuration map-schema [] pare-example-map-schema-config-map)
+        l (pare-projection-lens (c/access-lens a-setting pare-section) (c/access-lens b-setting pare-section))]
+    (is (= (make-pare "Yeah!" true) (lens/yank conf l)))))

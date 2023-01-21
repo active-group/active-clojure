@@ -228,6 +228,24 @@ MyRecord)`. This meta data is then "inherited" to all created symobls
 If you use an RTD record (`:java-class?`, `:rtd-record?` options), this data
 is also retrievable via `(meta #'MyRecord)`.
 
+#### Projection lens
+
+You can provide a binding name to the option key `:projection-lens` to create a
+[[active.clojure.lens/record-lens]] for the record that is bound to the supplied
+binding name.  For example:
+
+```
+(define-record-type Pare
+  {:projection-lens pare-lens}
+  kons
+  pare?
+  [a kar
+   b kdr])
+
+(let [data {:pare {:a "Foo" :b "Bar"}}
+      l (pare-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+    (= (pare "Foo" "Bar") (lens/yank data l)))
+```
 
 
 ### Lenses

@@ -444,7 +444,7 @@ right-most element where they were before."}  merge
 "
   [p]
   (cond
-    ;; TODO: optimize projection by using transient ? (generally, make a :keyword use assoc! on trantients?
+    ;; TODO: optimize projection by using transient ? (generally, make a :keyword use assoc! on transients?
     (map? p) (projection {} p)
     (vector? p) (projection [] (map-indexed (fn [idx f]
                                               [(at-index idx) f])

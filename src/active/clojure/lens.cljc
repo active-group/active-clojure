@@ -327,7 +327,7 @@
         (fn mapl-shove
           [data v]
           (map shove
-               data (repeat l) v))))
+               (concat data (repeat nil)) (repeat l) v))))
 
 (defn- at-index-shove [coll v n]
   (if (associative? coll)

@@ -213,6 +213,12 @@
     (is (= 13
            (lens/shove 42 l 13)))))
 
+;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
+;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for
+;; Bidirectional Tree Transformations: A Linguistic Approach to the
+;; View Update Problem”. In: Principles of Programming Languages. ACM
+;; Press, 2005, pages 233-246. doi: 10.1145/1040305.1040325.
+
 (deftest xmap
   (let [l (lens/xmap str #?(:clj read-string) #?(:cljs js/parseInt))]
     (lens-laws-hold l 42 "13" "1")
@@ -588,8 +594,3 @@
     (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
     (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
 
-;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
-;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for
-;; Bidirectional Tree Transformations: A Linguistic Approach to the
-;; View Update Problem”. In: Principles of Programming Languages. ACM
-;; Press, 2005, pages 233-246. doi: 10.1145/1040305.1040325.

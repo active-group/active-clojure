@@ -418,7 +418,7 @@ right-most element where they were before."}  merge
   (projection (make-inner-record nil)
               {inner-record-field outer-record-field})
 ```
-  
+
   The returned lens can then be used on a value of type
   'outer-record', to see it as a value of type 'inner-record'."
     [empty fields]
@@ -426,7 +426,7 @@ right-most element where they were before."}  merge
 
 (defn pattern
   "A lens over any value yielding to a map or a vector, depending on the given pattern.
-  
+
   For example
 
 ```
@@ -451,7 +451,7 @@ right-most element where they were before."}  merge
                                             p))
     :else (assert false "Pattern must be a map or a vector.")))
 
-(defn prism
+(defn surjection
   "A lens that focuses on many values in a data structure that should be identical.
   This is useful for invariants in data structures."
   [& lenses]

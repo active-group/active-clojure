@@ -565,14 +565,14 @@
                          proj
                          {:flup {:shmup -1 :blub "abc"}}))))))
 
-(deftest prism-lens-test
-  (lens-laws-hold (lens/prism :a (lens/>> :b (lens/at-index 0)))
+(deftest surjection-lens-test
+  (lens-laws-hold (lens/surjection :a (lens/>> :b (lens/at-index 0)))
                   {:a "Foo"
                    :b ["Foo" "Bar" "Baz"]}
                   "Marcus" "Crestani")
   (let [data {:a "Foo"
               :b ["Foo" "Bar" "Baz"]}
-        l (lens/prism :a (lens/>> :b (lens/at-index 0)))]
+        l (lens/surjection :a (lens/>> :b (lens/at-index 0)))]
     (is (= "Foo" (l data)))
     (is (= {:a "Marcus"
             :b ["Marcus" "Bar" "Baz"]}

@@ -594,3 +594,25 @@
     (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
     (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
 
+(deftest alt-test
+  (lens-laws-hold (lens/alt [map? :a]
+                            [vector? (lens/at-index 0)])
+                  [23] [nil 42] [nil 65])
+  (is (= [23 nil]
+         (lens/yank {:a 23}
+                    (lens/alt [map? :a]
+                              [vector? (lens/at-index 0)]))))
+  (is (= [nil 42]
+         (lens/yank [42]
+                    (lens/alt [map? :a]
+                              [vector? (lens/at-index 0)]))))
+  (is (= {:a 42}
+         (lens/shove {:a 23}
+                     (lens/alt [map? :a]
+                               [vector? (lens/at-index 0)])
+                     [42 nil])))
+  (is (= [65]
+         (lens/shove [42]
+                     (lens/alt [map? :a]
+                               [vector? (lens/at-index 0)])
+                     [nil 65]))))

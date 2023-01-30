@@ -463,3 +463,23 @@ right-most element where they were before."}  merge
   (fn [& lenses]
     (projection (apply constructor (mapv (constantly nil) field-lenses))
                 (mapv (fn [fl l] [fl l]) field-lenses lenses))))
+
+(defn alt
+  "A lens to focus on mixed data and sum types.  Accepts a list of `alternatives`,
+  where an alternative is a pair of a predicate to a lens that can focus data in
+  a value that matches the given predicate.
+
+  Uses vectors with positional values to match to the types."
+  [& alternatives]
+  (let [make-alt-projection
+        (fn [data]
+          (let [[alt-lens data-lens]
+                (first (keep-indexed (fn [idx [p? l]]
+                                       (when (p? data) [(at-index idx) l]))
+                                     alternatives))]
+            (projection (mapv (constantly nil) alternatives)
+                        [[alt-lens data-lens]])))]
+    (lens (fn [data]
+            (yank data (make-alt-projection data)))
+          (fn [data v]
+            (shove data (make-alt-projection data) v)))))

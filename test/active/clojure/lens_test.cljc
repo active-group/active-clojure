@@ -8,7 +8,7 @@
                       [active.clojure.cljs.record :refer [define-record-type]])))
 
 #?(:cljs
-(enable-console-print!))
+   (enable-console-print!))
 
 (defn law-1-holds [l data v]
   ;; you get back what you put in

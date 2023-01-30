@@ -424,6 +424,12 @@ right-most element where they were before."}  merge
     [empty fields]
     (f/partial f empty fields)))
 
+(defn ray
+  "A lens that projects a value of `from-lens` into `to-lens`.  Optional argmuent
+  `to-empty` is the initial new value that `to-lens` focusses on."
+  [from-lens to-lens & [to-empty]]
+  (projection to-empty {to-lens from-lens}))
+
 (defn pattern
   "A lens over any value yielding to a map or a vector, depending on the given pattern.
 

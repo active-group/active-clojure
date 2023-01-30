@@ -565,6 +565,16 @@
                          proj
                          {:flup {:shmup -1 :blub "abc"}}))))))
 
+(deftest ray-test
+  (lens-laws-hold (lens/ray :a (lens/at-index 0) [])
+                  {:a "Foo"
+                   :b ["Foo" "Bar" "Baz"]}
+                  ["Marcus"]
+                  ["Crestani"])
+  (let [l (lens/ray (lens/at-index 0) :a {})]
+    (is (= {:a 23} (lens/yank [23] l)))
+    (is (= [42] (lens/shove [23] l {:a 42})))))
+
 (deftest surjection-lens-test
   (lens-laws-hold (lens/surjection :a (lens/>> :b (lens/at-index 0)))
                   {:a "Foo"

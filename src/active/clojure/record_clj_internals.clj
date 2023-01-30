@@ -1,6 +1,5 @@
 (ns ^:no-doc active.clojure.record-clj-internals
   (:require [active.clojure.condition :as c]
-            [active.clojure.lens :as lens]
             [active.clojure.record-helper :as r-help])
   (:import clojure.lang.IPersistentMap
            clojure.lang.RT
@@ -392,4 +391,4 @@
         ;; Projection lens
         ~(when-let [projection-lens (:projection-lens options)]
            `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
-              (apply lens/record-projection-lens ~constructor ~(mapv second field-tuples)))))))
+              (apply r-help/into-record-projection-lens ~constructor ~(mapv second field-tuples)))))))

@@ -291,6 +291,15 @@
                             nil))
                         field-tuples))))))))
 
+(defn into-record-projection-lens
+  "Construtor for a lens that projects a data structure into a record with
+  `constructor` and `field-lenses`.
+  Returns a function that accepts `lenses` that will to map the `field-lenses`
+  in the projection."
+  [constructor & field-lenses]
+  (fn [& lenses]
+    (lens/projection (apply constructor (mapv (constantly nil) field-lenses))
+                     (mapv (fn [fl l] [fl l]) field-lenses lenses))))
 
 #?(:clj
    (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]
@@ -338,4 +347,4 @@
           ;; Projection lens
           ~(when-let [projection-lens (:projection-lens options)]
              `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
-                (apply lens/record-projection-lens ~constructor ~(mapv second field-tuples))))))))
+                (apply into-record-projection-lens ~constructor ~(mapv second field-tuples))))))))

@@ -473,13 +473,6 @@ right-most element where they were before."}  merge
   [& lenses]
   (projection nil (mapv (fn [l] [id l]) lenses)))
 
-(defn record-projection-lens
-  "A lens that projects a data structure into a record."
-  [constructor & field-lenses]
-  (fn [& lenses]
-    (projection (apply constructor (mapv (constantly nil) field-lenses))
-                (mapv (fn [fl l] [fl l]) field-lenses lenses))))
-
 (defn alt
   "A lens to focus on mixed data and sum types.  Accepts a list of `alternatives`,
   where an alternative is a pair of a predicate to a lens that can focus data in

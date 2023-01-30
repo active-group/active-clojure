@@ -594,12 +594,14 @@
   [a kar
    b kdr])
 
-(def pare-projection-lens
-  (lens/record-projection-lens kons kar kdr))
+(def edn-to-pare-projection-lens
+  (lens/projection (kons nil nil)
+                   {kar (lens/>> :pare :a)
+                    kdr (lens/>> :pare :b)}))
 
-(deftest record-projection-lens-test
+(deftest edn-to-pare-projection-lens-test
   (let [data {:pare {:a "Foo" :b "Bar"}}
-        l (pare-projection-lens (lens/>> :pare :a) (lens/>> :pare :b))]
+        l edn-to-pare-projection-lens]
     (is (= (kons "Foo" "Bar") (lens/yank data l)))
     (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
     (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
@@ -636,4 +638,19 @@
          (lens/shove [42]
                      (lens/alt [map? :a]
                                [vector? (lens/at-index 0)])
-                     [nil 65]))))
+                     [nil 65])))
+  (is (= [{:a 23 :b 42}]
+         (lens/yank (kons 23 42)
+                    (lens/projection [nil]
+                                     [[(lens/at-index 0)
+                                       (lens/>>
+                                         (lens/invert edn-to-pare-projection-lens)
+                                         :pare)]]))))
+  (is (= (kons 42 23)
+         (lens/shove (kons 23 42)
+                     (lens/projection [nil]
+                                      [[(lens/at-index 0)
+                                        (lens/>>
+                                         (lens/invert edn-to-pare-projection-lens)
+                                         :pare)]])
+                     [{:a 42 :b 23}]))))

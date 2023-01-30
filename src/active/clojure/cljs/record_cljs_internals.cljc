@@ -4,7 +4,6 @@
             #?(:cljs [cljs.core :as core])
             #?(:cljs [cljs.analyzer :as ana])
             #?(:cljs [cljs.spec.alpha])
-            [active.clojure.record-runtime :as rrun]
             [active.clojure.record-helper :as r-help])
   #?(:cljs (:require-macros [cljs.core :as core]
                             [active.clojure.record-helper :as r-help])))
@@ -401,5 +400,5 @@
           ;; Projection lens
           ~(when-let [projection-lens (:projection-lens options)]
            `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
-              (apply lens/record-projection-lens ~constructor ~(mapv second field-triples))))
+              (apply r-help/into-record-projection-lens ~constructor ~(mapv second field-triples))))
           ~r))))

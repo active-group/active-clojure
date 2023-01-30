@@ -604,6 +604,17 @@
     (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
     (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
 
+(deftest invert-test
+  (testing "with rays"
+    (let [l (lens/ray (lens/at-index 0) :a)]
+      (is (= [23] (lens/yank {:a 23} (lens/invert l))))
+      (is (= {:a 42} (lens/shove {:a 23} (lens/invert l) [42])))))
+  (testing "with projection lenses"
+    (is (= {:pare {:a "Foo" :b "Bar"}}
+           (lens/yank (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens))))
+    (is (= (kons "Bar" "Baz")
+           (lens/shove (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens) {:pare {:a "Bar" :b "Baz"}})))))
+
 (deftest alt-test
   (lens-laws-hold (lens/alt [map? :a]
                             [vector? (lens/at-index 0)])

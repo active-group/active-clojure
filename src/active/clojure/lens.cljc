@@ -430,6 +430,16 @@ right-most element where they were before."}  merge
   [from-lens to-lens & [to-empty]]
   (projection to-empty {to-lens from-lens}))
 
+(defn invert
+  "A lens that inverts another `lens`.  Optional argument `empty` is the initial
+  new value that `lens` focusses on."
+  [lens & [empty]]
+  (fn
+    ([data]
+     (shove empty lens data))
+    ([_data v]
+     (yank v lens))))
+
 (defn pattern
   "A lens over any value yielding to a map or a vector, depending on the given pattern.
 

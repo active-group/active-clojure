@@ -663,7 +663,7 @@
                                          (lens/invert edn-to-pare-projection-lens)
                                          :pare)]])
                      [{:a 42 :b 23}])))
-  (is (= [{:a 23 :b 42}]
+  (is (= [{:a 23 :b 42} nil]
          (lens/yank (kons 23 42)
                     (lens/alt [pare? (lens/>>
                                        (lens/invert edn-to-pare-projection-lens)
@@ -675,7 +675,7 @@
                                        (lens/invert edn-to-pare-projection-lens)
                                        :pare)]
                                [box? (lens/invert edn-to-box-projection-lens)])
-                     [{:a 42 :b 23}])))
+                     [{:a 42 :b 23} nil])))
   (is (= [nil {:box {:thing 65}}]
          (lens/yank (pack 65)
                     (lens/alt [pare? (lens/>>

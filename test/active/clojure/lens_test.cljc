@@ -617,7 +617,7 @@
     (is (= (kons "Bar" "Baz")
            (lens/shove (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens) {:pare {:a "Bar" :b "Baz"}})))))
 
-(define-record-type Box
+(define-record-type Bocs
   pack
   box?
   [thing unpack])

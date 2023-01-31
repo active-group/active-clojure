@@ -617,6 +617,15 @@
     (is (= (kons "Bar" "Baz")
            (lens/shove (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens) {:pare {:a "Bar" :b "Baz"}})))))
 
+(define-record-type Box
+  pack
+  box?
+  [thing unpack])
+
+(def edn-to-box-projection-lens
+  (lens/projection (pack nil)
+                   {unpack (lens/>> :box :thing)}))
+
 (deftest alt-test
   (lens-laws-hold (lens/alt [map? :a]
                             [vector? (lens/at-index 0)])
@@ -653,4 +662,30 @@
                                         (lens/>>
                                          (lens/invert edn-to-pare-projection-lens)
                                          :pare)]])
-                     [{:a 42 :b 23}]))))
+                     [{:a 42 :b 23}])))
+  (is (= [{:a 23 :b 42}]
+         (lens/yank (kons 23 42)
+                    (lens/alt [pare? (lens/>>
+                                       (lens/invert edn-to-pare-projection-lens)
+                                       :pare)]
+                              [box? (lens/invert edn-to-box-projection-lens)]))))
+  (is (= (kons 42 23)
+         (lens/shove (kons 23 42)
+                     (lens/alt [pare? (lens/>>
+                                       (lens/invert edn-to-pare-projection-lens)
+                                       :pare)]
+                               [box? (lens/invert edn-to-box-projection-lens)])
+                     [{:a 42 :b 23}])))
+  (is (= [nil {:box {:thing 65}}]
+         (lens/yank (pack 65)
+                    (lens/alt [pare? (lens/>>
+                                       (lens/invert edn-to-pare-projection-lens)
+                                       :pare)]
+                              [box? (lens/invert edn-to-box-projection-lens)]))))
+  (is (= (pack 69)
+         (lens/shove (pack 65)
+                     (lens/alt [pare? (lens/>>
+                                       (lens/invert edn-to-pare-projection-lens)
+                                       :pare)]
+                               [box? (lens/invert edn-to-box-projection-lens)])
+                     [nil {:box {:thing 69}}]))))

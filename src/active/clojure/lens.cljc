@@ -495,8 +495,9 @@ right-most element where they were before."}  merge
   where an alternative is a pair of a predicate to a lens that can focus data in
   a value that matches the given predicate.
 
-  Uses vectors in EDN representation with positional values to match to the
-  types."
+  Uses vectors in EDN representation to encode which predicate matched by fixed
+  positions for each case in the vector.  This allows to correctly map the case
+  when shoving."
   [& alternatives]
   (let [empty (mapv (constantly nil) alternatives)
         yank-vec-alternatives

@@ -400,5 +400,5 @@
           ;; Projection lens
           ~(when-let [projection-lens (:projection-lens options)]
            `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
-              (apply r-help/into-record-projection-lens ~constructor ~(mapv second field-triples))))
+              (r-help/into-record-projection-lens ~constructor ~@(mapv second field-triples))))
           ~r))))

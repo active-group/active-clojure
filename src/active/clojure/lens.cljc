@@ -387,8 +387,7 @@ right-most element where they were before."}  merge
                                                 [(cons next-res result)
                                                  next-remain
                                                  ;; structs to the left can keep the keys that were 'shadowed' by this.
-                                                 (set/union keep (set (keys next-struct)))
-                                                 ]))
+                                                 (set/union keep (set (keys next-struct)))]))
                                             [nil ns #{}]
                                             (reverse structs))]
            (->> (cons (clojure.core/merge (clojure.core/first result) remain)

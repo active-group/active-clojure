@@ -435,13 +435,14 @@ right-most element where they were before."}  merge
 
 (defn invert
   "A lens that inverts another `lens`.  Optional argument `empty` is the initial
-  new value that `lens` focusses on."
-  [lens & [empty]]
-  (fn
-    ([data]
-     (shove empty lens data))
-    ([_data v]
-     (yank v lens))))
+  new value that `lens` focusses on.  `lens` can be a [[clojure.core/Var]] to
+  delay evaluation of `lens`, which may be needed for mutually recursive
+  definitions."
+  [l & [empty]]
+  (lens (fn [data]
+          (shove empty l data))
+        (fn [_data v]
+          (yank v l))))
 
 (defn pattern
   "A lens over any value yielding to a map or a vector, depending on the given pattern.

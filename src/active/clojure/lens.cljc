@@ -395,17 +395,19 @@ right-most element where they were before."}  merge
                       (rest result))
                 (into (empty structs)))))))))
 
-(let [f (fn
-          ([empty fields in]
-           (reduce (fn [r [f lens]]
-                     (shove r f (yank in lens)))
-                   empty
-                   fields))
-          ([empty fields out v]
-           (reduce (fn [r [f lens]]
-                     (shove r lens (yank v f)))
-                   out
-                   fields)))]
+(let [projection-yank
+      (fn
+        [empty fields in]
+        (reduce (fn [r [f lens]]
+                  (shove r f (yank in lens)))
+                empty
+                fields))
+      projection-shove
+      (fn [empty fields out v]
+        (reduce (fn [r [f lens]]
+                  (shove r lens (yank v f)))
+                out
+                fields))]
   (defn projection
     "A lens that projects multiple derived values into a new value,
   with `empty` being an initial new value, and `fields` a map or
@@ -422,7 +424,8 @@ right-most element where they were before."}  merge
   The returned lens can then be used on a value of type
   'outer-record', to see it as a value of type 'inner-record'."
     [empty fields]
-    (f/partial f empty fields)))
+    (lens (f/partial projection-yank empty fields)
+          (f/partial projection-shove empty fields))))
 
 (defn ray
   "A lens that projects a value of `from-lens` into `to-lens`.  Optional argmuent

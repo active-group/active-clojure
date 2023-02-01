@@ -480,31 +480,15 @@ right-most element where they were before."}  merge
 (defn alt
   "A lens to focus on mixed data and sum types.  Accepts a list of `alternatives`,
   where an alternative is a pair of a predicate to a lens that can focus data in
-  a value that matches the given predicate.
-
-  Uses vectors with positional values to match to the types."
+  a value that matches the given predicate."
   [& alternatives]
-  (let [make-alt-yank-projection
+  (let [alt-lens
         (fn [data]
-          (let [[alt-lens data-lens]
-                (first (keep-indexed (fn [idx [p? l]]
-                                       (when (p? data) [(at-index idx) l]))
-                                     alternatives))]
-            (projection (mapv (constantly nil) alternatives)
-                        [[alt-lens data-lens]])))
-        make-alt-shove-projection
-        (fn [vct]
-          (let [[alt-lens data-lens]
-                (first (keep-indexed (fn [idx [v l]]
-                                       (when (some? v) [(at-index idx) l]))
-                                     (mapv (fn [[_p? l] v] [v l]) alternatives vct)))]
-
-            (projection (mapv (constantly nil) alternatives)
-                        [[alt-lens data-lens]])))]
+          (some (fn [[p? l]] (when (p? data) l)) alternatives))]
     (lens (fn [data]
-            (yank data (make-alt-yank-projection data)))
+            (yank data (alt-lens data)))
           (fn [data v]
-            (shove data (make-alt-shove-projection v) v)))))
+            (shove data (alt-lens data) v)))))
 
 (defn defer
   "A lens that defers evaluation of the given lens by lifting

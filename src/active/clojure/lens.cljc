@@ -483,15 +483,24 @@ right-most element where they were before."}  merge
 
   Uses vectors with positional values to match to the types."
   [& alternatives]
-  (let [make-alt-projection
+  (let [make-alt-yank-projection
         (fn [data]
           (let [[alt-lens data-lens]
                 (first (keep-indexed (fn [idx [p? l]]
                                        (when (p? data) [(at-index idx) l]))
                                      alternatives))]
             (projection (mapv (constantly nil) alternatives)
+                        [[alt-lens data-lens]])))
+        make-alt-shove-projection
+        (fn [vct]
+          (let [[alt-lens data-lens]
+                (first (keep-indexed (fn [idx [v l]]
+                                       (when (some? v) [(at-index idx) l]))
+                                     (mapv (fn [[_p? l] v] [v l]) alternatives vct)))]
+
+            (projection (mapv (constantly nil) alternatives)
                         [[alt-lens data-lens]])))]
     (lens (fn [data]
-            (yank data (make-alt-projection data)))
+            (yank data (make-alt-yank-projection data)))
           (fn [data v]
-            (shove data (make-alt-projection data) v)))))
+            (shove data (make-alt-shove-projection v) v)))))

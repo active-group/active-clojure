@@ -689,3 +689,14 @@
                                        :pare)]
                                [box? (lens/invert edn-to-box-projection-lens)])
                      [nil {:box {:thing 69}}]))))
+
+(declare deferred-lens)
+
+(def defer-lens (lens/defer #'deferred-lens))
+
+(deftest defer-test
+  (lens-laws-hold defer-lens {:a 12} 23 42)
+  (is (= 12 (lens/yank {:a 12} defer-lens)))
+  (is (= {:a 23} (lens/shove {:a 12} defer-lens 23))))
+
+(def deferred-lens :a)

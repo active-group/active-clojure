@@ -505,3 +505,16 @@ right-most element where they were before."}  merge
             (yank data (make-alt-yank-projection data)))
           (fn [data v]
             (shove data (make-alt-shove-projection v) v)))))
+
+(defn defer
+  "A lens that defers evaluation of the given lens by lifting
+  [[clojure.core/deref]] into lenses.
+
+  Argument `var-lens` must be a [[clojure.core/Var]] with a lens
+  as its value."
+  [var-lens]
+  (assert (var? var-lens))
+  (lens (fn [data]
+          (yank (deref var-lens) data))
+        (fn [data v]
+          (shove data (deref var-lens) v))))

@@ -490,6 +490,37 @@ right-most element where they were before."}  merge
           (fn [data v]
             (shove data (alt-lens data) v)))))
 
+(defn alt->edn
+  "A projection lens on mixed data and sum types.  Accepts a list of `alternatives`,
+  where an alternative is a pair of a predicate to a lens that can focus data in
+  a value that matches the given predicate.
+
+  Uses vectors in EDN representation with positional values to match to the
+  types."
+  [& alternatives]
+  (let [empty (mapv (constantly nil) alternatives)
+        yank-vec-alternatives
+        (map-indexed (fn [idx [p? l]]
+                       [p? (projection empty
+                                       [[(at-index idx) l]])])
+                     alternatives)
+        yank-vec
+        (apply alt yank-vec-alternatives)
+        shove-vec-alternatives
+        (fn [edn]
+          (map-indexed (fn [idx [v l]]
+                         [(constantly (some? v))
+                          (projection empty
+                                      [[(at-index idx) l]])])
+                       (mapv (fn [[_p? l] v] [v l]) alternatives edn)))
+        shove-vec
+        (fn [v]
+          (apply alt (shove-vec-alternatives v)))]
+    (lens (fn [data]
+            (yank data yank-vec))
+          (fn [data edn]
+            (shove data (shove-vec edn) edn)))))
+
 (defn defer
   "A lens that defers evaluation of the given lens by lifting
   [[clojure.core/deref]] into lenses.

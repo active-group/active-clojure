@@ -675,6 +675,70 @@
                                [box? (lens/invert edn-to-box-projection-lens)])
                      {:box {:thing 69}}))))
 
+(deftest alt->edn-test
+  (lens-laws-hold (lens/alt->edn [map? :a]
+                                [vector? (lens/at-index 0)])
+                  [23] [nil 42] [nil 65])
+  (is (= [23 nil]
+         (lens/yank {:a 23}
+                    (lens/alt->edn [map? :a]
+                                  [vector? (lens/at-index 0)]))))
+  (is (= [nil 42]
+         (lens/yank [42]
+                    (lens/alt->edn [map? :a]
+                                  [vector? (lens/at-index 0)]))))
+  (is (= {:a 42}
+         (lens/shove {:a 23}
+                     (lens/alt->edn [map? :a]
+                                   [vector? (lens/at-index 0)])
+                     [42 nil])))
+  (is (= [65]
+         (lens/shove [42]
+                     (lens/alt->edn [map? :a]
+                                   [vector? (lens/at-index 0)])
+                     [nil 65])))
+  (is (= [{:a 23 :b 42}]
+         (lens/yank (kons 23 42)
+                    (lens/projection [nil]
+                                     [[(lens/at-index 0)
+                                       (lens/>>
+                                        (lens/invert edn-to-pare-projection-lens)
+                                        :pare)]]))))
+  (is (= (kons 42 23)
+         (lens/shove (kons 23 42)
+                     (lens/projection [nil]
+                                      [[(lens/at-index 0)
+                                        (lens/>>
+                                         (lens/invert edn-to-pare-projection-lens)
+                                         :pare)]])
+                     [{:a 42 :b 23}])))
+  (is (= [{:a 23 :b 42} nil]
+         (lens/yank (kons 23 42)
+                    (lens/alt->edn [pare? (lens/>>
+                                          (lens/invert edn-to-pare-projection-lens)
+                                          :pare)]
+                                  [box? (lens/invert edn-to-box-projection-lens)]))))
+  (is (= (kons 42 23)
+         (lens/shove (kons 23 42)
+                     (lens/alt->edn [pare? (lens/>>
+                                           (lens/invert edn-to-pare-projection-lens)
+                                           :pare)]
+                                   [box? (lens/invert edn-to-box-projection-lens)])
+                     [{:a 42 :b 23} nil])))
+  (is (= [nil {:box {:thing 65}}]
+         (lens/yank (pack 65)
+                    (lens/alt->edn [pare? (lens/>>
+                                          (lens/invert edn-to-pare-projection-lens)
+                                          :pare)]
+                                  [box? (lens/invert edn-to-box-projection-lens)]))))
+  (is (= (pack 69)
+         (lens/shove (pack 65)
+                     (lens/alt->edn [pare? (lens/>>
+                                           (lens/invert edn-to-pare-projection-lens)
+                                           :pare)]
+                                   [box? (lens/invert edn-to-box-projection-lens)])
+                     [nil {:box {:thing 69}}]))))
+
 (declare deferred-lens)
 
 (def defer-lens (lens/defer #'deferred-lens))

@@ -1,5 +1,6 @@
 (ns active.clojure.lens-test
   (:require [active.clojure.lens :as lens]
+            [active.clojure.functions :as f]
             #?(:clj [active.clojure.record :refer [define-record-type]])
             #?(:clj [clojure.test :refer :all])
             #?(:cljs [cljs.test :as t]))
@@ -28,10 +29,13 @@
          (lens/shove (lens/shove data l v2) l v1))
       "Lens law 3 violated"))
 
-(defn lens-laws-hold [l data v1 v2]
-  (and (law-1-holds l data v1)
-       (law-2-holds l data)
-       (law-3-holds l data v1 v2)))
+(defn lens-laws-hold
+  "Given a lens l, an example data structure and two examples of the
+  values the lens can shove from, tests all 3 lens laws."
+  [l data v1 v2]
+  (do (law-1-holds l data v1)
+      (law-2-holds l data)
+      (law-3-holds l data v1 v2)))
 
 (deftest t-overhaul
   (is (= {:foo 24}
@@ -565,7 +569,7 @@
                          proj
                          {:flup {:shmup -1 :blub "abc"}}))))))
 
-(deftest ray-test
+#_(deftest ray-test
   (lens-laws-hold (lens/ray :a (lens/at-index 0) [])
                   {:a "Foo"
                    :b ["Foo" "Bar" "Baz"]}
@@ -588,156 +592,75 @@
             :b ["Marcus" "Bar" "Baz"]}
            (l data "Marcus")))))
 
-(define-record-type Pare
-  kons
-  pare?
-  [a kar
-   b kdr])
-
-(def edn-to-pare-projection-lens
-  (lens/projection (kons nil nil)
-                   {kar (lens/>> :pare :a)
-                    kdr (lens/>> :pare :b)}))
-
-(deftest edn-to-pare-projection-lens-test
-  (let [data {:pare {:a "Foo" :b "Bar"}}
-        l edn-to-pare-projection-lens]
-    (is (= (kons "Foo" "Bar") (lens/yank data l)))
-    (is (= {:pare {:a "Bar" :b "Baz"}} (lens/shove data l (kons "Bar" "Baz"))))
-    (is (= (kons "Bar" "Baz") (lens/yank (lens/shove data l (kons "Bar" "Baz")) l)))))
-
 (deftest invert-test
-  (testing "with rays"
-    (let [l (lens/ray (lens/at-index 0) :a)]
-      (is (= [23] (lens/yank {:a 23} (lens/invert l))))
-      (is (= {:a 42} (lens/shove {:a 23} (lens/invert l) [42])))))
-  (testing "with projection lenses"
-    (is (= {:pare {:a "Foo" :b "Bar"}}
-           (lens/yank (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens))))
-    (is (= (kons "Bar" "Baz")
-           (lens/shove (kons "Foo" "Bar") (lens/invert edn-to-pare-projection-lens) {:pare {:a "Bar" :b "Baz"}})))))
+  (let [lens (lens/invert :a {})]
+    (is (= {:a 23} (lens/yank 23 lens)))
 
-(define-record-type Bocs
-  pack
-  box?
-  [thing unpack])
+    (is (= 23 (lens/shove 10 lens {:a 23})))
 
-(def edn-to-box-projection-lens
-  (lens/projection (pack nil)
-                   {unpack (lens/>> :box :thing)}))
+    (lens-laws-hold lens 10 {:a 23} {:a 42})))
 
-(deftest alt-test
-  (lens-laws-hold (lens/alt [map? :a]
-                            [vector? (lens/at-index 0)])
-                  [23] 42 65)
-  (is (= 23
-         (lens/yank {:a 23}
-                    (lens/alt [map? :a]
-                              [vector? (lens/at-index 0)]))))
-  (is (= 42
-         (lens/yank [42]
-                    (lens/alt [map? :a]
-                              [vector? (lens/at-index 0)]))))
-  (is (= {:a 42}
-         (lens/shove {:a 23}
-                     (lens/alt [map? :a]
-                               [vector? (lens/at-index 0)])
-                     42)))
-  (is (= [65]
-         (lens/shove [42]
-                     (lens/alt [map? :a]
-                               [vector? (lens/at-index 0)])
-                     65)))
-  (is (= {:a 23 :b 42}
-         (lens/yank (kons 23 42)
-                    (lens/alt [pare? (lens/>>
-                                      (lens/invert edn-to-pare-projection-lens)
-                                      :pare)]
-                              [box? (lens/invert edn-to-box-projection-lens)]))))
-  (is (= (kons 42 23)
-         (lens/shove (kons 23 42)
-                     (lens/alt [pare? (lens/>>
-                                       (lens/invert edn-to-pare-projection-lens)
-                                       :pare)]
-                               [box? (lens/invert edn-to-box-projection-lens)])
-                     {:a 42 :b 23})))
-  (is (= {:box {:thing 65}}
-         (lens/yank (pack 65)
-                    (lens/alt [pare? (lens/>>
-                                      (lens/invert edn-to-pare-projection-lens)
-                                      :pare)]
-                              [box? (lens/invert edn-to-box-projection-lens)]))))
-  (is (= (pack 69)
-         (lens/shove (pack 65)
-                     (lens/alt [pare? (lens/>>
-                                       (lens/invert edn-to-pare-projection-lens)
-                                       :pare)]
-                               [box? (lens/invert edn-to-box-projection-lens)])
-                     {:box {:thing 69}}))))
+(deftest conditional-test
+  ;; Note: also tests 'either'.
+  (let [snd (fn [x y] y)
+        from (fn [p]
+               (f/comp p snd))
+        mk-lens #(lens/conditional
+                  [string? (from vector?) (lens/invert (lens/at-index 0) [nil])]
+                  [int? (from map?) (lens/invert :foo {})]
+                  (lens/invert (lens/contains :bar) #{}))
+        lens (mk-lens)]
+    (is (= (mk-lens) (mk-lens)) "referencially transparent")
 
-(deftest alt->edn-test
-  (lens-laws-hold (lens/alt->edn [map? :a]
-                                 [vector? (lens/at-index 0)])
-                  [23] [nil 42] [nil 65])
-  (is (= [23 nil]
-         (lens/yank {:a 23}
-                    (lens/alt->edn [map? :a]
-                                   [vector? (lens/at-index 0)]))))
-  (is (= [nil 42]
-         (lens/yank [42]
-                    (lens/alt->edn [map? :a]
-                                   [vector? (lens/at-index 0)]))))
-  (is (= {:a 42}
-         (lens/shove {:a 23}
-                     (lens/alt->edn [map? :a]
-                                    [vector? (lens/at-index 0)])
-                     [42 nil])))
-  (is (= [65]
-         (lens/shove [42]
-                     (lens/alt->edn [map? :a]
-                                    [vector? (lens/at-index 0)])
-                     [nil 65])))
-  (is (= [{:a 23 :b 42}]
-         (lens/yank (kons 23 42)
-                    (lens/projection [nil]
-                                     [[(lens/at-index 0)
-                                       (lens/>>
-                                        (lens/invert edn-to-pare-projection-lens)
-                                        :pare)]]))))
-  (is (= (kons 42 23)
-         (lens/shove (kons 23 42)
-                     (lens/projection [nil]
-                                      [[(lens/at-index 0)
-                                        (lens/>>
-                                         (lens/invert edn-to-pare-projection-lens)
-                                         :pare)]])
-                     [{:a 42 :b 23}])))
-  (is (= [{:a 23 :b 42} nil]
-         (lens/yank (kons 23 42)
-                    (lens/alt->edn [pare? (lens/>>
-                                           (lens/invert edn-to-pare-projection-lens)
-                                           :pare)]
-                                   [box? (lens/invert edn-to-box-projection-lens)]))))
-  (is (= (kons 42 23)
-         (lens/shove (kons 23 42)
-                     (lens/alt->edn [pare? (lens/>>
-                                            (lens/invert edn-to-pare-projection-lens)
-                                            :pare)]
-                                    [box? (lens/invert edn-to-box-projection-lens)])
-                     [{:a 42 :b 23} nil])))
-  (is (= [nil {:box {:thing 65}}]
-         (lens/yank (pack 65)
-                    (lens/alt->edn [pare? (lens/>>
-                                           (lens/invert edn-to-pare-projection-lens)
-                                           :pare)]
-                                   [box? (lens/invert edn-to-box-projection-lens)]))))
-  (is (= (pack 69)
-         (lens/shove (pack 65)
-                     (lens/alt->edn [pare? (lens/>>
-                                            (lens/invert edn-to-pare-projection-lens)
-                                            :pare)]
-                                    [box? (lens/invert edn-to-box-projection-lens)])
-                     [nil {:box {:thing 69}}]))))
+    ;; integers <-> {:foo v}
+    (is (= {:foo 42} (lens/yank 42 lens)))
+    (is (= 42 (lens/shove nil lens {:foo 42})))
+
+    ;; strings <-> [s]
+    (is (= ["42"] (lens/yank "42" lens)))
+    (is (= "42" (lens/shove "x" lens ["42"])))
+
+    ;; otherwise
+    (is (= #{:bar} (lens/yank true lens)))
+    (is (= false (lens/shove true lens #{})))
+    
+    (lens-laws-hold lens 42 {:foo 10} {:foo 20})
+    (lens-laws-hold lens "42" ["10"] ["20"])
+    (lens-laws-hold lens true #{:bar} #{})))
+
+(deftest union-test
+  (testing "union"
+    (let [lens (lens/union [int? #(and (map? %) (some? (:x %))) (lens/invert :x {})]
+                           [string? #(and (map? %) (some? (:y %))) (lens/invert :y {})])]
+
+      (is (= {:x 42} (lens/yank 42 lens)))
+      (is (= {:y "foo"} (lens/yank "foo" lens)))
+
+      (lens-laws-hold lens 42 {:x 10} {:y "foo"})
+      ))
+  (testing "union-vector"
+    (let [lens (lens/union-vector [int? (lens/invert :x {})]
+                                  [string? (lens/invert :y {})]
+                                  lens/id)]
+
+      (is (= [{:x 42} nil] (lens/yank 42 lens)))
+      (is (= [nil {:y "foo"}] (lens/yank "foo" lens)))
+      
+      (lens-laws-hold lens 42 [{:x 10} nil] [nil {:y "foo"}])
+      ))
+  (testing "union-tagged"
+    (let [lens (lens/union-tagged [int? :int (lens/invert :x {})]
+                                  [string? :str (lens/invert :y {})]
+                                  [false? :f]
+                                  lens/id)]
+      (is (= [:int {:x 42}] (lens/yank 42 lens)))
+      (is (= [:str {:y "foo"}] (lens/yank "foo" lens)))
+      (is (= [:f false] (lens/yank false lens)))
+      
+      (is (= true (lens/yank true lens)))
+
+      (lens-laws-hold lens 42 [:int {:x 42}] [:str {:y "foo"}])
+      )))
 
 (declare deferred-lens)
 

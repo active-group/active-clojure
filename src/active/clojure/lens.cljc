@@ -413,7 +413,7 @@ right-most element where they were before."}  merge
   sequence of tuples, of a lens on the new value and lens over the
   'outer' value the lens is used on.
 
-  As an example, this can be used to map between to record types like this:
+  As an example, this can be used to map between two record types like this:
 
 ```
   (projection (make-inner-record nil)
@@ -426,22 +426,25 @@ right-most element where they were before."}  merge
     (lens (f/partial projection-yank empty fields)
           (f/partial projection-shove empty fields))))
 
-(defn ray
+(let [invert-yank (fn [l empty data]
+                    (shove empty l data))
+      invert-shove (fn [l _data v]
+                     (yank v l))]
+  (defn invert
+    "A lens that inverts another `lens`.  Optional argument `empty` is the initial
+  new value that `lens` focusses on, which defaults to `nil`."
+    [l & [empty]]
+    (lens (f/partial invert-yank l empty)
+          (f/partial invert-shove l))))
+
+#_(defn ray
   "A lens that projects a value of `from-lens` into `to-lens`.  Optional argmuent
   `to-empty` is the initial new value that `to-lens` focusses on."
   [from-lens to-lens & [to-empty]]
-  (projection to-empty {to-lens from-lens}))
+  ;; Note: identical:
+  (>> from-lens (invert to-lens to-empty))
+  #_(projection to-empty {to-lens from-lens}))
 
-(defn invert
-  "A lens that inverts another `lens`.  Optional argument `empty` is the initial
-  new value that `lens` focusses on.  `lens` can be a [[clojure.core/Var]] to
-  delay evaluation of `lens`, which may be needed for mutually recursive
-  definitions."
-  [l & [empty]]
-  (lens (fn [data]
-          (shove empty l data))
-        (fn [_data v]
-          (yank v l))))
 
 (defn pattern
   "A lens over any value yielding to a map or a vector, depending on the given pattern.
@@ -476,50 +479,153 @@ right-most element where they were before."}  merge
   [& lenses]
   (projection nil (mapv (fn [l] [id l]) lenses)))
 
-(defn alt
-  "A lens to focus on mixed data and sum types.  Accepts a list of `alternatives`,
-  where an alternative is a pair of a predicate to a lens that can focus data in
-  a value that matches the given predicate."
-  [& alternatives]
-  (let [alt-lens
-        (fn [data]
-          (some (fn [[p? l]] (when (p? data) l)) alternatives))]
-    (lens (fn [data]
-            (yank data (alt-lens data)))
-          (fn [data v]
-            (shove data (alt-lens data) v)))))
+(let [either-yank (fn [yank? then-lens else-lens d]
+                    (yank d (if (yank? d)
+                              then-lens
+                              else-lens)))
+      either-shove (fn [shove? then-lens else-lens d v]
+                     (shove d (if (shove? d v)
+                                then-lens
+                                else-lens)
+                            v))]
+  (defn either
+    "A lens that behaves like `then-lens` if `(yank? data)` is true when
+  yanking, resp. `(shove? data value)` when shoving, and behaves like
+  `else-lens` otherwise."
+    [yank? shove? then-lens else-lens]
+    (lens (f/partial either-yank yank? then-lens else-lens)
+          (f/partial either-shove shove? then-lens else-lens))))
 
-(defn alt->edn
-  "A projection lens on mixed data and sum types.  Accepts a list of `alternatives`,
-  where an alternative is a pair of a predicate to a lens that can focus data in
-  a value that matches the given predicate.
+(defn conditional
+  "A lens similar to [[either]] that allows to specify multiple variants
+  at once. The last argument must a single default lens, which is used
+  when no predicate matches:
 
-  Uses vectors in EDN representation to encode which predicate matched by fixed
-  positions for each case in the vector.  This allows to correctly map the case
-  when shoving."
-  [& alternatives]
-  (let [empty (mapv (constantly nil) alternatives)
-        yank-vec-alternatives
-        (map-indexed (fn [idx [p? l]]
-                       [p? (projection empty
-                                       [[(at-index idx) l]])])
-                     alternatives)
-        yank-vec
-        (apply alt yank-vec-alternatives)
-        shove-vec-alternatives
-        (fn [edn]
-          (map-indexed (fn [idx [v l]]
-                         [(constantly (some? v))
-                          (projection empty
-                                      [[(at-index idx) l]])])
-                       (mapv (fn [[_p? l] v] [v l]) alternatives edn)))
-        shove-vec
-        (fn [v]
-          (apply alt (shove-vec-alternatives v)))]
-    (lens (fn [data]
-            (yank data yank-vec))
-          (fn [data edn]
-            (shove data (shove-vec edn) edn)))))
+  ```
+  (conditional
+    [yank? shove? lens]
+    ...
+    default)
+  =>
+  (either yank? shove? lens default)
+  ```
+  "
+  [clause & clauses]
+  (if (empty? clauses)
+    (do (assert (not (vector? clause)) "Last element must be a default lens.")
+        clause)
+    (do (assert (= 3 (count clause)) clause)
+        (let [[yank? shove? lens] clause]
+          (assert (some? yank?))
+          (assert (some? shove?))
+          (assert (some? lens))
+          (either yank? shove? lens
+                  (apply conditional clauses))))))
+
+(let [lift-shove? (fn [inner? data v]
+                   (inner? v))
+      lift-shoves? (fn [c]
+                    (assert (vector? c) c)
+                    (let [[outer? inner? lens] c]
+                      (assert (some? inner?))
+                      [outer? (f/partial lift-shove? inner?) lens]))
+      throw-lens
+      (lens (fn [data]
+              (throw (ex-info (str "No predicate matched data: " (pr-str data)) {:data data})))
+            (fn [data v]
+              (throw (ex-info (str "No predicate matched value: " (pr-str v)) {:value v}))))]
+  (defn union
+    "A lens that combines multiple lenses depending on the values yanked or
+  shoved from. Predicates on the values being yanked from or shoved to
+  the lens must be given:
+
+  ```
+  (union [d-1? v-1? lens-1] ...)
+  ```
+
+  i.e. `lens-1` is used when yanking, if `d-1?` is true for the data
+  being yanked from, and `lens-1` is used when shoving, if `v-1?` is
+  true for the value being shoved though the lens. In each case the
+  next triple are tried if the predicates do not hold. If none
+  matches, an exception is thrown. You can provide an alternative
+  fallback, by adding a clause that matches any value at the end."
+    [& clauses]
+    (apply conditional (concat (map lift-shoves? clauses)
+                               [throw-lens]))))
+
+(let [has-idx? (fn [idx vector]
+                 (and (vector? vector) (some? (get vector idx))))]
+  (defn union-vector
+    "A lens that combines multiple lenses depending on the values yanked,
+  into a vector corresponding in length to the number of clauses:
+
+  ```
+  (union-vector [d-1? lens-1] [d-2? lens-2] ... fallback-lens)
+  ```
+  
+  i.e. `lens-1` is used when yanking, if `d-1?` is true for the data
+  being yanked from, and otherwise `lens-2` if `d-2?` holds. Yanking
+  then results in a vector with all items `nil` except one, which
+  determines which lens to use when shoving. That also means none of
+  the given lenses should yank to `nil`!
+
+  An optional fallback lens can be given as the last argument, which
+  is applied to the 'raw data' directly. If none is given, and
+  exception is thrown in that case."
+    [& clauses]
+    ;; Note: must not project to nil
+    (let [size (let [c (count clauses)]
+                 (if (not (vector? (last clauses)))
+                   (dec c)
+                   c))
+          empty-v (vec (repeat size nil))]
+      (apply union (map-indexed (fn [idx clause]
+                                  (if (vector? clause)
+                                    (do (assert (= 2 (count clause)))
+                                        (let [[outer? lens] clause]
+                                          [outer?
+                                           (f/partial has-idx? idx)
+                                           (>> lens (invert (at-index idx) empty-v))]))
+                                    ;; default lens, only in last position.
+                                    (do (assert (= idx size))
+                                        (let [dflt clause]
+                                          [(f/constantly true) (f/constantly true) dflt]))))
+                                clauses)))))
+
+(let [tuple? (fn [v]
+               (and (seq v) (= 2 (count v))))
+      has-tag? (fn [tag v]
+                 (and (tuple? v) (= tag (first v))))]
+  (defn union-tagged
+    "A lens that associates different kinds of values with a tag on
+  yanking, and optionally adds different lenses to that:
+
+  ```
+  (union-tagged [d-1? tag-1 lens-1] [d-2? tag-2 lens-2] ... fallback-lens)
+  ```
+
+  will yank a value where `d-1?` is true to a tuple `[tag-1 v]` where
+  `v` is the result of yanking `lens-1` to the data. The lens defaults
+  to [[id]]. When shoving, that tag determines which lens to apply.
+
+  A optional fallback lens can be given as the last argument, which is
+  used on the 'raw data' when either none of the predicates hold on
+  yanking, or none if the tags match on shoving. If none is given, an
+  exception is thrown in that case."
+    [& clauses]
+    (let [size (count clauses)]
+      (apply union (map-indexed (fn [idx clause]
+                                  (if (vector? clause)
+                                    (do (assert (<= 2 (count clause) 3))
+                                        (let [[outer? tag & [lens]] clause]
+                                          [outer?
+                                           (f/partial has-tag? tag)
+                                           (++ (>> void (default tag)) (or lens id))]))
+                                    ;; default lens, only in last position.
+                                    (do (assert (= idx (dec size)))
+                                        (let [dflt clause]
+                                          [(f/constantly true) (f/constantly true) dflt]))))
+                                clauses)))))
 
 (defn defer
   "A lens that defers evaluation of the given lens by lifting

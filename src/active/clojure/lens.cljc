@@ -402,7 +402,7 @@ right-most element where they were before."}  merge
                 empty
                 fields))
       projection-shove
-      (fn [empty fields out v]
+      (fn [fields out v]
         (reduce (fn [r [f lens]]
                   (shove r lens (yank v f)))
                 out
@@ -424,11 +424,11 @@ right-most element where they were before."}  merge
   'outer-record', to see it as a value of type 'inner-record'."
     [empty fields]
     (lens (f/partial projection-yank empty fields)
-          (f/partial projection-shove empty fields))))
+          (f/partial projection-shove fields))))
 
-(let [invert-yank (fn [l empty data]
+(let [invert-yank (fn invert-yank [l empty data]
                     (shove empty l data))
-      invert-shove (fn [l _data v]
+      invert-shove (fn invert-shove [l _data v]
                      (yank v l))]
   (defn invert
     "A lens that inverts another `lens`.  Optional argument `empty` is the initial
@@ -554,7 +554,19 @@ right-most element where they were before."}  merge
                                [throw-lens]))))
 
 (let [has-idx? (fn [idx vector]
-                 (and (vector? vector) (some? (get vector idx))))]
+                 (and (vector? vector) (some? (get vector idx))))
+
+      union-vector-element-yank (fn [l idx empty-v data]
+                                  ;; create a vector, placing the yanked value into it at idx
+                                  (assoc empty-v idx (yank data l)))
+      union-vector-element-shove (fn [l idx data v]
+                                   ;; take value from index in vector, then shove it into data with l
+                                   (shove data l (get v idx)))
+      union-vector-element (fn [l idx empty-v]
+                             ;; focus on position idx in a vector, 
+                             (lens (f/partial union-vector-element-yank l idx empty-v)
+                                   (f/partial union-vector-element-shove l idx)))
+      ]
   (defn union-vector
     "A lens that combines multiple lenses depending on the values yanked,
   into a vector corresponding in length to the number of clauses:
@@ -585,7 +597,8 @@ right-most element where they were before."}  merge
                                         (let [[outer? lens] clause]
                                           [outer?
                                            (f/partial has-idx? idx)
-                                           (>> lens (invert (at-index idx) empty-v))]))
+                                           (union-vector-element lens idx empty-v)
+                                           ]))
                                     ;; default lens, only in last position.
                                     (do (assert (= idx size))
                                         (let [dflt clause]

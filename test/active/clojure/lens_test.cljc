@@ -628,6 +628,12 @@
     (lens-laws-hold lens "42" ["10"] ["20"])
     (lens-laws-hold lens true #{:bar} #{})))
 
+(define-record-type X
+  {:projection-lens to-x-projection-lens}
+  make-x
+  x?
+  [x x-x])
+
 (deftest union-test
   (testing "union"
     (let [lens (lens/union [int? #(and (map? %) (some? (:x %))) (lens/invert :x {})]
@@ -640,14 +646,23 @@
       ))
   (testing "union-vector"
     (let [lens (lens/union-vector [int? (lens/invert :x {})]
-                                  [string? (lens/invert :y {})]
-                                  lens/id)]
+                                  [string? (lens/invert :y {})])]
 
       (is (= [{:x 42} nil] (lens/yank 42 lens)))
       (is (= [nil {:y "foo"}] (lens/yank "foo" lens)))
+
+      (is (= 42 (lens/shove 23 lens [{:x 42} nil])))
+      (is (= "bar" (lens/shove "foo" lens [nil {:y "bar"}])))
       
-      (lens-laws-hold lens 42 [{:x 10} nil] [nil {:y "foo"}])
-      ))
+      (lens-laws-hold lens 42 [{:x 10} nil] [nil {:y "foo"}]))
+
+    ;; regression: union, record projection and union together:
+    (let [to-x-lens (to-x-projection-lens :y)
+          lens (lens/union-vector [x? (lens/invert to-x-lens {:y nil})])]
+
+      (is (= [{:y 42}] (lens/yank (make-x 42) lens)))
+      (is (= (make-x 42) (lens/shove nil lens [{:y 42}])))))
+  
   (testing "union-tagged"
     (let [lens (lens/union-tagged [int? :int (lens/invert :x {})]
                                   [string? :str (lens/invert :y {})]

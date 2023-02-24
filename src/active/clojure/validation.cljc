@@ -32,7 +32,8 @@
   (:require #?(:clj [active.clojure.record :refer [define-record-type]]
                :cljs [active.clojure.cljs.record :refer-macros [define-record-type]])
             [active.clojure.condition :as condition]
-            [active.clojure.lens :as lens]))
+            [active.clojure.lens :as lens])
+  (:refer-clojure :exclude [sequence]))
 
 ;;; A ValidationResult is one of the following
 ;; - a ValidationSuccess

@@ -2,6 +2,7 @@
   (:require [active.clojure.lens :as lens]
             [active.clojure.condition :as c]
             [clojure.spec.alpha :as spec]
+            [active.clojure.functions :as f]
             [active.clojure.record-runtime :as rrun]))
 
 
@@ -291,15 +292,26 @@
                             nil))
                         field-tuples))))))))
 
-(defn into-record-projection-lens
-  "Construtor for a lens that projects a data structure into a record with
+(let [p-yank (fn p-yank [constructor lenses v]
+               (apply constructor (map #(lens/yank v %) lenses)))
+      p-shove (fn p-shove [field-lenses lenses data v]
+                (reduce (fn [data [lens value]]
+                          (lens/shove data lens value))
+                        data
+                        (map (fn [lens flens]
+                               [lens (lens/yank v flens)])
+                             lenses
+                             field-lenses)))]
+  (defn into-record-projection-lens
+    "Construtor for a lens that projects a data structure into a record with
   `constructor` and `field-lenses`.
   Returns a function that accepts `lenses` that will to map the `field-lenses`
   in the projection."
-  [constructor & field-lenses]
-  (fn [& lenses]
-    (lens/projection (apply constructor (mapv (constantly nil) field-lenses))
-                     (mapv (fn [fl l] [fl l]) field-lenses lenses))))
+    [constructor & field-lenses]
+    (fn [& lenses]
+      (assert (= (count lenses) (count field-lenses)))
+      (lens/lens (f/partial p-yank constructor lenses)
+                 (f/partial p-shove field-lenses lenses)))))
 
 #?(:clj
    (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]

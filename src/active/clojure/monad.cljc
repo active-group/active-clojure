@@ -590,7 +590,15 @@
   mock runner for tests), to reify a composed command as something
   comparable (and printable), for cases where the command itself is
   not; e.g. it includes a `bind` inside. See [[`reify-command`]] to
-  extract the meta data again."
+  extract the meta data again.
+
+  Note that `reify-as` does not work on `bind`s like for example composed
+  monadic programs with `monadic`.  Because the reification meta data sticks at
+  the first `bind` that is handled by `run-monadic` and friends above -- and not
+  by the command runners that are mocked away by the mock runner.  To improve on
+  that we might either need to add the awareness of mocking into `run-monadic`
+  and friends above or copy their implementation into to `mock` namespace and
+  include mocking of binds there."
   [m reification]
   (assert reification) ;; should not be falsy, but only to simplify reify-command
   (vary-meta m

@@ -21,13 +21,13 @@
 (defn closed-struct? [v]
   (clj-instance? ClosedStruct v))
 
-(defn- closed-struct-keyset [^ClosedStruct t]
-  (assert (closed-struct? t)) ;; TODO: exception?
-  (.-field-set t))
-
 (defn closed-struct-keyset [^ClosedStruct t]
   (assert (closed-struct? t)) ;; TODO: exception?
   (.-field-set t))
+
+(defn create-closed-struct [fields]
+  (ClosedStruct. (set fields)
+                 (apply create-open-struct fields)))
 
 (deftype ^:private PersistentClosedStructMap [struct ^clojure.lang.PersistentStructMap m]
 
@@ -139,9 +139,6 @@
   (and (clj-instance? PersistentClosedStructMap v)
        (= (.-struct v)
           t)))
-
-(defn create-struct [fields]
-  (ClosedStruct. (set fields) (apply create-open-struct fields)))
 
 (defn- build-map* [struct key-val-pairs]
   ;; TODO: fail is not all keys given, or not? (records allowed that to some extend - via less fields in ctor)

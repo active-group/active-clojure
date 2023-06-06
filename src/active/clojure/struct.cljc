@@ -15,7 +15,7 @@
      ~@(for [f# fields]
          `(def-key ~f#))
      
-     (def ~t (closed-struct-map/create-struct [~@fields]))
+     (def ~t (closed-struct-map/create-closed-struct [~@fields]))
 
      ~(doseq [k# fields]
         `(key/optimize-for! ~k# ~t))

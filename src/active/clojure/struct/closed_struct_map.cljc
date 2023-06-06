@@ -21,6 +21,10 @@
 (defn closed-struct? [v]
   (clj-instance? ClosedStruct v))
 
+(defn- closed-struct-keyset [^ClosedStruct t]
+  (assert (closed-struct? t)) ;; TODO: exception?
+  (.-field-set t))
+
 (defn closed-struct-keyset [^ClosedStruct t]
   (assert (closed-struct? t)) ;; TODO: exception?
   (.-field-set t))
@@ -125,9 +129,10 @@
       (a (.-struct m)))))
 
 (defn setter [^ClosedStruct t key]
-  ;; TODO: exception if key not in struct
-  ;; TODO: any way to optimize it?
+  (assert (contains? (closed-struct-keyset t) key)) ;; TODO: exception
+  ;; TODO: any way to optimize it? Probably not while basing impl on clojure/struct-map
   (fn [m v]
+    (assert (clj-instance? PersistentClosedStructMap m)) ;; TODO: exception
     (assoc m key v)))
 
 (defn instance? [^ClosedStruct t v]
@@ -138,16 +143,21 @@
 (defn create-struct [fields]
   (ClosedStruct. (set fields) (apply create-open-struct fields)))
 
-(defn build-map [struct keys-vals]
+(defn- build-map* [struct key-val-pairs]
+  ;; TODO: fail is not all keys given, or not? (records allowed that to some extend - via less fields in ctor)
   (assert (closed-struct? struct)) ;; TODO: exception
-  ;; TODO: check all keys are included, but not more; even args
   (let [open-struct (.-open-struct struct)
-        m (apply open-struct-map open-struct (map second (partition 2 keys-vals)))]
-    (PersistentClosedStructMap. struct m)))
+        empty-m (open-struct-map open-struct)]
+    ;; OPT: there should be more efficient ways to contruct it...? But for clj/struct-map we would to know the orginal order :-/
+    ;; TODO: use transient
+    (reduce (fn [res [k v]]
+              (assoc res k v))
+            (PersistentClosedStructMap. struct empty-m)
+            key-val-pairs)))
+
+(defn build-map [struct keys-vals]
+  (assert (even? (count keys-vals))) ;; TODO: exception
+  (build-map* struct (partition 2 keys-vals)))
 
 (defn from-map [struct m]
-  (assert (closed-struct? struct)) ;; TODO: exception
-  ;; TODO: check all keys are included, but not more
-  (let [open-struct (.-open-struct struct)
-        m (apply open-struct-map open-struct (vals m))]
-    (PersistentClosedStructMap. struct m)))
+  (build-map* struct (seq m)))

@@ -13,7 +13,11 @@
   (let [v (sut/struct-map T
                           t-a 42
                           t-b :foo)]
-    (t/is (some? v) "Can construct with all fields"))
+    (t/is (some? v) "Can construct with all fields")
+
+    (t/is (= v (sut/struct-map T
+                               t-b :foo
+                               t-a 42)) "order does not matter"))
 
   (t/is (some? (throws #(sut/struct-map T t-a 42)))
         "Cannot construct with partial fields")

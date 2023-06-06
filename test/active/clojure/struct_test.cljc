@@ -1,5 +1,6 @@
 (ns active.clojure.struct-test
   (:require [active.clojure.struct :as sut #?@(:cljs [:include-macros true])]
+            [active.clojure.struct.validator :as validator]
             #?(:clj [clojure.test :as t]
                   :cljs [cljs.test :as t :include-macros true])))
 
@@ -231,3 +232,26 @@
        (t/is (sut/instance? t1 v2))
        (t/is (sut/instance? t2 v1))
        )))
+
+(defrecord AllInt []
+  validator/IStructMapValidator
+  (-validate-field [this changed-key changed-value]
+    (when-not (int? changed-value)
+      (throw (ex-info "Not an int" {:v changed-value}))))
+  (-validate [this m changed-keys]
+    (doseq [k changed-keys]
+      (let [v (get m k)]
+        (when-not (int? v)
+          (throw (ex-info "Not an int" {:v v})))))))
+
+(t/deftest validator-test
+  
+  (sut/def-struct ValidatedT [t-a t-b])
+  (sut/set-validator! ValidatedT (AllInt.))
+  
+  (t/is (not (throws #(sut/struct-map ValidatedT t-a 42 t-b 21))))
+  
+  (t/is (throws #(assoc (sut/struct-map ValidatedT t-a 42 t-b 21)
+                        t-a :foo)))
+  
+  (t/is (throws #(sut/struct-map ValidatedT t-a :foo t-b 21))))

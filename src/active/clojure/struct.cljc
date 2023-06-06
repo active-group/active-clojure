@@ -29,6 +29,11 @@
 
 ;; TODO: construct from map; either arity 1 of struct-map, or IFn on struct, or separate?
 
+(defn ^{:no-doc true
+        :doc "Replace validator of struct. Unsynchronized side effect; use only if you know what you are doing."}
+  set-validator! [struct validator]
+  (closed-struct-map/set-closed-struct-validator! struct validator))
+
 (defn struct?
   "Tests if v is a struct defined by [[def-struct]]."
   [v]

@@ -1,12 +1,21 @@
 (ns active.clojure.struct.closed-struct-map
+  (:require [active.clojure.struct.validator :as v])
   #?(:clj (:import (clojure.lang Util)))
   (:refer-clojure :rename {instance? clj-instance?
                            accessor open-struct-accessor
                            struct open-struct-map
                            create-struct create-open-struct}))
 
-(deftype ^:private ClosedStruct [field-set open-struct]
+(defprotocol ^:private IClosedStruct
+  (-get-validator [this])
+  (-set-validator [this validator]))
 
+(deftype ^:private ClosedStruct [field-set open-struct ^:unsynchronized-mutable validator]
+  IClosedStruct
+  (-get-validator [this]
+    (.-validator this))
+  (-set-validator [this validator]
+    (set! (.-validator this) validator))
   #?@(:clj
 
       [clojure.lang.IHashEq
@@ -25,9 +34,23 @@
   (assert (closed-struct? t)) ;; TODO: exception?
   (.-field-set t))
 
+(defn closed-struct-validator [^ClosedStruct t]
+  (assert (closed-struct? t)) ;; TODO: exception?
+  (-get-validator t))
+
+(defn set-closed-struct-validator! [^ClosedStruct t validator]
+  (-set-validator t validator))
+
+(defn- validate [^clojure.lang.PersistentStructMap m ^ClosedStruct t changed-keys changed-values]
+  ;; TODO: pass the PersistentClosedStructMap instead of the PersistentStructMap?
+  (when-let [v (-get-validator t)]
+    (v/validate v m changed-keys changed-values))
+  m)
+
 (defn create-closed-struct [fields]
   (ClosedStruct. (set fields)
-                 (apply create-open-struct fields)))
+                 (apply create-open-struct fields)
+                 nil))
 
 (deftype ^:private PersistentClosedStructMap [struct ^clojure.lang.PersistentStructMap m]
 
@@ -72,26 +95,42 @@
        (cons [this o]
              (let [check-key! (fn [k]
                                 (when-not (.containsKey m k)
-                                  (throw (Util/runtimeException "Not a key of struct"))))]
-               (condp clj-instance? o
-                 java.util.Map$Entry
-                 (check-key! (.getKey ^java.util.Map$Entry o))
+                                  (throw (Util/runtimeException "Not a key of struct"))))
 
-                 clojure.lang.IPersistentVector
-                 (when (>= (count o) 1) ;; should be tuple [k v]
-                   (check-key! (.nth ^clojure.lang.IPersistentVector o 0)))
+                   ;; OPT: collecting the changes if we have no validator is superflous (do it lazily?)
+                   [changed-keys changed-values]
+                   (condp clj-instance? o
+                     java.util.Map$Entry
+                     (let [^java.util.Map$Entry e o]
+                       (check-key! (.getKey e))
+                       [(list (.getKey e))
+                        (list (.getValue e))])
 
-                 ;; else: clojure.lang.IPersistentMap
-                 (doseq [^java.util.Map$Entry x (seq o)]
-                   (check-key! (.getKey x)))))
-             (PersistentClosedStructMap. struct (.cons m o)))
+                     clojure.lang.IPersistentVector
+                     (let [^clojure.lang.IPersistentVector v o]
+                       (when (>= (count v) 1) ;; should be tuple [k v]
+                         (check-key! (.nth v 0))
+                         [(list (.nth v 0))
+                          (list (.nth v 1))]))
+
+                     ;; else: clojure.lang.IPersistentMap
+                     (reduce (fn [ks-vs ^java.util.Map$Entry x]
+                               (check-key! (.getKey x))
+                               [(conj (first ks-vs) (.getKey x))
+                                (conj (second ks-vs) (.getValue x))])
+                             [[] []]
+                             (seq o)))
+                   new-m (-> (.cons m o)
+                             (validate struct changed-keys changed-values))]
+               (PersistentClosedStructMap. struct new-m)))
 
        (iterator [this]
                  (.iterator m))
 
        (assoc [this key val]
               (if (contains? m key)
-                (PersistentClosedStructMap. struct (.assoc m key val))
+                (PersistentClosedStructMap. struct (-> (.assoc m key val)
+                                                       (validate struct (list key) (list val))))
                 (throw (Util/runtimeException "Not a key of struct"))))
        (assocEx [this key val]
                 ;; assocEx is 'assoc if not set yet' - all our keys are always set.
@@ -109,7 +148,9 @@
        (valAt [this key not-found]
               (.valAt m key not-found))
        (empty [this]
-              (PersistentClosedStructMap. struct (.empty m)))
+              (PersistentClosedStructMap. struct (-> (.empty m)
+                                                     ;; potentially all keys have changed, to nil
+                                                     (validate struct (keys m) (vals m)))))
        ]))
 
 #?(:clj

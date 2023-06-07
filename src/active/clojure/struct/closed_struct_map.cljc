@@ -2,6 +2,7 @@
   (:require [active.clojure.struct.validator :as v])
   #?(:clj (:import (clojure.lang Util)))
   (:refer-clojure :rename {instance? clj-instance?
+                           satisfies? cljs-satisfies?
                            accessor open-struct-accessor
                            struct open-struct-map
                            create-struct create-open-struct}))
@@ -44,7 +45,7 @@
 (defn- validate [^clojure.lang.PersistentStructMap m ^ClosedStruct t changed-keys changed-values]
   ;; TODO: pass the PersistentClosedStructMap instead of the PersistentStructMap?
   (when-let [v (-get-validator t)]
-    (v/validate v m changed-keys changed-values))
+    (v/validate! v m changed-keys changed-values))
   m)
 
 (defn create-closed-struct [fields]
@@ -150,7 +151,7 @@
        (empty [this]
               (PersistentClosedStructMap. struct (-> (.empty m)
                                                      ;; potentially all keys have changed, to nil
-                                                     (validate struct (keys m) (vals m)))))
+                                                     (validate struct (keys m) (repeat (count m) nil)))))
        ]))
 
 #?(:clj
@@ -180,6 +181,15 @@
   (and (clj-instance? PersistentClosedStructMap v)
        (= (.-struct v)
           t)))
+
+(defn satisfies? [^ClosedStruct t v]
+  (or (instance? t v)
+      (and (map? v)
+           (let [struct-keys (closed-struct-keyset t)]
+             (and (every? #(contains? v %) struct-keys)
+                  (if-let [validator (closed-struct-validator t)]
+                    (v/valid? validator v)
+                    true))))))
 
 (defn- build-map* [struct key-val-pairs]
   ;; TODO: fail is not all keys given, or not? (records allowed that to some extend - via less fields in ctor)

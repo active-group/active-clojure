@@ -1,8 +1,8 @@
 (ns active.clojure.struct
-  (:require [clojure.set :as set]
-            [active.clojure.struct.key :as key]
+  (:require [active.clojure.struct.key :as key]
             [active.clojure.struct.closed-struct-map :as closed-struct-map])
-  (:refer-clojure :exclude [struct-map instance? satisfies?]))
+  (:refer-clojure :exclude [struct-map instance? satisfies?
+                            set-validator!]))
 
 (defmacro ^:no-doc def-key [name]
   `(def ~name (key/make (symbol ~(str *ns*) ~(str name)))))
@@ -15,10 +15,11 @@
      ~@(for [f# fields]
          `(def-key ~f#))
      
-     (def ~t (closed-struct-map/create-closed-struct [~@fields]))
+     (def ~t (closed-struct-map/create-closed-struct ~fields))
 
      ~(doseq [k# fields]
         `(key/optimize-for! ~k# ~t))
+     
      ~t))
 
 (defn struct-map
@@ -27,7 +28,7 @@
   [struct & keys-vals]
   (closed-struct-map/build-map struct keys-vals))
 
-;; TODO: construct from map; either arity 1 of struct-map, or IFn on struct, or separate?
+;; TODO: construct from map; either arity 1 of struct-map, or (also) IFn on struct, or separate?
 
 (defn ^{:no-doc true
         :doc "Replace validator of struct. Unsynchronized side effect; use only if you know what you are doing."}
@@ -40,18 +41,12 @@
   (closed-struct-map/closed-struct? v))
 
 (defn instance?
-  "Tests if `v` is a map and contains exactly the keys defined for `struct`."
+  "Tests if `v` is a struct map created from the given `struct`."
   [struct v]
-  (and (map? v)
-       (or (closed-struct-map/instance? struct v)
-           (= (closed-struct-map/closed-struct-keyset struct)
-              (set (keys v))))))
+  (closed-struct-map/instance? struct v))
 
 (defn satisfies?
   "Tests if `v` is a map and contains at least the keys defined for `struct`."
   [struct v]
-  ;; actual instance, or map with at least those keys?
-  (and (map? v)
-       (or (closed-struct-map/instance? struct v)
-           (empty? (set/difference (closed-struct-map/closed-struct-keyset struct)
-                                   (set (keys v)))))))
+  ;; Note: also checks the validity, if a validator is defined for struct.
+  (closed-struct-map/satisfies? struct v))

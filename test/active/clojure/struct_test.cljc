@@ -165,7 +165,7 @@
 
       (t/is (not (sut/satisfies? T {t-a 42}))))
 
-    (t/testing "normal maps can be ok too"
+    #_(t/testing "normal maps can be ok too"
       ;; option: allow this or not?
       (t/is (sut/instance? T {t-a 42
                               t-b :foo}))
@@ -234,24 +234,31 @@
        )))
 
 (defrecord AllInt []
-  validator/IStructMapValidator
-  (-validate-field [this changed-key changed-value]
+  validator/IMapValidator
+  (-validate-field! [this changed-key changed-value]
     (when-not (int? changed-value)
       (throw (ex-info "Not an int" {:v changed-value}))))
-  (-validate [this m changed-keys]
+  (-validate-map! [this m changed-keys]
     (doseq [k changed-keys]
       (let [v (get m k)]
         (when-not (int? v)
           (throw (ex-info "Not an int" {:v v})))))))
 
 (t/deftest validator-test
-  
+
   (sut/def-struct ValidatedT [t-a t-b])
   (sut/set-validator! ValidatedT (AllInt.))
   
-  (t/is (not (throws #(sut/struct-map ValidatedT t-a 42 t-b 21))))
-  
-  (t/is (throws #(assoc (sut/struct-map ValidatedT t-a 42 t-b 21)
-                        t-a :foo)))
-  
-  (t/is (throws #(sut/struct-map ValidatedT t-a :foo t-b 21))))
+  (let [valid (sut/struct-map ValidatedT t-a 42 t-b 21)]
+    (t/testing "contruction checks for validity"
+      (t/is (throws #(sut/struct-map ValidatedT t-a :foo t-b 21))))
+
+    (t/testing "modification checks for validity"
+      (t/is (throws #(assoc valid t-a :foo)))
+      (t/is (throws #(into valid {t-a :foo})))
+      (t/is (throws #(empty valid))))
+
+    (t/testing "satisfies? checks for validity"  
+      (t/is (sut/satisfies? ValidatedT {t-a 11 t-b 22}))
+      (t/is (not (sut/satisfies? ValidatedT {t-a :foo t-b :bar})))))
+  )

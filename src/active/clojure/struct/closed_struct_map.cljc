@@ -53,6 +53,27 @@
                  (apply create-open-struct fields)
                  nil))
 
+#?(:clj
+   (defn- map-cons-o [f o]
+     (condp clj-instance? o
+       java.util.Map$Entry
+       (let [^java.util.Map$Entry e o]
+         (list (f (.getKey e) (.getValue e))))
+
+       clojure.lang.IPersistentVector
+       (let [^clojure.lang.IPersistentVector v o]
+         ;; should be tuple [k v]
+         (when (not= (count v) 2)
+           ;; same as APersistentMap does:
+           (throw (IllegalArgumentException. "Vector arg to map conj must be a pair")))
+         (list (f (.nth v 0) (.nth v 1))))
+
+       ;; else: clojure.lang.IPersistentMap
+       (let [^clojure.lang.IPersistentMap m o]
+         (map (fn [^java.util.Map$Entry e]
+                (f (.getKey e) (.getValue e)))
+              (.seq m))))))
+
 (deftype ^:private PersistentClosedStructMap [struct ^clojure.lang.PersistentStructMap m]
 
   ;; TODO: Ifn taking key.
@@ -98,32 +119,14 @@
                                 (when-not (.containsKey m k)
                                   (throw (Util/runtimeException "Not a key of struct"))))
 
-                   ;; OPT: collecting the changes if we have no validator is superflous (do it lazily?)
-                   [changed-keys changed-values]
-                   (condp clj-instance? o
-                     java.util.Map$Entry
-                     (let [^java.util.Map$Entry e o]
-                       (check-key! (.getKey e))
-                       [(list (.getKey e))
-                        (list (.getValue e))])
-
-                     clojure.lang.IPersistentVector
-                     (let [^clojure.lang.IPersistentVector v o]
-                       (when (>= (count v) 1) ;; should be tuple [k v]
-                         (check-key! (.nth v 0))
-                         [(list (.nth v 0))
-                          (list (.nth v 1))]))
-
-                     ;; else: clojure.lang.IPersistentMap
-                     (reduce (fn [ks-vs ^java.util.Map$Entry x]
-                               (check-key! (.getKey x))
-                               [(conj (first ks-vs) (.getKey x))
-                                (conj (second ks-vs) (.getValue x))])
-                             [[] []]
-                             (seq o)))
-                   new-m (-> (.cons m o)
-                             (validate struct changed-keys changed-values))]
-               (PersistentClosedStructMap. struct new-m)))
+                   changed-keys-vals (map-cons-o list o)
+                   
+                   changed-keys (map first changed-keys-vals)
+                   changed-vals (map second changed-keys-vals)]
+               
+               (dorun (map check-key! changed-keys))
+               (PersistentClosedStructMap. struct (-> (.cons m o)
+                                                      (validate struct changed-keys changed-vals)))))
 
        (iterator [this]
                  (.iterator m))

@@ -16,10 +16,10 @@
 
 (defn validate! [t m changed-keys changed-values]
   (assert (map? m))
-  (doall (map (partial -validate-field! t)
+  (-validate-map! t m changed-keys)
+  (dorun (map (partial -validate-field! t)
               changed-keys
-              changed-values))
-  (-validate-map! t m changed-keys))
+              changed-values)))
 
 (defn valid? [t m]
   ;; Note: a pity that we have to try-catch here, but the advantage of
@@ -27,7 +27,43 @@
   ;; will directly point at the validator impl.
   (try (validate! t m (keys m) (vals m))
        true
-       #?(:clj (catch Exception e
+       #?(:clj (catch Throwable e
                  false)
           :cljs (catch :default e
                   false))))
+
+(defn field-validators
+  "Returns a map validator that checks some of the fields individually."
+  [keys-fns-map]
+  (let [lookup keys-fns-map]
+    (reify IMapValidator
+      (-validate-map! [this m changed-key] nil)
+      (-validate-field! [this changed-key new-value]
+        (when-let [f (lookup changed-key)]
+          (f new-value))))))
+
+(defn field-assertions
+  "Returns a map validator that asserts that the given predicates hold for the given keys."
+  [keys-predicates-map]
+  (field-validators
+   (into {} (map (fn [[k pred]]
+                   (fn [v]
+                     (assert (pred v) k)))
+                 keys-predicates-map))))
+
+;; TODO: (when ^boolean js/goog.DEBUG)?, although asserts are already
+;; removable in CLJS, and there seems to be no standard way in CLJ
+;; (https://ask.clojure.org/index.php/1529/debug-builds)
+
+(defn conditionally
+  "Returns a validator that passes validation on to the given validator, if `@var` is true, and does nothing otherwise."
+  [var validator]
+  (assert (satisfies? IMapValidator validator))
+  (assert (satisfies? clojure.lang.IDeref validator))
+  (reify IMapValidator
+    (-validate-map! [this m changed-key]
+      (when @var
+        (-validate-map! validator m changed-key)))
+    (-validate-field! [this changed-key new-value]
+      (when @var
+        (-validate-field! changed-key changed-key new-value)))))

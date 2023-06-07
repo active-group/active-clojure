@@ -4,10 +4,23 @@
   (:refer-clojure :exclude [struct-map instance? satisfies?
                             set-validator!]))
 
+;; Note: there is no positional constructor on purpose; although they
+;; can be handy for small structs, they quickly become hard to read
+;; and hard to refactor when getting larger. And defining a positional
+;; constructor for small structs is much easier than the other way
+;; round.
+
 (defmacro ^:no-doc def-key [name]
   `(def ~name (key/make (symbol ~(str *ns*) ~(str name)))))
 
-(defmacro def-struct [t fields]
+(defmacro def-struct
+  "Defines a struct and its keys:
+
+  ```
+  (def-struct T [field-1 ...])
+  ```
+  "
+  [t fields]
   ;; TOOO: proper compile-time errors:
   (assert (symbol? t))
   (assert (every? symbol? fields))
@@ -24,8 +37,15 @@
 
 (defn struct-map
   "Returns a new struct map with the keys of the struct. All keys of the
-  stuct must be given."
+  stuct must be given.
+
+  ```
+  (def-struct T [field-1 ...])
+  (struct-map T field-1 42 ...)
+  ```
+  "
   [struct & keys-vals]
+  ;; TODO: do we really want to enforce that all keys are given? A validator could decide if nil is ok as a default.
   (closed-struct-map/build-map struct keys-vals))
 
 ;; TODO: construct from map; either arity 1 of struct-map, or (also) IFn on struct, or separate?
@@ -33,6 +53,9 @@
 (defn ^{:no-doc true
         :doc "Replace validator of struct. Unsynchronized side effect; use only if you know what you are doing."}
   set-validator! [struct validator]
+  ;; Note: the validator is not an argument to 'def-struct', because
+  ;; you usually want to use they defined keys in the validator
+  ;; implementation; that would make for a weird macro.
   (closed-struct-map/set-closed-struct-validator! struct validator))
 
 (defn struct?

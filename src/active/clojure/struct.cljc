@@ -21,17 +21,14 @@
   ```
   "
   [t fields]
-  ;; TOOO: proper compile-time errors:
-  (assert (symbol? t))
-  (assert (every? symbol? fields))
   `(do
      ~@(for [f# fields]
          `(def-key ~f#))
      
      (def ~t (closed-struct-map/create-closed-struct ~fields))
 
-     ~(doseq [k# fields]
-        `(key/optimize-for! ~k# ~t))
+     ~(doseq [f# fields]
+        `(key/optimize-for! ~f# ~t))
      
      ~t))
 
@@ -45,7 +42,7 @@
   ```
   "
   [struct & keys-vals]
-  ;; TODO: do we really want to enforce that all keys are given? A validator could decide if nil is ok as a default.
+  ;; TODO: reject the same key given twice? Or offer that as an easy way to specify default values?
   (closed-struct-map/build-map struct keys-vals))
 
 ;; TODO: construct from map; either arity 1 of struct-map, or (also) IFn on struct, or separate?
@@ -54,7 +51,7 @@
         :doc "Replace validator of struct. Unsynchronized side effect; use only if you know what you are doing."}
   set-validator! [struct validator]
   ;; Note: the validator is not an argument to 'def-struct', because
-  ;; you usually want to use they defined keys in the validator
+  ;; you usually want to use the defined keys in the validator
   ;; implementation; that would make for a weird macro.
   (closed-struct-map/set-closed-struct-validator! struct validator))
 

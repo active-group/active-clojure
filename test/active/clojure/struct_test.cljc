@@ -24,7 +24,19 @@
         "Cannot construct with partial fields")
   
   (t/is (some? (throws #(sut/struct-map T :foo 42)))
-        "Cannot construct with foreign fields"))
+        "Cannot construct with foreign fields")
+
+  ;; Note: not sure if we want to allow this; but it could be an easy
+  ;; way to write 'smart constructors' that define default values.
+  (t/is (= (sut/struct-map T
+                           t-b :foo
+                           t-a 42)
+           (sut/struct-map T
+                           t-b :foo
+                           t-a nil
+                           t-a 42))
+        "Later values 'override' previous values in struct-map")
+  )
 
 (t/deftest printer-test
   ;; (also indirectly tests key printer)

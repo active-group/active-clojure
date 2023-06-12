@@ -262,3 +262,14 @@
       (t/is (sut/satisfies? ValidatedT {t-a 11 t-b 22}))
       (t/is (not (sut/satisfies? ValidatedT {t-a :foo t-b :bar})))))
   )
+
+(t/deftest number-of-fields-test
+  ;; more than 21 fields works.
+  (sut/def-struct BigT [t-a0 t-a1 t-a2 t-a3 t-a4 t-a5 t-a6 t-a7 t-a8 t-a9
+                        t-a10 t-a11 t-a12 t-a13 t-a14 t-a15 t-a16 t-a17 t-a18 t-a19
+                        t-a20 t-a21 t-a22 t-a23 t-a24 t-a25 t-a26 t-a27 t-a28 t-a29])
+  (t/is (sut/instance? BigT
+                       (sut/struct-map BigT
+                                       t-a0 nil t-a1 nil t-a2 nil t-a3 nil t-a4 nil t-a5 nil t-a6 nil t-a7 nil t-a8 nil t-a9 nil
+                                       t-a10 nil t-a11 nil t-a12 nil t-a13 nil t-a14 nil t-a15 nil t-a16 nil t-a17 nil t-a18 nil t-a19 nil
+                                       t-a20 nil t-a21 nil t-a22 nil t-a23 nil t-a24 nil t-a25 nil t-a26 nil t-a27 nil t-a28 nil t-a29 nil))))

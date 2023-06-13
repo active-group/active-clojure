@@ -255,16 +255,21 @@
                 ;; TODO: pass 'v' or (select-keys ... v) to validator?
                 (closed-struct/valid? t v)))))
 
+(defn- unvalidated-empty-transient [struct]
+  ;; event if an all-nil map would be invalid, if it is immediately
+  ;; used as a transient, the validity is checked when getting
+  ;; persistent again.
+  (TransientClosedStructMap. struct (data/create struct) true))
+
 (defn- build-map* [struct key-val-pairs]
   ;; TODO: fail if not all keys given, or not? (records allowed that to some extend - via less fields in ctor)
+  ;; TODO: if allowing the same key multiple times, then each occurrence is validated; even if overriden later; is that what we want?
   (assert (closed-struct/closed-struct? struct)) ;; TODO: exception
-  
-  ;; OPT: there should be more efficient ways to contruct it...? But for clj/struct-map we would to know the orginal order :-/
-  ;; TODO: use transient, resp. not that many copies.
-  (reduce (fn [res [k v]]
-            (assoc res k v))
-          (create struct (data/create struct) nil)
-          key-val-pairs))
+  (-> (reduce (fn [res [k v]]
+                (assoc! res k v))
+              (unvalidated-empty-transient struct)
+              key-val-pairs)
+      (persistent!)))
 
 (defn build-map [struct keys-vals]
   (assert (even? (count keys-vals))) ;; TODO: exception

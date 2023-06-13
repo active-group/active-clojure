@@ -139,19 +139,24 @@
         v3 {t-a 42
             t-b :foo}]
 
-    (t/is (= t-a t-a) "Key equal itself")
+    (t/testing "equality"
+      (t/is (= t-a t-a) "Key equal itself")
 
-    (t/is (= T T) "Types equal itself")
+      (t/is (= T T) "Types equal itself")
 
-    (t/is (= v v) "Equals itself")
+      (t/is (= v v) "Equals itself")
 
-    (t/is (and (= v v2) (= v2 v)) "Equals other struct-map")
+      (t/is (and (= v v2) (= v2 v)) "Equals other struct-map")
 
-    (t/is (= v v3) "Equals other maps with same keys")
-    (t/is (= v3 v) "Other maps with same keys are equal")
+      (t/is (= v v3) "Equals other maps with same keys")
+      (t/is (= v3 v) "Other maps with same keys are equal")
 
-    (t/is (not (= v {:foo 42})) "Does not equals maps with other keys")
-    (t/is (not (= {:foo 42} v)) "Maps with other keys are not equal")
+      (t/is (not (= v {:foo 42})) "Does not equals maps with other keys")
+      (t/is (not (= {:foo 42} v)) "Maps with other keys are not equal"))
+    
+    (t/testing "hash"
+      (t/is (= (hash v3) (hash v)) "Hash equals that of an equal map")
+      )
     ))
 
 (t/deftest type-test-test

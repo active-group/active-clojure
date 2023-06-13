@@ -1,5 +1,6 @@
 (ns active.clojure.struct
   (:require [active.clojure.struct.key :as key]
+            [active.clojure.struct.closed-struct :as closed-struct]
             [active.clojure.struct.closed-struct-map :as closed-struct-map])
   (:refer-clojure :exclude [struct-map instance? satisfies?
                             set-validator!]))
@@ -25,7 +26,7 @@
      ~@(for [f# fields]
          `(def-key ~f#))
      
-     (def ~t (closed-struct-map/create-closed-struct ~fields))
+     (def ~t (closed-struct/create ~fields))
 
      ~(doseq [f# fields]
         `(key/optimize-for! ~f# ~t))
@@ -53,12 +54,12 @@
   ;; Note: the validator is not an argument to 'def-struct', because
   ;; you usually want to use the defined keys in the validator
   ;; implementation; that would make for a weird macro.
-  (closed-struct-map/set-closed-struct-validator! struct validator))
+  (closed-struct/set-validator! struct validator))
 
 (defn struct?
   "Tests if v is a struct defined by [[def-struct]]."
   [v]
-  (closed-struct-map/closed-struct? v))
+  (closed-struct/closed-struct? v))
 
 (defn instance?
   "Tests if `v` is a struct map created from the given `struct`."

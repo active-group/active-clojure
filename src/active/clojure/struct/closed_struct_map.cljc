@@ -1,57 +1,11 @@
 (ns active.clojure.struct.closed-struct-map
-  (:require [active.clojure.struct.validator :as v])
+  (:require [active.clojure.struct.closed-struct :as closed-struct]
+            [active.clojure.struct.closed-struct-data :as data])
   #?(:clj (:import (clojure.lang Util)))
   (:refer-clojure :rename {instance? clj-instance?
-                           satisfies? cljs-satisfies?
-                           accessor open-struct-accessor
-                           struct open-struct-map
-                           create-struct create-open-struct}))
+                           satisfies? cljs-satisfies?}
+                  :exclude [accessor struct-map struct create-struct]))
 
-(defprotocol ^:private IClosedStruct
-  (-get-validator [this])
-  (-set-validator [this validator]))
-
-(deftype ^:private ClosedStruct [field-set open-struct ^:unsynchronized-mutable validator]
-  IClosedStruct
-  (-get-validator [this]
-    (.-validator this))
-  (-set-validator [this validator]
-    (set! (.-validator this) validator))
-  #?@(:clj
-
-      [clojure.lang.IHashEq
-       (hasheq [this]
-               (hash field-set))
-       Object
-       (equals [this other]
-               (if (clj-instance? ClosedStruct other)
-                 (= field-set (.-field-set other))
-                 false))]))
-
-(defn closed-struct? [v]
-  (clj-instance? ClosedStruct v))
-
-(defn closed-struct-keyset [^ClosedStruct t]
-  (assert (closed-struct? t)) ;; TODO: exception?
-  (.-field-set t))
-
-(defn closed-struct-validator [^ClosedStruct t]
-  (assert (closed-struct? t)) ;; TODO: exception?
-  (-get-validator t))
-
-(defn set-closed-struct-validator! [^ClosedStruct t validator]
-  (-set-validator t validator))
-
-(defn- validate [^clojure.lang.PersistentStructMap m ^ClosedStruct t changed-keys changed-values]
-  ;; TODO: pass the PersistentClosedStructMap instead of the PersistentStructMap?
-  (when-let [v (-get-validator t)]
-    (v/validate! v m changed-keys changed-values))
-  m)
-
-(defn create-closed-struct [fields]
-  (ClosedStruct. (set fields)
-                 (apply create-open-struct fields)
-                 nil))
 
 #?(:clj
    (defn- map-cons-o [f o]
@@ -74,9 +28,11 @@
                 (f (.getKey e) (.getValue e)))
               (.seq m))))))
 
-(deftype ^:private PersistentClosedStructMap [struct ^clojure.lang.PersistentStructMap m]
+(declare create)
 
-  ;; TODO: Ifn taking key.
+(deftype ^:private PersistentClosedStructMap [struct data ^int ^:unsynchronized-mutable _hasheq ^int ^:unsynchronized-mutable _hash]
+
+  ;; TODO: Ifn taking key. TODO: transient, TODO: with-meta
   #?@(:clj
       ;; Note: if we used gen-class instead of deftype, we could
       ;; extend APersistentMap; but using gen-class is also not easy
@@ -84,12 +40,13 @@
       [java.lang.Iterable
        
        java.util.Map
-       (size [this] (.size m))
-       (isEmpty [this] (.isEmpty m))
-       (containsKey [this k] (.containsKey m k))
-       (keySet [this] (.keySet m))
+       (size [this] (closed-struct/size struct))
+       (isEmpty [this] (zero? (closed-struct/size struct)))
+       (containsKey [this k] (closed-struct/contains? struct k))
+       (keySet [this] ;; Java api, and a Java Set
+               (closed-struct/keyset struct))
        (getOrDefault [this key default]
-                     (get this key default))
+                     (data/access-with-default struct data key default))
        (get [this key]
             ;; Note: this is called by clojure to compare other maps
             ;; to this; but maybe in more situations.
@@ -97,114 +54,133 @@
             ;; Not sure if we should/could throw here too, if a key is
             ;; not in map, or stick to the java.Map contract by
             ;; returning null.
-            (get this key nil))
+            (.getOrDefault this key nil))
 
        clojure.lang.IHashEq
-       (hasheq [this]
-               (.hasheq m))
-       
+       (hasheq [this] ;; called by (hash x)
+               (when (= 0 (.-_hasheq this))
+                 (set! (.-_hasheq this) (clojure.lang.APersistentMap/mapHasheq this)))
+               (.-_hasheq this))
+       (hashCode [this] ;; Java's hashCode
+                 (when (= 0 ^int (.-_hash this))
+                   (set! (.-_hash this) (clojure.lang.APersistentMap/mapHash this)))
+                 (.-_hash this))
+
+       ;; MapEquivalence marks that other maps should try to compare with this.
        clojure.lang.MapEquivalence
 
        clojure.lang.IPersistentMap
        (equiv [this other]
-              (if (clj-instance? PersistentClosedStructMap other)
-                (.equiv m (.-m other))
-                (= other m)))
+              (condp clj-instance? other
+                PersistentClosedStructMap
+                (and (= struct
+                        (.-struct other))
+                     (data/equiv data (.-data other)))
 
-       (seq [this]
-            (.seq m))
+                clojure.lang.IPersistentMap
+                ;; let other map implementations do the work.
+                (.equiv ^clojure.lang.IPersistentMap other this)
+
+                ;; else java maps, or anything else.
+                (clojure.lang.APersistentMap/mapEquals this other)))
+       (equals [this other] ;; Java's equals
+               (clojure.lang.APersistentMap/mapEquals this other))
 
        (cons [this o]
-             (let [check-key! (fn [k]
-                                (when-not (.containsKey m k)
-                                  (throw (Util/runtimeException "Not a key of struct"))))
-
-                   changed-keys-vals (map-cons-o list o)
+             ;; Note: 'into' uses this if IEditableCollection is not implemented (and that otherwise)
+             (let [changed-keys-vals (map-cons-o list o)
                    
                    changed-keys (map first changed-keys-vals)
                    changed-vals (map second changed-keys-vals)]
                
-               (dorun (map check-key! changed-keys))
-               (PersistentClosedStructMap. struct (-> (.cons m o)
-                                                      (validate struct changed-keys changed-vals)))))
+               (-> (create struct (reduce (fn [data [k v]]
+                                            (data/mutate! struct data k v))
+                                          (data/copy data)
+                                          changed-keys-vals))
+                   (closed-struct/validate struct changed-keys changed-vals))))
 
-       (iterator [this]
-                 (.iterator m))
+       (seq [this] ;; seq of MapEntry
+            (iterator-seq (.iterator this)))
+
+       (iterator [this] ;; iterator over MapEntry
+                 (data/java-iterator struct data))
 
        (assoc [this key val]
-              (if (contains? m key)
-                (PersistentClosedStructMap. struct (-> (.assoc m key val)
-                                                       (validate struct (list key) (list val))))
-                (throw (Util/runtimeException "Not a key of struct"))))
+              (-> (create struct (data/mutate! struct (data/copy data) key val))
+                  (closed-struct/validate struct (list key) (list val))))
        (assocEx [this key val]
                 ;; assocEx is 'assoc if not set yet' - all our keys are always set.
                 (throw (Util/runtimeException "Key already present")))
        (without [this key]
                 (throw (Util/runtimeException "Can't remove struct key")))
        (count [this]
-              (.count m))
+              (closed-struct/size struct))
   
        (valAt [this key]
-              (let [v (.valAt m key ::not-found)]
-                (if (= v ::not-found)
-                  (throw (Util/runtimeException "Not a key of struct"))
-                  v)))
+              (data/access struct data key))
        (valAt [this key not-found]
-              (.valAt m key not-found))
+              (data/access-with-default struct data key not-found))
        (empty [this]
-              (PersistentClosedStructMap. struct (-> (.empty m)
-                                                     ;; potentially all keys have changed, to nil
-                                                     (validate struct (keys m) (repeat (count m) nil)))))
+              ;; OPT: 'memoize' the empty val in struct? we can't create it before hand because of the validation :-/
+              (-> (create struct (data/create struct))
+                  ;; potentially all keys have changed, to nil
+                  (closed-struct/validate struct (closed-struct/keys struct) (repeat (closed-struct/size struct) nil))))
        ]))
 
-#?(:clj
-   (defmethod print-method PersistentClosedStructMap [^PersistentClosedStructMap s ^java.io.Writer writer]
-     (print-method (.-m s) writer))
+(defn- create [struct data]
+  (PersistentClosedStructMap. struct data 0 0))
 
-   :cljs
-   (extend-protocol IPrintWithWriter
+
+#?(#_:clj
+   ;; seems already implemented for all IPersistentMap
+   #_(defmethod print-method PersistentClosedStructMap [^PersistentClosedStructMap s ^java.io.Writer writer]
+     (print-method (into {} s) writer))
+
+   #_:cljs
+   #_(extend-protocol IPrintWithWriter
      PersistentClosedStructMap
      (-pr-writer [^PersistentClosedStructMap s writer x]
-       (-pr-writer (.-m s) writer x))))
+       ;; OPT: direct access to map printer? reimplement?
+       (-pr-writer (into {} s) writer x))))
 
-(defn accessor [^ClosedStruct t key]
-  (let [a (open-struct-accessor (.-open-struct t) key)]
-    (fn [^PersistentClosedStructMap m]
-      (assert (clj-instance? PersistentClosedStructMap m)) ;; TODO: exception
-      (a (.-struct m)))))
-
-(defn setter [^ClosedStruct t key]
-  (assert (contains? (closed-struct-keyset t) key)) ;; TODO: exception
-  ;; TODO: any way to optimize it? Probably not while basing impl on clojure/struct-map
-  (fn [m v]
-    (assert (clj-instance? PersistentClosedStructMap m)) ;; TODO: exception
-    (assoc m key v)))
-
-(defn instance? [^ClosedStruct t v]
+(defn instance? [t v]
+  (assert (closed-struct/closed-struct? t)) ;; TODO: exception?
   (and (clj-instance? PersistentClosedStructMap v)
        (= (.-struct v)
           t)))
 
-(defn satisfies? [^ClosedStruct t v]
+(defn accessor [t key]
+  (let [data-f (data/accessor t key)]
+    (fn [m]
+      (assert (instance? t m)) ;; TODO: exception
+      (data-f (.-data m))
+      )))
+
+(defn setter [t key]
+  (let [data-f (data/mutator t key)
+        key-list (list key)]
+    (fn [m val]
+      (assert (instance? t m)) ;; TODO: exception
+      (-> (create t (data-f (data/copy (.-data m)) val))
+          (closed-struct/validate t key-list (list val))))))
+
+(defn satisfies? [t v]
   (or (instance? t v)
       (and (map? v)
-           (let [struct-keys (closed-struct-keyset t)]
-             (and (every? #(contains? v %) struct-keys)
-                  (if-let [validator (closed-struct-validator t)]
-                    (v/valid? validator v)
-                    true))))))
+           (and (every? #(contains? v %) (closed-struct/keys t))
+                ;; TODO: pass 'v' or (select-keys ... v) to validator?
+                (closed-struct/valid? t v)))))
 
 (defn- build-map* [struct key-val-pairs]
   ;; TODO: fail is not all keys given, or not? (records allowed that to some extend - via less fields in ctor)
-  (assert (closed-struct? struct)) ;; TODO: exception
-  (let [open-struct (.-open-struct struct)
-        empty-m (open-struct-map open-struct)]
-    ;; OPT: there should be more efficient ways to contruct it...? But for clj/struct-map we would to know the orginal order :-/
-    ;; TODO: use transient
-    (reduce (fn [res [k v]]
-              (assoc res k v))
-            (PersistentClosedStructMap. struct empty-m)
-            key-val-pairs)))
+  (assert (closed-struct/closed-struct? struct)) ;; TODO: exception
+  
+  ;; OPT: there should be more efficient ways to contruct it...? But for clj/struct-map we would to know the orginal order :-/
+  ;; TODO: use transient, resp. not that many copies.
+  (reduce (fn [res [k v]]
+            (assoc res k v))
+          (create struct (data/create struct))
+          key-val-pairs))
 
 (defn build-map [struct keys-vals]
   (assert (even? (count keys-vals))) ;; TODO: exception

@@ -107,7 +107,7 @@
                (update v t-a -))))
 
     (t/testing "update fails if key not in struct-map"
-      (t/is (throws #(assoc v :foo))))
+      (t/is (throws #(assoc v :foo 42))))
     ))
 
 (t/deftest keyed-map-test
@@ -264,21 +264,21 @@
 
 (t/deftest validator-test
 
-  (sut/def-struct ValidatedT [t-a t-b])
+  (sut/def-struct ValidatedT [vt-a vt-b])
   (sut/set-validator! ValidatedT (AllInt.))
   
-  (let [valid (sut/struct-map ValidatedT t-a 42 t-b 21)]
+  (let [valid (sut/struct-map ValidatedT vt-a 42 vt-b 21)]
     (t/testing "contruction checks for validity"
-      (t/is (throws #(sut/struct-map ValidatedT t-a :foo t-b 21))))
+      (t/is (throws #(sut/struct-map ValidatedT vt-a :foo vt-b 21))))
 
     (t/testing "modification checks for validity"
-      (t/is (throws #(assoc valid t-a :foo)))
-      (t/is (throws #(into valid {t-a :foo})))
+      (t/is (throws #(assoc valid vt-a :foo)))
+      (t/is (throws #(into valid {vt-a :foo})))
       (t/is (throws #(empty valid))))
 
     (t/testing "satisfies? checks for validity"  
-      (t/is (sut/satisfies? ValidatedT {t-a 11 t-b 22}))
-      (t/is (not (sut/satisfies? ValidatedT {t-a :foo t-b :bar})))))
+      (t/is (sut/satisfies? ValidatedT {vt-a 11 vt-b 22}))
+      (t/is (not (sut/satisfies? ValidatedT {vt-a :foo vt-b :bar})))))
   )
 
 (t/deftest number-of-fields-test

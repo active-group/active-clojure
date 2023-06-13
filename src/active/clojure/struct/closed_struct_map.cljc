@@ -28,11 +28,83 @@
                 (f (.getKey e) (.getValue e)))
               (.seq m))))))
 
+;; TODO: other exceptions are probably more helpful: (also synchronize with exceptions thrown in struct/index-of)
+(defn- cannot-add [key]
+  (Util/runtimeException "Key already present"))
+
+(defn- cannot-remove [key]
+  (Util/runtimeException "Can't remove struct key"))
+
 (declare create)
 
-(deftype ^:private PersistentClosedStructMap [struct data ^int ^:unsynchronized-mutable _hasheq ^int ^:unsynchronized-mutable _hash]
 
-  ;; TODO: Ifn taking key. TODO: transient, TODO: with-meta
+(defn- ensure-editable! [owner]
+  (when-not owner
+    ;; same error and message as clojure
+    (throw (java.lang.IllegalAccessError. "Transient used after persistent! call"))))
+
+(defn- unchecked-assoc! [struct data key val]
+  ;; unchecked = without ensure-editable!
+  (closed-struct/validate-single! struct key val)
+  (data/mutate! struct data key val))
+
+(deftype ^:private TransientClosedStructMap [struct data ^:unsynchronized-mutable owner]
+  ;; Note: does 'single field' validation immediately, but full map validation only on persistence.
+
+  #?@(:clj
+      ;; clojure.lang.ATransientMap does not expose any helpers :-/
+      ;; TODO: IFn?
+      [clojure.lang.ITransientMap
+       clojure.lang.Counted
+       clojure.lang.ITransientAssociative
+       
+       (assoc [this key val]
+              (ensure-editable! owner)
+              (unchecked-assoc! struct data key val)
+              this)
+       (without [this key]
+                (ensure-editable! owner)
+                (throw (cannot-remove key)))
+       (count [this]
+              (ensure-editable! owner)
+              (closed-struct/size struct))
+       (conj [this val]
+             (ensure-editable! owner)
+             (condp clj-instance? val
+               java.util.Map$Entry
+               (let [^java.util.Map$Entry e val]
+                 (unchecked-assoc! struct data (.getKey e) (.getValue e)))
+
+               clojure.lang.IPersistentVector
+               (let [^clojure.lang.IPersistentVector v val]
+                 (when (not= 2 (.count v))
+                   (java.lang.IllegalArgumentException. "Vector arg to map conj must be a pair"))
+                 (unchecked-assoc! struct data (.nth v 0) (.nth v 1)))
+
+               ;; else, assume sequence of Map.Entry
+               (doseq [o (seq val)]
+                 (let [^java.util.Map$Entry e o]
+                   (unchecked-assoc! struct data (.getKey e) (.getValue e)))))
+             this)
+       (valAt [this key]
+              (ensure-editable! owner)
+              (data/access struct data key))
+       (valAt [this key not-found]
+              (ensure-editable! owner)
+              (data/access-with-default struct data key not-found))
+       
+       (persistent [this]
+                   (ensure-editable! owner)
+                   ;; do full map validation here.
+                   (set! (.-owner this) false)
+                   ;; transient -> persistent looses meta.
+                   (-> (create struct data nil)
+                       (closed-struct/validate-map-only struct)))
+       ]))
+
+(deftype ^:private PersistentClosedStructMap [struct data ^int ^:unsynchronized-mutable _hasheq ^int ^:unsynchronized-mutable _hash _meta]
+
+  ;; TODO: Ifn taking key.
   #?@(:clj
       ;; Note: if we used gen-class instead of deftype, we could
       ;; extend APersistentMap; but using gen-class is also not easy
@@ -55,6 +127,13 @@
             ;; not in map, or stick to the java.Map contract by
             ;; returning null.
             (.getOrDefault this key nil))
+
+       clojure.lang.IObj
+       clojure.lang.IMeta
+       (withMeta [this meta]
+                 (create struct data meta))
+       (meta [this]
+             _meta)
 
        clojure.lang.IHashEq
        (hasheq [this] ;; called by (hash x)
@@ -96,7 +175,8 @@
                (-> (create struct (reduce (fn [data [k v]]
                                             (data/mutate! struct data k v))
                                           (data/copy data)
-                                          changed-keys-vals))
+                                          changed-keys-vals)
+                           _meta)
                    (closed-struct/validate struct changed-keys changed-vals))))
 
        (seq [this] ;; seq of MapEntry
@@ -106,13 +186,13 @@
                  (data/java-iterator struct data))
 
        (assoc [this key val]
-              (-> (create struct (data/mutate! struct (data/copy data) key val))
+              (-> (create struct (data/mutate! struct (data/copy data) key val) _meta)
                   (closed-struct/validate struct (list key) (list val))))
        (assocEx [this key val]
                 ;; assocEx is 'assoc if not set yet' - all our keys are always set.
-                (throw (Util/runtimeException "Key already present")))
+                (throw (cannot-add key)))
        (without [this key]
-                (throw (Util/runtimeException "Can't remove struct key")))
+                (throw (cannot-remove key)))
        (count [this]
               (closed-struct/size struct))
   
@@ -122,13 +202,17 @@
               (data/access-with-default struct data key not-found))
        (empty [this]
               ;; OPT: 'memoize' the empty val in struct? we can't create it before hand because of the validation :-/
-              (-> (create struct (data/create struct))
+              (-> (create struct (data/create struct) _meta)
                   ;; potentially all keys have changed, to nil
                   (closed-struct/validate struct (closed-struct/keys struct) (repeat (closed-struct/size struct) nil))))
+
+       clojure.lang.IEditableCollection
+       (asTransient [this]
+                    (TransientClosedStructMap. struct (data/copy data) true))
        ]))
 
-(defn- create [struct data]
-  (PersistentClosedStructMap. struct data 0 0))
+(defn- create [struct data meta]
+  (PersistentClosedStructMap. struct data 0 0 meta))
 
 
 #?(#_:clj
@@ -161,7 +245,7 @@
         key-list (list key)]
     (fn [m val]
       (assert (instance? t m)) ;; TODO: exception
-      (-> (create t (data-f (data/copy (.-data m)) val))
+      (-> (create t (data-f (data/copy (.-data m)) val) (meta m))
           (closed-struct/validate t key-list (list val))))))
 
 (defn satisfies? [t v]
@@ -172,14 +256,14 @@
                 (closed-struct/valid? t v)))))
 
 (defn- build-map* [struct key-val-pairs]
-  ;; TODO: fail is not all keys given, or not? (records allowed that to some extend - via less fields in ctor)
+  ;; TODO: fail if not all keys given, or not? (records allowed that to some extend - via less fields in ctor)
   (assert (closed-struct/closed-struct? struct)) ;; TODO: exception
   
   ;; OPT: there should be more efficient ways to contruct it...? But for clj/struct-map we would to know the orginal order :-/
   ;; TODO: use transient, resp. not that many copies.
   (reduce (fn [res [k v]]
             (assoc res k v))
-          (create struct (data/create struct))
+          (create struct (data/create struct) nil)
           key-val-pairs))
 
 (defn build-map [struct keys-vals]

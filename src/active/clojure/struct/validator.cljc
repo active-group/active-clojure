@@ -14,6 +14,13 @@
     ;; Note: m can be any kind of map; not guaranteed to be a struct-map.
     ))
 
+(defn validate-single! [t key value]
+  (-validate-field! t key value))
+
+(defn validate-map-only! [t m]
+  ;; OPT: have a variant without 'changed key'; might be counter-productive to pass just all of them here.
+  (-validate-map! t m (keys m)))
+
 (defn validate! [t m changed-keys changed-values]
   (assert (map? m))
   (-validate-map! t m changed-keys)

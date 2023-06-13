@@ -41,6 +41,15 @@
     (v/validate! v m changed-keys changed-values))
   m)
 
+(defn validate-single! [^ClosedStruct t changed-key changed-value]
+  (when-let [v (-get-validator t)]
+    (v/validate-single! v changed-key changed-value)))
+
+(defn validate-map-only [m ^ClosedStruct t]
+  (when-let [v (-get-validator t)]
+    (v/validate-map-only! v m))
+  m)
+
 (defn valid? [t m]
   (if-let [validator (validator t)]
     (v/valid? validator m)

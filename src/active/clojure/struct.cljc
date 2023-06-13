@@ -43,7 +43,7 @@
   ```
   "
   [struct & keys-vals]
-  ;; TODO: reject the same key given twice? Or offer that as an easy way to specify default values?
+  ;; TODO: reject the same key given twice? Or offer that explicitly as an easy way to specify default values?
   (closed-struct-map/build-map struct keys-vals))
 
 ;; TODO: construct from map; either arity 1 of struct-map, or (also) IFn on struct, or separate?

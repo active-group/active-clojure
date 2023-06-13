@@ -7,7 +7,7 @@
 (sut/def-struct T [t-a t-b])
 
 (defn throws [t]
-  #?(:clj (try (t) false (catch Exception e e))
+  #?(:clj (try (t) false (catch Throwable e e))
      :cljs (try (t) false (catch :default e e))))
 
 (t/deftest construction-test
@@ -225,7 +225,7 @@
   (let [v (sut/struct-map T
                           t-a 42
                           t-b :foo)]
-    ;; requires cons to be implemented
+    ;; requires cons to be implemented, unless transient is implemented.
     (t/is (= v
              (into (sut/struct-map T t-a nil t-b nil)
                    #{[t-a 42] [t-b :foo]})))
@@ -290,3 +290,17 @@
                                        t-a0 nil t-a1 nil t-a2 nil t-a3 nil t-a4 nil t-a5 nil t-a6 nil t-a7 nil t-a8 nil t-a9 nil
                                        t-a10 nil t-a11 nil t-a12 nil t-a13 nil t-a14 nil t-a15 nil t-a16 nil t-a17 nil t-a18 nil t-a19 nil
                                        t-a20 nil t-a21 nil t-a22 nil t-a23 nil t-a24 nil t-a25 nil t-a26 nil t-a27 nil t-a28 nil t-a29 nil))))
+
+(t/deftest transient-test
+  (let [v (sut/struct-map T
+                          t-a 42
+                          t-b :foo)]
+    (t/is (= (sut/struct-map T
+                             t-a 21
+                             t-b :foo)
+             (persistent! (-> (transient v)
+                              (assoc! t-a 21)))))
+    (t/is (throws #(let [x (transient v)]
+                     (persistent! x)
+                     (assoc! x t-a 21))))
+    ))

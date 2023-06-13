@@ -1,6 +1,6 @@
 (ns active.clojure.struct.closed-struct
   (:require [active.clojure.struct.validator :as v])
-  (:refer-clojure :exclude [set-validator!]
+  (:refer-clojure :exclude [set-validator! #?@(:cljs [contains? keys])]
                   :rename {contains? clj-contains?
                            keys clj-keys}))
 
@@ -85,7 +85,7 @@
                                            :available (.-keys t)}))
       idx)))
 
-(defn keys "Collection of keys in order given in [[create]]." [^ClosedStruct t]
+(defn keys "Vector of keys in order given in [[create]]." [^ClosedStruct t]
   (.-keys t))
 
 (defn keyset [t]

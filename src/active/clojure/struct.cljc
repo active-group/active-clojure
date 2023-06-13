@@ -44,6 +44,7 @@
   "
   [struct & keys-vals]
   ;; TODO: reject the same key given twice? Or offer that explicitly as an easy way to specify default values?
+  ;; TODO: hash-map are quite complex macros in cljs - check that out.
   (closed-struct-map/build-map struct keys-vals))
 
 ;; TODO: construct from map; either arity 1 of struct-map, or (also) IFn on struct, or separate?

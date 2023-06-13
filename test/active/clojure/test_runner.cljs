@@ -16,4 +16,5 @@
            'active.clojure.macro-test
            'active.clojure.functions-test
            'active.clojure.record-runtime-test
-           'active.clojure.validation-test)
+           'active.clojure.validation-test
+           'active.clojure.struct-test)

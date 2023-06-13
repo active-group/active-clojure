@@ -42,10 +42,10 @@
 (t/deftest printer-test
   ;; (also indirectly tests key printer)
   (let [s (pr-str (sut/struct-map T
-                                  t-a 42
+                                  t-a "42"
                                   t-b :foo))]
-    (t/is (#{"{~t-b :foo, ~t-a 42}"
-             "{~t-a 42, ~t-b :foo}"} s)))
+    (t/is (#{"{~t-b :foo, ~t-a \"42\"}"
+             "{~t-a \"42\", ~t-b :foo}"} s)))
   (let [s (str (sut/struct-map T
                                t-a "42"
                                t-b :foo))]

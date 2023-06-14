@@ -74,22 +74,23 @@
   ;; Note: also checks the validity, if a validator is defined for struct.
   (closed-struct-map/satisfies? struct v))
 
-(let [from-struct-1 (fn [v struct field-lens-map]
+(let [from-struct-1 (fn [v struct field-lens-map _]
                       (reduce-kv (fn [r f l]
                                    (lens/shove r l (f v)))
                                  {}
                                  field-lens-map))
-      from-struct-2 (fn [v struct field-keyword-map]
+      from-struct-2 (fn [v struct field-keyword-map _]
                       (-> (reduce-kv (fn [r f k]
                                        (assoc! r k (f v)))
                                      (transient {})
                                      field-keyword-map)
                           (persistent!)))
-      to-struct (fn [v struct field-lens-map]
-                  (apply struct-map struct
-                         (mapcat (fn [[f l]]
-                                   (list f (lens/yank v l)))
-                                 field-lens-map)))]
+      to-struct (fn [v struct _ setter-lens-map]
+                  (-> (reduce-kv (fn [r setter l]
+                                   (setter r (lens/yank v l)))
+                                 (closed-struct-map/unvalidated-empty-transient struct)
+                                 setter-lens-map)
+                      (persistent!)))]
   (defn map-projection "Returns a lens that projects between a struct-map of the given `struct` and a
   hash-map.
 
@@ -104,8 +105,14 @@
   (= (lens/shove nil p {:foo {:bar 42}})
      (struct-map T foo 42))
   ```
-  " [struct field-lens-map]
+  " [struct field-lens-map] ;; or maybe this should be in the lens package?
+    ;; TODO: an optional 'error handler' that informs about which field was transformed when an exception occurred?
     (assert (= (closed-struct/keyset struct) (set (keys field-lens-map))) "All keys of the struct must be given.")
     (lens/xmap (if (every? keyword? (vals field-lens-map)) from-struct-2 from-struct-1)
                to-struct
-               struct field-lens-map)))
+               struct
+               field-lens-map
+               (into {} (map (fn [[f l]]
+                               [(closed-struct-map/transient-setter struct f)
+                                l])
+                             field-lens-map)))))

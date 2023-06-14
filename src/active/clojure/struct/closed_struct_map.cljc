@@ -1,4 +1,4 @@
-(ns active.clojure.struct.closed-struct-map
+(ns ^:no-doc active.clojure.struct.closed-struct-map
   (:require [active.clojure.struct.closed-struct :as closed-struct]
             [active.clojure.struct.closed-struct-data :as data])
   #?(:clj (:import (clojure.lang Util)))
@@ -63,8 +63,9 @@
   (closed-struct/validate-single! struct key val)
   (data/mutate! struct data key val))
 
-(defprotocol TransientUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
+(defprotocol ^:private TransientUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
   (t-assoc [this key val])
+  (t-update [this f key val])
   (t-dissoc [this key])
   (t-persistent [this])
   (t-get [this key])
@@ -77,6 +78,12 @@
   (t-assoc [this key val]
     (ensure-editable! owner)
     (unchecked-assoc! struct data key val)
+    this)
+
+  (t-update [this f key val]
+    (ensure-editable! owner)
+    (closed-struct/validate-single! struct key val)
+    (f data val) ;; should mutate data, and only at key.
     this)
 
   (t-dissoc [this key]
@@ -168,7 +175,7 @@
        (-lookup [this key not-found] (t-get-with-default this key not-found))
        ]))
 
-(defprotocol PersistentUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
+(defprotocol ^:private PersistentUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
   (do-assoc [this key val])
   (do-assoc-multi [this changed-keys-vals])
   (do-transient [this])
@@ -397,12 +404,27 @@
        (= (.-struct v)
           t)))
 
-(defn accessor [t key]
+(defn transient-instance? [t v]
+  (assert (closed-struct/closed-struct? t)) ;; TODO: exception?
+  (and (clj-instance? TransientClosedStructMap v)
+       (= (.-struct v)
+          t)))
+
+(defn accessor "Returns an optimized accessor for key, in both persistent and
+  transient struct-maps."
+  [t key]
   (let [data-f (data/accessor t key)]
     (fn [m]
-      (assert (instance? t m)) ;; TODO: exception
-      (data-f (.-data m))
-      )))
+      (cond
+        (instance? t m)
+        (data-f (.-data ^PersistentClosedStructMap m))
+
+        ;; Note: if we don't allow transients here, then a simple (get ..) would be used, which works too but is just slower.
+        (transient-instance? t m)
+        (data-f (.-data ^TransientClosedStructMap m))
+
+        :else (assert (instance? t m) "Not a struct-map") ;; TODO: exception
+        ))))
 
 (defn setter [t key]
   (let [data-f (data/mutator t key)
@@ -412,15 +434,24 @@
       (-> (create t (data-f (data/copy (.-data m)) val) (meta m))
           (closed-struct/validate t key-list (list val))))))
 
+(defn transient-setter [t key]
+  ;; Note: we could integrate this into [[setter]], thus allowing the
+  ;; keys to work optimized on both... but that's an even larger deviation
+  ;; from clojure (it's assoc! instead of assoc, and keywords never set anything).
+  (let [data-f (data/mutator t key)]
+    (fn [m val]
+      (assert (transient-instance? t m)) ;; TODO: exception
+      (t-update m data-f key val))))
+
 (defn satisfies? [t v]
   (or (instance? t v)
       (and (map? v)
            (and (every? #(contains? v %) (closed-struct/keys t))
-                ;; TODO: pass 'v' or (select-keys ... v) to validator?
+                ;; Note: passes v to validator, which may contain more keys. (validators should allow that)
                 (closed-struct/valid? t v)))))
 
-(defn- unvalidated-empty-transient [struct]
-  ;; event if an all-nil map would be invalid, if it is immediately
+(defn unvalidated-empty-transient [struct]
+  ;; even if an all-nil map would be invalid, if it is immediately
   ;; used as a transient, the validity is checked when getting
   ;; persistent again.
   (TransientClosedStructMap. struct (data/create struct) true))

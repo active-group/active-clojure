@@ -1,4 +1,4 @@
-(ns active.clojure.struct.closed-struct
+(ns ^:no-doc active.clojure.struct.closed-struct
   (:require [active.clojure.struct.validator :as v])
   (:refer-clojure :exclude [set-validator! #?@(:cljs [contains? keys])]
                   :rename {contains? clj-contains?

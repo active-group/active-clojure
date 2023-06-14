@@ -36,7 +36,6 @@
                  (.hashCode sym))
        
        (equals [this other]
-               ;; TODO: this con't make it symmetrical (= x y) (= y x) - how does that work?
                (if (instance? Key other)
                  (= sym (.-sym other))
                  false))])

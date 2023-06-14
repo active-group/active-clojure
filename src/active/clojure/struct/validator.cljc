@@ -11,7 +11,10 @@
     "Throws an exception if the given new map is not acceptable. The given
      changed keys can be used to optimize the test. Other keys are
      guaranteed to have been checked before."
-    ;; Note: m can be any kind of map; not guaranteed to be a struct-map.
+    ;; Note: m can be any kind of map; not guaranteed to be a
+    ;; struct-map.  Note: when used in [[satisfied?]] resp. [[valid?]], the map may
+    ;; contain more keys; validators should only check the fields they
+    ;; know of. (maybe add 'valid?' to the protocol; also removes the need for try-catch.)
     ))
 
 (defn validate-single! [t key value]

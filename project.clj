@@ -29,7 +29,7 @@
              ;; run `lein fig` and then open browser at
              ;; http://localhost:9500/figwheel-extra-main/auto-testing
              :dev {:dependencies   [[lein-doo "0.1.10"]
-                                    [com.bhauman/figwheel-main "0.2.0"]
+                                    [com.bhauman/figwheel-main "0.2.18"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]
                                     [compojure "1.6.1"]]
                    :source-paths ["src" "dev"]

@@ -7,20 +7,19 @@
 (defn create [struct]
   (object-array (closed-struct/size struct)))
 
-(defn accessor [struct key]
-  (let [index (closed-struct/index-of struct key)]
-    (fn [^objects data]
-      (aget data index))))
+(defn unsafe-access [data index]
+  (aget data index))
 
 (defn access [struct data key]
-  (let [index (closed-struct/index-of struct key)]
-    (aget data index)))
+  (unsafe-access data
+                 (closed-struct/index-of struct key)))
 
-(defn access-with-default [struct data key default]
-  (let [index (closed-struct/maybe-index-of struct key ::not-found)]
-    (if (= index ::not-found)
-      default
-      (aget data index))))
+(let [not-found #?(:clj (Object.) :cljs #js {})]
+  (defn access-with-default [struct data key default]
+    (let [index (closed-struct/maybe-index-of struct key not-found)]
+      (if (identical? index not-found)
+        default
+        (aget data index)))))
 
 (defn kv-reduce [struct data f init]
   (let [keys (closed-struct/keys struct)
@@ -34,12 +33,6 @@
             (recur res (inc idx))))
         res))))
 
-(defn mutator [struct key]
-  (let [index (closed-struct/index-of struct key)]
-    (fn [^objects data value]
-      (aset data index value)
-      data)))
-
 (defn mutate! [struct data key value]
   (let [index (closed-struct/index-of struct key)]
     (aset data index value)
@@ -49,6 +42,7 @@
   (aclone data))
 
 (defn equiv [^objects v1 ^objects v2]
+  ;; OPT: nothing built in clojure for this?
   (reduce (fn [r idx]
             (if-not r
               (reduced r)
@@ -57,36 +51,39 @@
           (= (alength v1) (alength v2))
           (range (alength v1))))
 
+(defn indices [struct]
+  (range (closed-struct/size struct)))
+
 #?(:clj
    (defn java-iterator [struct data]
      (let [ks (closed-struct/keys struct)
-           idxs (range (count ks))]
+           idxs (indices struct)]
        (let [^java.util.Iterator base (.iterator idxs)]
          (reify java.util.Iterator
            (hasNext [this]
              (.hasNext base))
            (next [this]
              (let [idx (.next base)]
-               (clojure.lang.MapEntry. (get ks idx) (aget data idx))))
+               (clojure.lang.MapEntry. (nth ks idx) (unsafe-access data idx))))
            (remove [this]
              (throw (java.lang.UnsupportedOperationException.)))))))
 
    :cljs
    (defn js-iterator [struct data]
      (let [ks (closed-struct/keys struct)
-           idxs (range (count ks))]
+           idxs (indices struct)]
        (let [base (-iterator idxs)]
          (reify Object
            (hasNext [_] (.hasNext ^js base))
            (next [_]
              (let [idx (.next ^js base)]
-               (MapEntry. (get ks idx) (aget data idx) nil)))))))
+               (MapEntry. (nth ks idx) (unsafe-access data idx) nil)))))))
    )
 
 #?(:cljs
    (defn js-seq [struct data]
      ;; OPT: special implementation needed? (but that's a lot: https://github.com/clojure/clojurescript/blob/219951678b16575ec29bb9b88047356cf1437aec/src/main/cljs/cljs/core.cljs#L6808)
      (map (fn [key idx]
-            (MapEntry. key (aget data idx) nil))
+            (MapEntry. key (unsafe-access data idx) nil))
           (closed-struct/keys struct)
-          (range (count (closed-struct/keys struct))))))
+          (indices struct))))

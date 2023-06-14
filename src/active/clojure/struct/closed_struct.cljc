@@ -77,13 +77,13 @@
 (defn maybe-index-of [^ClosedStruct t key default]
   (get (.-index-map t) key default))
 
-(defn index-of [t key]
-  (let [idx (maybe-index-of t key ::not-found)]
-    (if (= idx ::not-found)
-      (throw (ex-info "Key not in struct" {:key key
-                                           :x (.-index-map t)
-                                           :available (.-keys t)}))
-      idx)))
+(let [not-found #?(:clj (Object.) :cljs #js {})]
+  (defn index-of [t key]
+    (let [idx (maybe-index-of t key not-found)]
+      (if (identical? idx not-found)
+        (throw (ex-info "Key not in struct" {:key key
+                                             :available (.-keys t)}))
+        idx))))
 
 (defn keys "Vector of keys in order given in [[create]]." [^ClosedStruct t]
   (.-keys t))

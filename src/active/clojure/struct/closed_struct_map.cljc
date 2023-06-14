@@ -1,6 +1,7 @@
 (ns ^:no-doc active.clojure.struct.closed-struct-map
   (:require [active.clojure.struct.closed-struct :as closed-struct]
-            [active.clojure.struct.closed-struct-data :as data])
+            [active.clojure.struct.closed-struct-data :as data]
+            [active.clojure.struct.key :as struct-key])
   #?(:clj (:import (clojure.lang Util)))
   (:refer-clojure :rename {instance? clj-instance?
                            satisfies? clj-satisfies?}
@@ -65,7 +66,6 @@
 
 (defprotocol ^:private TransientUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
   (t-assoc [this key val])
-  (t-update [this f key val])
   (t-dissoc [this key])
   (t-persistent [this])
   (t-get [this key])
@@ -78,12 +78,6 @@
   (t-assoc [this key val]
     (ensure-editable! owner)
     (unchecked-assoc! struct data key val)
-    this)
-
-  (t-update [this f key val]
-    (ensure-editable! owner)
-    (closed-struct/validate-single! struct key val)
-    (f data val) ;; should mutate data, and only at key.
     this)
 
   (t-dissoc [this key]
@@ -100,10 +94,14 @@
 
   (t-get [this key]
     (ensure-editable! owner)
-    (data/access struct data key))
+    (if-let [index (struct-key/optimized-for? key struct)]
+      (data/unsafe-access data index)
+      (data/access struct data key)))
   (t-get-with-default [this key not-found]
     (ensure-editable! owner)
-    (data/access-with-default struct data key not-found))
+    (if-let [index (struct-key/optimized-for? key struct)]
+      (data/unsafe-access data index)
+      (data/access-with-default struct data key not-found)))
   
   #?@(:clj
       ;; clojure.lang.ATransientMap does not expose any helpers :-/
@@ -176,6 +174,8 @@
        ]))
 
 (defprotocol ^:private PersistentUtil ;; to share some code between clj/cljs, with hopefully little runtime overhead.
+  (do-get [this key])
+  (do-get-with-default [this key not-found])
   (do-assoc [this key val])
   (do-assoc-multi [this changed-keys-vals])
   (do-transient [this])
@@ -187,6 +187,16 @@
                                               #?(:clj ^:unsynchronized-mutable ^int _hash :cljs ^:mutable _hash)]
 
   PersistentUtil
+  (do-get [this key]
+    (if-let [index (struct-key/optimized-for? key struct)]
+      (data/unsafe-access data index)
+      (data/access struct data key)))
+
+  (do-get-with-default [this key not-found]
+    (if-let [index (struct-key/optimized-for? key struct)]
+      (data/unsafe-access data index)
+      (data/access-with-default struct data key not-found)))
+  
   (do-assoc [this key val]
     ;; OPT: check if current association is identical?
     (-> (create struct (data/mutate! struct (data/copy data) key val) _meta)
@@ -228,7 +238,7 @@
        (containsKey [this k] (closed-struct/contains? struct k))
        (keySet [this] ;; Java api, and a Java Set
                (closed-struct/keyset struct))
-       (getOrDefault [this key default] (data/access-with-default struct data key default))
+       (getOrDefault [this key default] (do-get-with-default this key default))
        (get [this key]
             ;; Note: this is called by clojure to compare other maps
             ;; to this; but maybe in more situations.
@@ -236,7 +246,7 @@
             ;; Not sure if we should/could throw here too, if a key is
             ;; not in map, or stick to the java.Map contract by
             ;; returning null.
-            (.getOrDefault this key nil))
+            (do-get-with-default this key nil))
 
        clojure.lang.IObj
        clojure.lang.IMeta
@@ -289,8 +299,8 @@
        (without [this key] (throw (cannot-remove key)))
        (count [this] (closed-struct/size struct))
   
-       (valAt [this key] (data/access struct data key))
-       (valAt [this key not-found] (data/access-with-default struct data key not-found))
+       (valAt [this key] (do-get this key))
+       (valAt [this key not-found] (do-get-with-default this key not-found))
        (empty [this] (do-empty this))
 
        clojure.lang.IEditableCollection
@@ -341,8 +351,8 @@
        (-count [this] (closed-struct/size struct))
 
        ILookup
-       (-lookup [this key] (data/access struct data key))
-       (-lookup [this key not-found] (data/access-with-default struct data key not-found))
+       (-lookup [this key] (do-get this key))
+       (-lookup [this key not-found] (do-get-with-default this key not-found))
 
        IAssociative
        (-assoc [this k v] (do-assoc this k v))
@@ -350,7 +360,7 @@
 
        IFind
        (-find [this key]
-              (let [v (data/access-with-default struct data key ::not-found)]
+              (let [v (do-get-with-default this key ::not-found)]
                 (when-not (= v ::not-found)
                   (MapEntry. key v nil))))
 
@@ -409,39 +419,6 @@
   (and (clj-instance? TransientClosedStructMap v)
        (= (.-struct v)
           t)))
-
-(defn accessor "Returns an optimized accessor for key, in both persistent and
-  transient struct-maps."
-  [t key]
-  (let [data-f (data/accessor t key)]
-    (fn [m]
-      (cond
-        (instance? t m)
-        (data-f (.-data ^PersistentClosedStructMap m))
-
-        ;; Note: if we don't allow transients here, then a simple (get ..) would be used, which works too but is just slower.
-        (transient-instance? t m)
-        (data-f (.-data ^TransientClosedStructMap m))
-
-        :else (assert (instance? t m) "Not a struct-map") ;; TODO: exception
-        ))))
-
-(defn setter [t key]
-  (let [data-f (data/mutator t key)
-        key-list (list key)]
-    (fn [m val]
-      (assert (instance? t m)) ;; TODO: exception
-      (-> (create t (data-f (data/copy (.-data m)) val) (meta m))
-          (closed-struct/validate t key-list (list val))))))
-
-(defn transient-setter [t key]
-  ;; Note: we could integrate this into [[setter]], thus allowing the
-  ;; keys to work optimized on both... but that's an even larger deviation
-  ;; from clojure (it's assoc! instead of assoc, and keywords never set anything).
-  (let [data-f (data/mutator t key)]
-    (fn [m val]
-      (assert (transient-instance? t m)) ;; TODO: exception
-      (t-update m data-f key val))))
 
 (defn satisfies? [t v]
   (or (instance? t v)

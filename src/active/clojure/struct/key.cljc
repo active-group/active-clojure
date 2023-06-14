@@ -1,27 +1,22 @@
 (ns ^:no-doc active.clojure.struct.key
-  (:require [active.clojure.struct.closed-struct-map :as closed-struct-map])
+  (:require [active.clojure.struct.closed-struct :as closed-struct])
   (:refer-clojure :exclude (set)))
 
 (defprotocol ^:private IKey
-  (-optimize! [this accessor setter]))
+  (-optimize-for! [this struct])
+  (-optimized-for? [this struct] "Returns the index in struct or nil."))
 
-(defn- simple-access [m k]
-  (get m k))
-
-(defn- simple-set [m k v]
-  (assoc m k v))
-
-(defn- access [m k optimized]
-  (if optimized (optimized m) (simple-access m k)))
-
-(defn- set [m k v optimized]
-  (if optimized (optimized m v) (simple-set m k v)))
-
-(deftype ^:private Key [^clojure.lang.Symbol sym ^:unsynchronized-mutable accessor ^:unsynchronized-mutable setter]
+(deftype ^:private Key [^clojure.lang.Symbol sym ^:unsynchronized-mutable struct ^:unsynchronized-mutable index]
   IKey
-  (-optimize! [this accessor setter]
-    (set! (.-accessor this) accessor)
-    (set! (.-setter this) setter))
+  (-optimize-for! [this struct]
+    (let [idx (closed-struct/index-of struct this)]
+      (set! (.-struct this) struct)
+      (set! (.-index this) index)))
+  (-optimized-for? [this s]
+    (if (and (some? struct)
+             (= s struct))
+      index
+      nil))
   
   #?@(:clj
       [clojure.lang.IHashEq
@@ -41,14 +36,15 @@
                  false))])
 
   #?@(:clj
+      ;; Note: the struct-map implementation of get and assoc will look for 'struct' and 'index', and use it if set.
       [clojure.lang.IFn
-       (invoke [this m] (access m this accessor))
-       (invoke [this m v] (set m this v setter))]
+       (invoke [this m] (get m this))
+       (invoke [this m v] (assoc m this v))]
 
       :cljs
       [IFn
-       (-invoke [this m] (access m this accessor))
-       (-invoke [this m v] (set m this v setter))]))
+       (-invoke [this m] (get m this))
+       (-invoke [this m v] (assoc m this v))]))
 
 #?(:clj
    ;; add ~ to the namespaced symbol, so that quasiquoting the output
@@ -68,23 +64,11 @@
 (defn make [sym]
   (Key. sym nil nil))
 
-(defn- optimized-accessor [struct key]
-  (let [f (closed-struct-map/accessor struct key)]
-    (fn [m]
-      (if (closed-struct-map/instance? struct m)
-        (f m)
-        (simple-access m key)))))
-
-(defn- optimized-setter [struct key]
-  (let [f (closed-struct-map/setter struct key)]
-    (fn [m v]
-      (if (closed-struct-map/instance? struct m)
-        (f m v)
-        (simple-set m key v)))))
-
 (defn optimize-for! [^Key key struct]
   ;; Note: should only be called once and immediately after construction/during definition;
   ;; therefor it's ok to just use :unsynchronized-mutable fields.
-  (-optimize! key
-              (optimized-accessor struct key)
-              (optimized-setter struct key)))
+  (-optimize-for! key struct))
+
+(defn optimized-for? [key struct]
+  (and (instance? Key key)
+       (-optimized-for? ^Key key struct)))

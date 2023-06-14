@@ -76,22 +76,22 @@
   ;; Note: also checks the validity, if a validator is defined for struct.
   (closed-struct-map/satisfies? struct v))
 
-(let [from-struct-1 (fn [v struct field-lens-map _]
+(let [from-struct-1 (fn [v struct field-lens-map]
                       (reduce-kv (fn [r f l]
                                    (lens/shove r l (f v)))
                                  {}
                                  field-lens-map))
-      from-struct-2 (fn [v struct field-keyword-map _]
+      from-struct-2 (fn [v struct field-keyword-map]
                       (-> (reduce-kv (fn [r f k]
                                        (assoc! r k (f v)))
                                      (transient {})
                                      field-keyword-map)
                           (persistent!)))
-      to-struct (fn [v struct _ setter-lens-map]
-                  (-> (reduce-kv (fn [r setter l]
-                                   (setter r (lens/yank v l)))
+      to-struct (fn [v struct field-lens-map]
+                  (-> (reduce-kv (fn [r f l]
+                                   (assoc! r f (lens/yank v l)))
                                  (closed-struct-map/unvalidated-empty-transient struct)
-                                 setter-lens-map)
+                                 field-lens-map)
                       (persistent!)))]
   (defn map-projection "Returns a lens that projects between a struct-map of the given `struct` and a
   hash-map.
@@ -113,8 +113,4 @@
     (lens/xmap (if (every? keyword? (vals field-lens-map)) from-struct-2 from-struct-1)
                to-struct
                struct
-               field-lens-map
-               (into {} (map (fn [[f l]]
-                               [(closed-struct-map/transient-setter struct f)
-                                l])
-                             field-lens-map)))))
+               field-lens-map)))

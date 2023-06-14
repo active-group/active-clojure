@@ -1,7 +1,8 @@
 (ns active.clojure.struct
   (:require [active.clojure.struct.key :as key]
             [active.clojure.struct.closed-struct :as closed-struct]
-            [active.clojure.struct.closed-struct-map :as closed-struct-map])
+            [active.clojure.struct.closed-struct-map :as closed-struct-map]
+            [active.clojure.lens :as lens])
   (:refer-clojure :exclude [struct-map instance? satisfies?
                             set-validator!]))
 
@@ -72,3 +73,39 @@
   [struct v]
   ;; Note: also checks the validity, if a validator is defined for struct.
   (closed-struct-map/satisfies? struct v))
+
+(let [from-struct-1 (fn [v struct field-lens-map]
+                      (reduce-kv (fn [r f l]
+                                   (lens/shove r l (f v)))
+                                 {}
+                                 field-lens-map))
+      from-struct-2 (fn [v struct field-keyword-map]
+                      (-> (reduce-kv (fn [r f k]
+                                       (assoc! r k (f v)))
+                                     (transient {})
+                                     field-keyword-map)
+                          (persistent!)))
+      to-struct (fn [v struct field-lens-map]
+                  (apply struct-map struct
+                         (mapcat (fn [[f l]]
+                                   (list f (lens/yank v l)))
+                                 field-lens-map)))]
+  (defn map-projection "Returns a lens that projects between a struct-map of the given `struct` and a
+  hash-map.
+
+  ```
+  (def-struct T [foo])
+
+  (def p (map-projection {foo (lens/>> :foo :bar)}))
+  
+  (= (lens/yank (struct-map T foo 42) p)
+     {:foo {:bar 42}})
+  
+  (= (lens/shove nil p {:foo {:bar 42}})
+     (struct-map T foo 42))
+  ```
+  " [struct field-lens-map]
+    (assert (= (closed-struct/keyset struct) (set (keys field-lens-map))) "All keys of the struct must be given.")
+    (lens/xmap (if (every? keyword? (vals field-lens-map)) from-struct-2 from-struct-1)
+               to-struct
+               struct field-lens-map)))

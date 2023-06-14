@@ -109,7 +109,7 @@
 
 (defn xmap
   "Returns a \"view lens\", that transforms a whole data structure
-   to something else (f) and back (g)."
+   to something else `(f v & args)` and back `(g v & args)`."
   [f g & args]
   (apply lens xmap-yank xmap-shove f g args))
 

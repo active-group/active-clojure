@@ -1,6 +1,7 @@
 (ns active.clojure.struct-test
   (:require [active.clojure.struct :as sut #?@(:cljs [:include-macros true])]
             [active.clojure.struct.validator :as validator]
+            [active.clojure.lens :as lens]
             #?(:clj [clojure.test :as t]
                   :cljs [cljs.test :as t :include-macros true])))
 
@@ -304,4 +305,28 @@
     (t/is (throws #(let [x (transient v)]
                      (persistent! x)
                      (assoc! x t-a 21))))
+    ))
+
+(t/deftest map-projection-test
+  (let [p (sut/map-projection T {t-a (lens/>> :foo :bar)
+                                 t-b :b})
+        v (sut/struct-map T t-a 42 t-b :test)
+        m {:foo {:bar 42}
+           :b :test}]
+
+    (t/is (= (lens/yank v p) m))
+    (t/is (= (lens/shove nil p m) v)))
+
+  (t/is (throws #(sut/map-projection T {t-b :b}))
+        "All fields must be given.")
+
+  (t/testing "optimized yank if only keywords"
+    (let [p (sut/map-projection T {t-a :a
+                                   t-b :b})
+          v (sut/struct-map T t-a 42 t-b :test)
+          m {:a 42
+             :b :test}]
+
+      (t/is (= (lens/yank v p) m))
+      (t/is (= (lens/shove nil p m) v)))
     ))

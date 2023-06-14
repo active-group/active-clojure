@@ -12,4 +12,5 @@
             [active.clojure.record-spec-test]
             [active.clojure.record-test]
             [active.clojure.sum-type-test]
-            [active.clojure.validation-test]))
+            [active.clojure.validation-test]
+            [active.clojure.struct-test]))

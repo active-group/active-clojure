@@ -263,9 +263,14 @@
           ~rtd-symbol))))
 
 
+(defn throw-different-args-count
+  [constructor-symbol constructor-args-count given-args-count]
+  (let [exception-string (str constructor-symbol " takes " constructor-args-count
+                              " arguments. Got: " given-args-count ".")]
+    #?(:clj (throw (Exception. exception-string))
+       :cljs (throw (js/Error. exception-string)))))
+
 #?(:clj
-
-
    (defn define-constructor-rtd
      "Defines a constructor based on a record-constructor-fn. This function takes one argument, a list of field symbols."
      [type make-record constructor-symbol constructor-args-symbols field-tuples meta-data]
@@ -278,10 +283,7 @@
              `(fn [~'& many-args#]
                 (when (not= ~(count constructor-args-symbols)
                             (count many-args#))
-                  (throw (Exception. (str ~constructor-symbol " takes "
-                                          ~(count constructor-args-symbols)
-                                          " arguments. Got: "
-                                          (count many-args#) "."))))
+                  (throw-different-args-count ~constructor-symbol ~(count constructor-args-symbols) (count many-args#)))
                 (apply ~make-record
                        many-args#))
              `(fn [~@constructor-args-symbols]

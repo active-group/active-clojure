@@ -19,8 +19,8 @@ jobs:
       run: lein deps
     - name: Run tests 
       run: |
-        lein doo firefox-headless test once
-        lein doo chrome-headless test once
+        lein figtest-firefox
+        lein figtest-chrome
         lein test
     - name: Notify with mattermost upon failure
       if: failure()

@@ -366,3 +366,24 @@
   (let [{a t-a b t-b} (sut/struct-map T t-a 42 t-b :foo)]
     (t/is (= a 42))
     (t/is (= b :foo))))
+
+(sut/def-struct ExT
+  :extends T
+  [t-c])
+
+(t/deftest extends-test
+  (let [v (sut/struct-map ExT t-a 42 t-b :test t-c "xxx")]
+    (t/is (sut/satisfies? T v))
+    (t/is (not (sut/instance? T v)))
+
+    (t/is (sut/instance? ExT (assoc v t-a 10)))
+    (t/is (= 10 (t-a (assoc v t-a 10))))
+    (t/is (= "yyy" (t-c (assoc v t-c "yyy"))))
+
+    ;; optimizations
+    (t/is (key/optimized-for? t-a ExT))
+
+    ;; TODO: inherited validation?
+    )
+  
+  )

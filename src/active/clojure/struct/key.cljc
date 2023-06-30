@@ -6,6 +6,12 @@
   (-optimize-for! [this struct])
   (-optimized-for? [this struct] "Returns the index in struct or nil."))
 
+(defn- same-or-extended? [tstruct struct]
+  (or (= tstruct struct)
+      ;; Note: for the same indices to work, the fields of the parent struct must come first in the child struct!
+      (when-let [ex (closed-struct/extended-struct tstruct)]
+        (same-or-extended? ex struct))))
+
 (deftype ^:private Key [^clojure.lang.Symbol sym ^:unsynchronized-mutable struct ^:unsynchronized-mutable index]
   IKey
   (-optimize-for! [this s]
@@ -14,7 +20,7 @@
       (set! (.-index this) idx)))
   (-optimized-for? [this s]
     (if (and (some? struct)
-             (= s struct))
+             (same-or-extended? s struct))
       index
       nil))
   

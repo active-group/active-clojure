@@ -8,7 +8,7 @@
   (-get-validator [this])
   (-set-validator [this validator]))
 
-(deftype ^:private ClosedStruct [keys index-map  ^:unsynchronized-mutable validator]
+(deftype ^:private ClosedStruct [keys index-map  ^:unsynchronized-mutable validator extended-struct]
   IClosedStruct
   (-get-validator [this]
     (.-validator this))
@@ -25,6 +25,27 @@
                  ;; OPT: faster to compare only the keys?
                  (= index-map (.-index-map other))
                  false))]))
+
+#?(:clj
+   ;; TODO: tune that a bit, add namespace, deduplicate impls.
+   
+   (defmethod print-method ClosedStruct [s ^java.io.Writer writer]
+     (.write writer "#Struct{")
+     (when-let [k (first (.-keys s))]
+       (print-method k writer))
+     (doseq [k (rest (.-keys s))]
+       (.write writer ", ")
+       (print-method k writer))
+     (.write writer "}"))
+
+   :cljs
+   (extend-protocol IPrintWithWriter
+     ClosedStruct
+     (-pr-writer [s writer _]
+       (write-all writer "#Struct{")
+       (doseq [k (interpose ", " (.-keys s))]
+         (write-all writer k))
+       (write-all writer "}"))))
 
 (defn closed-struct? [v]
   (instance? ClosedStruct v))
@@ -55,18 +76,20 @@
     (v/valid? validator m)
     true))
 
-(defn create [fields]
-  (ClosedStruct. (vec fields)
-                 ;; OPT: is this actually the fastest way to create the index-map:
-                 (loop [idx 0
-                        r (transient {})
-                        fs fields]
-                   (if-not (empty? fs)
-                     (recur (inc idx)
-                            (assoc! r (first fs) idx)
-                            (rest fs))
-                     (persistent! r)))
-                 nil))
+(defn create [fields extended-struct]
+  ;; Note: keys of the extended struct must come first! (for optimizations to work)
+  (let [all-fields (vec (concat (when (some? extended-struct) (.-keys extended-struct)) fields))]
+    (ClosedStruct. all-fields
+                   (loop [idx 0
+                          r (transient {})
+                          fs all-fields]
+                     (if-not (empty? fs)
+                       (recur (inc idx)
+                              (assoc! r (first fs) idx)
+                              (rest fs))
+                       (persistent! r)))
+                   nil
+                   extended-struct)))
 
 (defn size [^ClosedStruct t]
   (count (.-keys t)))
@@ -91,3 +114,6 @@
 (defn keyset [t]
   ;; OPT: maybe cache that in closed-struct
   (set (keys t)))
+
+(defn extended-struct "The struct that t extends, or nil." [t]
+  (.-extended-struct t))

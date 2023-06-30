@@ -21,21 +21,33 @@
   ```
   (def-struct T [field-1 ...])
   ```
-  "
-  [t fields]
-  `(do
-     ~@(for [f# fields]
-         `(def-key ~(cond-> f#
-                      (and (contains? (meta t) :private)
-                           (not (contains? (meta f#) :private)))
-                      (vary-meta assoc :private (:private (meta t))))))
-     
-     (def ~t (closed-struct/create ~fields))
 
-     ~@(for [f# fields]
-         `(key/optimize-for! ~f# ~t))
+  Other structs can be extended, too:
+
+  ``
+  (def-struct X
+    :extends T
+    [field-2])
+  ```
+  "
+  ([t fields]
+   `(def-struct ~t :extends nil ~fields))
+  ([t x super fields]
+   (assert (= :extends x)) ;; TODO: proper exception
+   `(do
+      ~@(for [f# fields]
+          `(def-key ~(cond-> f#
+                       (and (contains? (meta t) :private)
+                            (not (contains? (meta f#) :private)))
+                       (vary-meta assoc :private (:private (meta t))))))
      
-     ~t))
+      (def ~t (closed-struct/create ~fields
+                                    ~super))
+
+      ~@(for [f# fields]
+          `(key/optimize-for! ~f# ~t))
+     
+      ~t)))
 
 (defn struct-map
   "Returns a new struct map with the keys of the struct. All keys of the

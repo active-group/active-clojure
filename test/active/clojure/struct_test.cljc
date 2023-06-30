@@ -2,7 +2,6 @@
   (:require [active.clojure.struct :as sut #?@(:cljs [:include-macros true])]
             [active.clojure.struct.validator :as validator]
             [active.clojure.lens :as lens]
-            [schema.core :as s #?@(:cljs [:include-macros true])]
             [clojure.data :as data]
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])))
@@ -343,25 +342,6 @@
       (t/is (= (lens/yank v p) m))
       (t/is (= (lens/shove nil p m) v)))
     ))
-
-
-(s/defschema TSchema
-  ;; Note: only keywords are inplicitly understood as 'required-key's.
-  {(s/required-key t-a) s/Int
-   (s/required-key t-b) s/Keyword})
-
-(t/deftest schema-works-test
-  #_(t/is (s/validate TSchema (sut/struct-map T t-a 42 t-b :foo)))
-  #_(t/is (throws #(s/validate TSchema (sut/struct-map T t-a "42" t-b 10))))
-
-  ;; damnit :-/
-  #_(dissoc #?(:clj (if (instance? clojure.lang.PersistentStructMap m) (into {} m) m)
-               :cljs m)
-            rk)
-  ;; alternative: allow dissoc, but turn it into a hash-map then?
-  ;; alternative: inherit from PersistentStructMap (via gen-class, or Java code) (would not solve cljs)
-  ;; alternative: special Schema impl for struct-maps.
-  )
 
 (t/deftest diff-and-humane-test-output-test
   ;; watch live:

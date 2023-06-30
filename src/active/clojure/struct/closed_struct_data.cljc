@@ -33,10 +33,13 @@
             (recur res (inc idx))))
         res))))
 
+(defn unsafe-mutate! [data index value]
+  (aset data index value)
+  data)
+
 (defn mutate! [struct data key value]
   (let [index (closed-struct/index-of struct key)]
-    (aset data index value)
-    data))
+    (unsafe-mutate! data index value)))
 
 (defn copy [data]
   (aclone data))

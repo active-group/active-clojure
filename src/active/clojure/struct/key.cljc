@@ -8,10 +8,10 @@
 
 (deftype ^:private Key [^clojure.lang.Symbol sym ^:unsynchronized-mutable struct ^:unsynchronized-mutable index]
   IKey
-  (-optimize-for! [this struct]
-    (let [idx (closed-struct/index-of struct this)]
-      (set! (.-struct this) struct)
-      (set! (.-index this) index)))
+  (-optimize-for! [this s]
+    (let [idx (closed-struct/index-of s this)]
+      (set! (.-struct this) s)
+      (set! (.-index this) idx)))
   (-optimized-for? [this s]
     (if (and (some? struct)
              (= s struct))

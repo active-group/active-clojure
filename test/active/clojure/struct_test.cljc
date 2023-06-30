@@ -1,6 +1,7 @@
 (ns active.clojure.struct-test
   (:require [active.clojure.struct :as sut #?@(:cljs [:include-macros true])]
             [active.clojure.struct.validator :as validator]
+            [active.clojure.struct.key :as key]
             [active.clojure.lens :as lens]
             [clojure.data :as data]
             #?(:clj [clojure.test :as t]
@@ -18,6 +19,13 @@
     (t/is (:private (meta #'PrivT)))
     (t/is (:private (meta #'pt-a)) "Privateness is inherited")
     (t/is (not (:private (meta #'pt-b))) "Privateness is inherited only as a default")))
+
+(t/deftest optimization-test
+  (t/is (key/optimized-for? t-a T))
+  (t/is (not (key/optimized-for? t-a PrivT)))
+
+  ;; Note: ClosedStructMap must also make use of that, but that cannot be tested extrinsicly.
+  )
 
 (defn throws [t]
   #?(:clj (try (t) nil (catch Throwable e e))

@@ -32,8 +32,8 @@
      
      (def ~t (closed-struct/create ~fields))
 
-     ~(doseq [f# fields]
-        `(key/optimize-for! ~f# ~t))
+     ~@(for [f# fields]
+         `(key/optimize-for! ~f# ~t))
      
      ~t))
 

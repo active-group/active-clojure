@@ -196,24 +196,32 @@
     (if-let [index (struct-key/optimized-for? key struct)]
       (data/unsafe-access data index)
       (data/access-with-default struct data key not-found)))
-  
+
   (do-assoc [this key val]
     ;; OPT: check if current association is identical?
-    (-> (create struct (data/mutate! struct (data/copy data) key val) _meta)
+    (-> (create struct (if-let [index (struct-key/optimized-for? key struct)]
+                         (data/unsafe-mutate! (data/copy data) index val)
+                         (data/mutate! struct (data/copy data) key val))
+                _meta)
         (closed-struct/validate struct (list key) (list val))))
+
   (do-empty [this]
     ;; OPT: 'memoize' the empty val in struct? we can't create it before hand because of the validation :-/
     (-> (create struct (data/create struct) _meta)
         ;; potentially all keys have changed, to nil
         (closed-struct/validate struct (closed-struct/keys struct) (repeat (closed-struct/size struct) nil))))
+
   (do-transient [this]
     (TransientClosedStructMap. struct (data/copy data) true))
+  
   (do-assoc-multi [this changed-keys-vals]
     (let [changed-keys (map first changed-keys-vals)
           changed-vals (map second changed-keys-vals)]
                
       (-> (create struct (reduce (fn [data [k v]]
-                                   (data/mutate! struct data k v))
+                                   (if-let [index (struct-key/optimized-for? k struct)]
+                                     (data/unsafe-mutate! data index v)
+                                     (data/mutate! struct data k v)))
                                  (data/copy data)
                                  changed-keys-vals)
                   _meta)

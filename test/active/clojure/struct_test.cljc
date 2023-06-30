@@ -7,7 +7,18 @@
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t :include-macros true])))
 
-(sut/def-struct T [t-a t-b])
+(sut/def-struct ^:foo T [^:a t-a t-b])
+
+(sut/def-struct ^:private PrivT [pt-a ^{:private false} pt-b])
+
+(t/deftest metadata-test
+  (t/is (:foo (meta #'T)))
+  (t/is (:a (meta #'t-a)))
+
+  (t/testing "private inheritance"
+    (t/is (:private (meta #'PrivT)))
+    (t/is (:private (meta #'pt-a)) "Privateness is inherited")
+    (t/is (not (:private (meta #'pt-b))) "Privateness is inherited only as a default")))
 
 (defn throws [t]
   #?(:clj (try (t) nil (catch Throwable e e))
@@ -367,5 +378,3 @@
   (let [{a t-a b t-b} (sut/struct-map T t-a 42 t-b :foo)]
     (t/is (= a 42))
     (t/is (= b :foo))))
-
-;; TODO: Test metadata, private, etc on struct + keys.

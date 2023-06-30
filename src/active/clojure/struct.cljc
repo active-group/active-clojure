@@ -25,7 +25,10 @@
   [t fields]
   `(do
      ~@(for [f# fields]
-         `(def-key ~f#))
+         `(def-key ~(cond-> f#
+                      (and (contains? (meta t) :private)
+                           (not (contains? (meta f#) :private)))
+                      (vary-meta assoc :private (:private (meta t))))))
      
      (def ~t (closed-struct/create ~fields))
 

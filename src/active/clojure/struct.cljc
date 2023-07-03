@@ -60,6 +60,7 @@
   "
   [struct & keys-vals]
   ;; TODO: reject the same key given twice? Or offer that explicitly as an easy way to specify default values?
+  ;; TODO: actually require all keys? If duplicates are allowed, that is costly to check.
   ;; TODO: hash-map are quite complex macros in cljs - check that out.
   (closed-struct-map/build-map struct keys-vals))
 

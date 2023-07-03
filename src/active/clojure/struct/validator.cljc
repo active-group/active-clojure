@@ -7,14 +7,15 @@
   
   (-validate-field! [this changed-key new-value]
     "Throws an exception if the new value is not acceptable for the given key.")
-  (-validate-map! [this m changed-keys]
-    "Throws an exception if the given new map is not acceptable. The given
-     changed keys can be used to optimize the test. Other keys are
-     guaranteed to have been checked before."
+  (-validate-map! [this m]
+    "Throws an exception if an invariant is broken in the given map. Note
+     that in general, unknown keys in the map should be ignored by the
+     validator."
     ;; Note: m can be any kind of map; not guaranteed to be a
-    ;; struct-map.  Note: when used in [[satisfied?]] resp. [[valid?]], the map may
-    ;; contain more keys; validators should only check the fields they
-    ;; know of. (maybe add 'valid?' to the protocol; also removes the need for try-catch.)
+    ;; struct-map.  Note: when used in [[satisfies?]] resp. [[valid?]]
+    ;; or extending struct, the map may contain more keys; validators
+    ;; should only check the fields they know of. (maybe add 'valid?'
+    ;; to the protocol; also removes the need for try-catch.)
     ))
 
 (defn validate-single! [t key value]
@@ -22,14 +23,14 @@
 
 (defn validate-map-only! [t m]
   ;; OPT: have a variant without 'changed key'; might be counter-productive to pass just all of them here.
-  (-validate-map! t m (keys m)))
+  (-validate-map! t m #_(keys m)))
 
 (defn validate! [t m changed-keys changed-values]
   (assert (map? m))
-  (-validate-map! t m changed-keys)
   (dorun (map (partial -validate-field! t)
               changed-keys
-              changed-values)))
+              changed-values))
+  (-validate-map! t m #_changed-keys))
 
 (defn valid? [t m]
   ;; Note: a pity that we have to try-catch here, but the advantage of
@@ -47,7 +48,7 @@
   [keys-fns-map]
   (let [lookup keys-fns-map]
     (reify IMapValidator
-      (-validate-map! [this m changed-key] nil)
+      (-validate-map! [this m] nil)
       (-validate-field! [this changed-key new-value]
         (when-let [f (lookup changed-key)]
           (f new-value))))))
@@ -71,9 +72,9 @@
   (assert (satisfies? IMapValidator validator))
   (assert (satisfies? clojure.lang.IDeref validator))
   (reify IMapValidator
-    (-validate-map! [this m changed-key]
+    (-validate-map! [this m]
       (when @var
-        (-validate-map! validator m changed-key)))
+        (-validate-map! validator m)))
     (-validate-field! [this changed-key new-value]
       (when @var
         (-validate-field! changed-key changed-key new-value)))))

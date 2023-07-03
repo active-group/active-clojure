@@ -428,8 +428,14 @@
        (= (.-struct v)
           t)))
 
+(defn- derived-instance? [t vt]
+  (or (= t vt)
+      (when-let [p (closed-struct/extended-struct vt)]
+        (derived-instance? t p))))
+
 (defn satisfies? [t v]
-  (or (instance? t v)
+  (or (and (clj-instance? PersistentClosedStructMap v)
+           (derived-instance? t (.-struct v)))
       (and (map? v)
            (and (every? #(contains? v %) (closed-struct/keys t))
                 ;; Note: passes v to validator, which may contain more keys. (validators should allow that)

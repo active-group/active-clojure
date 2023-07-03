@@ -277,11 +277,8 @@
   (-validate-field! [this changed-key changed-value]
     (when-not (int? changed-value)
       (throw (ex-info "Not an int" {:v changed-value}))))
-  (-validate-map! [this m changed-keys]
-    (doseq [k changed-keys]
-      (let [v (get m k)]
-        (when-not (int? v)
-          (throw (ex-info "Not an int" {:v v})))))))
+  (-validate-map! [this m]
+    nil))
 
 (t/deftest validator-test
 
@@ -382,8 +379,67 @@
 
     ;; optimizations
     (t/is (key/optimized-for? t-a ExT))
+    )
 
-    ;; TODO: inherited validation?
+  (t/testing "inherited validation"
+    (let [inspect-v (fn [atom]
+                      (reify validator/IMapValidator
+                        (-validate-field! [this changed-key changed-value]
+                          (swap! atom conj [:field changed-key changed-value]))
+                        (-validate-map! [this m]
+                          (swap! atom conj [:map m]))))
+          base-validations (atom [])
+          derived-validations (atom [])]
+      
+      (sut/def-struct VBase [vt-a])
+      (sut/set-validator! VBase (inspect-v base-validations))
+
+      (sut/def-struct VExt :extends VBase [vt-b])
+      (sut/set-validator! VExt (inspect-v derived-validations))
+  
+      (let [valid (sut/struct-map VExt vt-a 42 vt-b 21)]
+        (t/testing "contruction checks for validity"
+          (t/is (= [[:field vt-a 42]
+                    [:map valid]]
+                   @base-validations))
+          (t/is (= [[:field vt-a 42]
+                    [:field vt-b 21]
+                    [:map valid]]
+                   @derived-validations)))
+
+        (reset! base-validations [])
+        (reset! derived-validations [])
+
+        (t/testing "modification checks for validity"
+          ;; of a base field:
+          (assoc valid vt-a :foo)
+          (t/is (= `[[:field ~vt-a :foo]
+                     [:map {~vt-a :foo, ~vt-b 21}]]
+                   @base-validations))
+          ;; Note: validator of derived struct is also called for change in base field
+          (t/is (= `[[:field ~vt-a :foo]
+                     [:map {~vt-a :foo, ~vt-b 21}]]
+                   @derived-validations))
+
+          (reset! base-validations [])
+          (reset! derived-validations [])
+
+          ;; of a derived field:
+          (assoc valid vt-b :bar)
+          (t/is (empty? @base-validations))
+          (t/is (= `[[:field ~vt-b :bar]
+                     [:map {~vt-a 42, ~vt-b :bar}]]
+                   @derived-validations)))
+
+        (reset! base-validations [])
+        (reset! derived-validations [])
+
+        (t/testing "satisfies? does not check base validity if derived struct-map"
+          ;; Note: although it is not an instance? of base, the base validity must have been checked on construction already.
+          
+          (t/is (sut/satisfies? VBase valid))
+          (t/is (empty? @base-validations))
+          )))
     )
   
   )

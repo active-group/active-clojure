@@ -291,7 +291,8 @@
 (defn **
   "Return the product of several lenses, which means that each lens is
   held over an element of a collection in the order they appear in the
-  argument list."
+  argument list.  Note that the resulting collection is a lazy sequence
+  (since it is constructed with `map`)."
   [& lenses]
   (lens mult-yank
         mult-shove
@@ -328,6 +329,36 @@
           [data v]
           (map shove
                (concat data (repeat nil)) (repeat l) v))))
+
+(defn mapl-kv
+  "Returns a lens that maps the given key-lens and val-lens over a key-value map
+  and returns a key-value map.  Note that this special lens is needed to since
+  using `mapl` together with `**` and `as-map` to achieve something similar is
+  hard, due to the fact that `**` returns a lazy list and `as-map` (or
+  rather `(into {} ...)` expects a two-element vector to be equivalent to a
+  `clojure.lang.MapEntry`).  Something like this would work, but this is way to
+  complicated and obscure:
+
+    (>> (invert as-map) (mapl (xmap vec vec))
+        (mapl (invert (invert (** key-lens value-lens) (first (seq {nil nil})))))
+        (mapl (xmap vec vec)) as-map)
+
+  Using a specialization of `**` to return vectors or even `MapEntry`s would
+  improve the above chain, but these specialized versions would only make sense
+  for mapping maps, so let's just provide that lens."
+  [key-lens val-lens]
+  (lens (fn mapl-kv-yank
+               [data]
+               (reduce-kv (fn [m k v] (assoc m
+                                             (yank k key-lens)
+                                             (yank v val-lens)))
+                          (empty data) data))
+             (fn mapl-kv-shove
+               [data shove-v]
+               (reduce-kv (fn [m k v] (assoc m
+                                             (shove nil key-lens k)
+                                             (shove nil val-lens v)))
+                          (empty data) shove-v))))
 
 (defn- at-index-shove [coll v n]
   (if (associative? coll)

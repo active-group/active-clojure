@@ -316,6 +316,12 @@
     (is (= [{:a 1} {:a 2} {:a 3}]
            (lens/shove [] l [1 2 3])))))
 
+(deftest mapl-kv
+  (let [l (lens/mapl-kv (lens/xmap name keyword) (lens/xmap inc dec))]
+    (lens-laws-hold l {:a 1 :b 2} {"a" 2, "b" 3} {"c" 22, "d" 23})
+    (is (= {"a" 2, "b" 3} (lens/yank {:a 1 :b 2} l)))
+    (is (= {:a 1 :b 2} (lens/shove {:a 1 :b 2} l {"a" 2, "b" 3})))))
+
 (deftest explicit
   (let [car (lens/lens first (fn [l v] (cons v (rest l))))]
     (is (= 'foo

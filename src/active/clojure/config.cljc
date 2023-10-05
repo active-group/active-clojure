@@ -808,6 +808,9 @@ the remainder of the lines the field holds \".\"."
   "Normalize and check the validity of a configuration object.
 
   In  the result, every setting has an associated value."
+  ([schema config]
+   (normalize&check-config-object schema [] config {} []))
+
   ([schema profile-names config]
    (normalize&check-config-object schema profile-names config {} []))
 
@@ -824,24 +827,26 @@ the remainder of the lines the field holds \".\"."
 
 (defn make-configuration
   "Make a configuration from a map."
-  [schema profile-names config-object]
-  (let [res (normalize&check-config-object schema profile-names config-object)]
-    (if (range-error? res)
-      (c/error `make-configuration
-               (str "range error at path "
-                    (vec (range-error-path res))
-                    " in configuration map: "
-                    "value "
-                    (pr-str (range-error-value res))
-                    " should be in range "
-                    (let [r (range-error-range res)]
-                      (if (range? r)
-                        (range-description r)
+  ([schema config-object]
+   (make-configuration schema [] config-object))
+  ([schema profile-names config-object]
+   (let [res (normalize&check-config-object schema profile-names config-object)]
+     (if (range-error? res)
+       (c/error `make-configuration
+                (str "range error at path "
+                     (vec (range-error-path res))
+                     " in configuration map: "
+                     "value "
+                     (pr-str (range-error-value res))
+                     " should be in range "
+                     (let [r (range-error-range res)]
+                       (if (range? r)
+                         (range-description r)
                         ;; FIXME: should look at this
-                        (pr-str r)))
-                    " but isn't")
-               res)
-      (really-make-configuration res schema))))
+                         (pr-str r)))
+                     " but isn't")
+                res)
+       (really-make-configuration res schema)))))
 
 (defn diff-setting-values
   "Returns sequence of triples `[path-vector version-1 version-2]` of settings that differ.

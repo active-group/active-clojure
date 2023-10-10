@@ -85,7 +85,12 @@ Each profile has the same format as the top-level configuration itself
   range-error?
   [range range-error-range
    path range-error-path
-   value range-error-value])
+   value range-error-value]
+  Object
+  (toString [^RangeError this]
+     (str "Range error at path " (vec (range-error-path this)) ": "
+          "value " (pr-str (range-error-value this)) " is not in range "
+          (range-description (range-error-range this)))))
 
 (defn scalar-range-reduce
   [completer]

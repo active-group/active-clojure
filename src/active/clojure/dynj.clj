@@ -27,24 +27,45 @@
                            binding clj-binding
                            with-bindings* clj-with-bindings*}))
 
+(defn- dynj-name [dynj]
+  #_(symbol (name (ns-name (:ns (meta dynj))))
+            (name (:name (meta dynj))))
+  ;; TODO: nicer
+  (str dynj))
+
 (defn ^:no-doc not-implemented [dynj]
-  (ex-info "Dynj var not implemented." {:dynj dynj :type ::not-implemented}))
+  (ex-info (str "Dynj var " (dynj-name dynj) " not implemented.") {:dynj dynj :type ::not-implemented}))
+
+(defmacro defn-dynj
+  "Declares `name` as a dynamic injection point, to be bound to an
+  implementation/value later via [[binding]], and adds a default
+  implementation. Typically you would throw a helpful exception in the
+  body."
+  [name params & body]
+  (let [[docstring params body]
+        (if (string? params)
+          [params (first body) (rest body)]
+          [nil params body])]
+    
+    `(do (defn ~name [~@params] ~body)
+         (alter-meta! (var ~name) assoc
+                      :dynamic true
+                      ::dynj true
+                      :docstring ~docstring)
+         ;; Note: adding :dynamic meta data is not enough in clojure :-/ need to call clojure.lang.Var/setDynamic.
+         (.setDynamic (var ~name))
+         (var ~name))))
 
 (defmacro declare-dynj
   "Declares `name` as a dynamic injection point, to be bound to an
   implementation/value later via [[binding]]. `params` and `docstring`
   are for documentation purposes."
   ([name params]
-   `(declare-dynj ~name nil ~params))
+   `(defn-dynj ~name ~params
+      (throw (not-implemented ~name))))
   ([name docstring params]
-   `(do (defn ~name [~@params] (throw (not-implemented ~name)))
-        (alter-meta! (var ~name) assoc
-                     :dynamic true
-                     ::dynj true
-                     :docstring ~docstring)
-        ;; Note: adding :dynamic meta data is not enough in clojure :-/ need to call clojure.lang.Var/setDynamic.
-        (.setDynamic (var ~name))
-        (var ~name))))
+   `(defn-dynj ~name ~docstring ~params
+      (throw (not-implemented ~name)))))
 
 (defn- dynj-var? [v]
   (and (var? v)

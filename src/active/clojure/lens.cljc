@@ -680,6 +680,6 @@ right-most element where they were before."}  merge
   [var-lens]
   (assert (var? var-lens))
   (lens (fn [data]
-          (yank (deref var-lens) data))
+          (yank data (deref var-lens)))
         (fn [data v]
           (shove data (deref var-lens) v))))

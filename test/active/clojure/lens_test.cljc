@@ -692,4 +692,4 @@
   (is (= 12 (lens/yank {:a 12} defer-lens)))
   (is (= {:a 23} (lens/shove {:a 12} defer-lens 23))))
 
-(def deferred-lens :a)
+(def deferred-lens (lens/member :a))

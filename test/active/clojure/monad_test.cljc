@@ -307,6 +307,14 @@
                                                    (put-state! {:x 'bar})
                                                    (return x))))))
 
+(deftest put-state-test
+  (is (= [nil 42]
+         (run-free-reader-state-exception (null-monad-command-config {} {})
+                                          (put-state! 42))))
+  (is (= [nil 42]
+         (run-monadic (null-monad-command-config {} {}) 
+                      (put-state! 42)))))
+
 (deftest null-config
   (let [c (null-monad-command-config nil nil)]
     (is (unknown-command? ((monad-command-config-run-command c)

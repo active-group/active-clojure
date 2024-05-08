@@ -426,7 +426,7 @@
                [state state]
 
                (put-state!? m)
-               [nil state]
+               [nil (put-state-state m)]
 
                :else
                (let [res (run-command run env state m)]
@@ -558,7 +558,7 @@
                [state state]
 
                (put-state!? m)
-               [nil state]
+               [nil (put-state-state m)]
 
                :else
                (let [res (run-command run env state m)]

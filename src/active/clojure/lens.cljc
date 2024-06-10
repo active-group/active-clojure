@@ -463,7 +463,8 @@ right-most element where they were before."}  merge
   sequence of tuples, of a lens on the new value and lens over the
   'outer' value the lens is used on.
 
-  Example:
+  The optional `empty` will default to `nil`, so you can nil-pun your
+  way to blissful oblivion:
 ```
   (projection {(at-index 0) :a
                (at-index 1) :b})

@@ -457,6 +457,21 @@ right-most element where they were before."}  merge
     (lens (f/partial projection-yank empty fields)
           (f/partial projection-shove fields))))
 
+(defn project
+  "A lens that projects multiple derived values into a new value,
+  with an optional `empty` being an initial new value, and `fields` a map or
+  sequence of tuples, of a lens on the new value and lens over the
+  'outer' value the lens is used on.
+
+  Example:
+```
+  (projection {(at-index 0) :a
+               (at-index 1) :b})
+```
+  "
+  [fields & [empty]]
+  (projection empty fields))
+
 (let [invert-yank (fn invert-yank [l empty data]
                     (shove empty l data))
       invert-shove (fn invert-shove [l _data v]

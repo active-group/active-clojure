@@ -1,0 +1,6 @@
+{:linters {:monad/empty {:level :error}}
+ :hooks {:analyze-call {active.clojure.monad/monadic hooks.monad/monadic
+                        active.clojure.cljs.record/define-record-type hooks.record/define-record-type
+                        active.clojure.cljs.record/define-singleton-type hooks.record/define-singleton-type
+                        active.clojure.record/define-record-type hooks.record/define-record-type
+                        active.clojure.record/define-singleton-type hooks.record/define-singleton-type}}}

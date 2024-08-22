@@ -213,7 +213,10 @@
     #_(is (= nil
            (lens/shove 13 l 42)))
     (is (= 13
-           (lens/shove 42 l 13)))))
+           (lens/shove 42 l 13)))
+    ;; reacl-c apps sometimes rely on this behaviour
+    (is (= nil
+           (lens/shove nil l 42)))))
 
 ;; [1] J. Nathan Foster, Michael B. Greenwald, Jonathan T. Moore,
 ;; Benjamin C. Pierce, and Alan Schmitt. “Combinators for

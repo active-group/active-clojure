@@ -159,11 +159,17 @@
           id)
       (lens comb-yank comb-shove (mapv lift-lens non-trivial-lenses)))))
 
-(defn- default-yank [data dflt]
+(defn- default-yank [dflt data]
   (if (nil? data) dflt data))
 
-(defn- default-shove [v dflt]
-  (if (= dflt v) nil v))
+(defn- default-shove [dflt large small]
+  (if (= large nil)
+    (if (= dflt small)
+      ;; put default in and what's there is already nil => keep nil
+      nil
+      ;; put default in and what's there is not nil => shove in the default
+      small)
+    small))
 
 (defn default
   "Returns a lens that shows nil as the given default value, but does
@@ -171,7 +177,8 @@
   the underlying data from `Maybe a` to `a` and thus you must not
   shove `nil` into it."
   [dflt]
-  (xmap default-yank default-shove dflt))
+  (lens (f/partial default-yank dflt)
+        (f/partial default-shove dflt)))
 
 (defn- consx [v coll]
   (if (and (nil? v) (empty? coll))

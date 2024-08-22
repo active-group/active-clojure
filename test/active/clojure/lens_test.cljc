@@ -201,18 +201,16 @@
 (deftest default
   (let [l (lens/default 42)]
     (lens-laws-hold l nil 3 7)
-
-    ;; default is not a "very well behaved" lens [1]
-    #_(lens-laws-hold l 42 3 7)
-    ;; but it's probably "well behaved" [1]
-    (law-1-holds l nil 3)
-    (law-2-holds l nil)
+    (lens-laws-hold l 42 3 7)
 
     (is (= 42
            (lens/yank nil l)))
     (is (= 13
            (lens/yank 13 l)))
-    (is (= nil
+    (is (= 42
+           (lens/shove 13 l 42)))
+    ;; This used to be the case, but this violates the lens laws:
+    #_(is (= nil
            (lens/shove 13 l 42)))
     (is (= 13
            (lens/shove 42 l 13)))))

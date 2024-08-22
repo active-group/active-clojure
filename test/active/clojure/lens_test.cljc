@@ -198,8 +198,8 @@
   (is (vector? (lens/shove [13 0] (lens/at-index 1) 42)))
   (is (list? (lens/shove '(13 0) (lens/at-index 0) 42))))
 
-(deftest default
-  (let [l (lens/default 42)]
+(deftest or-else
+  (let [l (lens/or-else 42)]
     (lens-laws-hold l nil 3 7)
     (lens-laws-hold l 42 3 7)
 
@@ -209,12 +209,23 @@
            (lens/yank 13 l)))
     (is (= 42
            (lens/shove 13 l 42)))
-    ;; This used to be the case, but this violates the lens laws:
-    #_(is (= nil
-           (lens/shove 13 l 42)))
     (is (= 13
            (lens/shove 42 l 13)))
-    ;; reacl-c apps sometimes rely on this behaviour
+    (is (= nil
+           (lens/shove nil l 42)))))
+
+(deftest default
+  (let [l (lens/default 42)]
+    (lens-laws-hold l nil 3 7)
+    ;; violated:
+    #_(lens-laws-hold l 42 3 7)
+
+    (is (= 42
+           (lens/yank nil l)))
+    (is (= 13
+           (lens/yank 13 l)))
+    (is (= nil
+           (lens/shove 13 l 42)))
     (is (= nil
            (lens/shove nil l 42)))))
 
@@ -304,7 +315,7 @@
     (lens-laws-hold l [[4 3 2 1 0] {1 "a" 42 "b"} nil] [1 2 3] [4 5 'dflt])
     (is (= [2 "b" 'dflt]
            (lens/yank [[4 3 2 1 0] {1 "a" 42 "b"} nil] l)))
-    (is (= [[4 3 nil 1 0] {1 "a" 42 42} 'dflt]
+    (is (= [[4 3 nil 1 0] {1 "a" 42 42} nil]
            (lens/shove [[4 3 2 1 0] {1 "a" 42 "b"} 'dflt] l [nil 42 'dflt])))))
 
 (deftest mapl

@@ -159,23 +159,37 @@
           id)
       (lens comb-yank comb-shove (mapv lift-lens non-trivial-lenses)))))
 
-(defn- default-yank [dflt data]
+(defn- or-else-yank [dflt data]
   (if (nil? data) dflt data))
 
+(defn- or-else-shove [dflt large small]
+  (if (and (nil? large)
+           (= dflt small))
+    nil
+    small))
+
+(defn or-else
+  "Returns a well-behaved lens that shows nil as the given default
+  value, but does not change any other value. Note that this lens
+  changed the type of the underlying data from `Maybe a` to `a` and
+  thus you must not shove `nil` into it."
+  [dflt]
+  (lens (f/partial or-else-yank dflt)
+        (f/partial or-else-shove dflt)))
+
+(def ^:private default-yank or-else-yank)
+
 (defn- default-shove [dflt large small]
-  (if (= large nil)
-    (if (= dflt small)
-      ;; put default in and what's there is already nil => keep nil
-      nil
-      ;; put default in and what's there is not nil => shove in the default
-      small)
+  (if (= dflt small)
+    nil
     small))
 
 (defn default
   "Returns a lens that shows nil as the given default value, but does
   not change any other value. Note that this lens changed the type of
   the underlying data from `Maybe a` to `a` and thus you must not
-  shove `nil` into it."
+  shove `nil` into it. Not well-behaved. Take to `or-else` for a
+  well-behaved version."
   [dflt]
   (lens (f/partial default-yank dflt)
         (f/partial default-shove dflt)))

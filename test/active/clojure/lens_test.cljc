@@ -301,7 +301,7 @@
     (lens-laws-hold l [[4 3 2 1 0] {1 "a" 42 "b"} nil] [1 2 3] [4 5 'dflt])
     (is (= [2 "b" 'dflt]
            (lens/yank [[4 3 2 1 0] {1 "a" 42 "b"} nil] l)))
-    (is (= [[4 3 nil 1 0] {1 "a" 42 42} nil]
+    (is (= [[4 3 nil 1 0] {1 "a" 42 42} 'dflt]
            (lens/shove [[4 3 2 1 0] {1 "a" 42 "b"} 'dflt] l [nil 42 'dflt])))))
 
 (deftest mapl

@@ -315,6 +315,10 @@
       (lens/lens (f/partial p-yank constructor lenses)
                  (f/partial p-shove field-lenses lenses)))))
 
+(defn options-projection-lens-constructor [opts]
+  (or (:projection-lens-constructor opts)
+      (:projection-lens opts)))
+
 #?(:clj
    (defn emit-own-record-definition [type options constructor constructor-args predicate field-tuples opt+specs]
 
@@ -329,7 +333,7 @@
 
 
        `(do
-          ~(when-let [projection-lens (:projection-lens options)]
+          ~(when-let [projection-lens (options-projection-lens-constructor options)]
              `(declare ~projection-lens))
           (declare ~@(map second field-tuples))
 
@@ -359,6 +363,6 @@
           ~(define-type-function type rtd-symbol predicate constructor constructor-args field-tuples)
 
           ;; Projection lens
-          ~(when-let [projection-lens (:projection-lens options)]
+          ~(when-let [projection-lens (options-projection-lens-constructor options)]
              `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
                 (into-record-projection-lens ~constructor ~@(mapv second field-tuples))))))))

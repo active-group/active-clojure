@@ -345,7 +345,7 @@
            meta-data (meta type)]
        (validate-fields "defrecord" type fields)
        `(do
-          ~(when-let [projection-lens (:projection-lens options)]
+          ~(when-let [projection-lens (r-help/options-projection-lens-constructor options)]
              `(declare ~projection-lens))
           ;; direct use of `defrecord` - to be replaced in the future
           ;; (defrecord ~type ~fields ~@opt+specs)
@@ -398,7 +398,7 @@
                       :ret ~spec-name))))
 
           ;; Projection lens
-          ~(when-let [projection-lens (:projection-lens options)]
+          ~(when-let [projection-lens (r-help/options-projection-lens-constructor options)]
            `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
               (r-help/into-record-projection-lens ~constructor ~@(mapv second field-triples))))
           ~r))))

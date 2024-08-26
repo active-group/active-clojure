@@ -326,7 +326,7 @@
         constructor-args-set (set constructor-args)
         meta-data            (meta type)]
      `(do
-        ~(when-let [projection-lens (:projection-lens options)]
+        ~(when-let [projection-lens (r-help/options-projection-lens-constructor options)]
            `(declare ~projection-lens))
         ;; This block is copy pasted from the original defrecord implementation & slightly altered
         (declare ~@(map (fn [[?field ?accessor ?lens]] ?accessor) field-tuples))
@@ -389,6 +389,6 @@
                                                 field-tuples)))))))
 
         ;; Projection lens
-        ~(when-let [projection-lens (:projection-lens options)]
+        ~(when-let [projection-lens (r-help/options-projection-lens-constructor options)]
            `(def ~(vary-meta (symbol projection-lens) (fn [m] (merge meta-data m)))
               (r-help/into-record-projection-lens ~constructor ~@(mapv second field-tuples)))))))

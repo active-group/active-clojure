@@ -230,13 +230,13 @@ is also retrievable via `(meta #'MyRecord)`.
 
 #### Projection lens
 
-You can provide a binding name to the option key `:projection-lens` to create a
-[[active.clojure.lens/record-lens]] for the record that is bound to the supplied
+You can provide a binding name to the option key `:projection-lens-constructor` to create a
+[[active.clojure.lens/record-lens]] constructor for the record that is bound to the supplied
 binding name.  For example:
 
 ```
 (define-record-type Pare
-  {:projection-lens pare-lens}
+  {:projection-lens-constructor pare-lens}
   kons
   pare?
   [a kar

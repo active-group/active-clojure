@@ -169,10 +169,13 @@
     small))
 
 (defn or-else
-  "Returns a well-behaved lens that shows nil as the given default
-  value, but does not change any other value. Note that this lens
-  changed the type of the underlying data from `Maybe a` to `a` and
-  thus you must not shove `nil` into it."
+  "Returns a lens that replaces `nil` with `dflt` on yank, and keeps `nil`
+  if `dflt` is shoved. Other values are not modified.
+
+  Unlike [[default]], shove replaces values other than `nil` with
+  `dflt` when `dflt` is shoved, and is thus \"well-behaved\".
+
+  Do not shove `nil` with the returned lens."
   [dflt]
   (lens (f/partial or-else-yank dflt)
         (f/partial or-else-shove dflt)))
@@ -185,11 +188,13 @@
     small))
 
 (defn default
-  "Returns a lens that shows nil as the given default value, but does
-  not change any other value. Note that this lens changed the type of
-  the underlying data from `Maybe a` to `a` and thus you must not
-  shove `nil` into it. Not well-behaved. Take to `or-else` for a
-  well-behaved version."
+  "Returns a lens that replaces `nil` with `dflt` on yank, and `dflt`
+  with `nil` on shove. Other values are not modified.
+
+  Unlike [[or-else]], shove always returns `nil` when `dflt` is
+  shoved, and is thus not \"well-behaved\".
+
+  Do not shove `nil` with the returned lens."
   [dflt]
   (lens (f/partial default-yank dflt)
         (f/partial default-shove dflt)))

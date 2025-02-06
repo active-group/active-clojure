@@ -1,6 +1,9 @@
 (ns hooks.record
-  (:require [clj-kondo.hooks-api :as api]
-            [active.clojure.record-helper :as r-help]))
+  (:require [clj-kondo.hooks-api :as api]))
+
+(defn- options-projection-lens-constructor [opts]
+  (or (:projection-lens-constructor opts)
+      (:projection-lens opts)))
 
 (defn define-record-type
   [{:keys [:node]}]
@@ -21,8 +24,7 @@
                 (api/list-node [(api/token-node 'declare) constructor])
                 (map (fn [t] (api/list-node [(api/token-node 'declare) t]))
                      (if-let [projection-lens (and (api/map-node? (first more))
-                                                   (r-help/options-projection-lens-constructor
-                                                    (api/sexpr (first more))))]
+                                                   (options-projection-lens-constructor (api/sexpr (first more))))]
                        (conj accessors (api/token-node projection-lens))
                        accessors))))]
   {:node new-node}))

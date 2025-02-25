@@ -12,3 +12,4 @@ pom.xml.asc
 resources/public/cljs-out
 .rebel_readline_history
 /.lsp
+node_modules/

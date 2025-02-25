@@ -7,9 +7,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: DeterminateSystems/nix-installer-action@main
-    - name: install NodeJS dependencies
-      run: nix develop -c npm install
     - name: install Clojure dependencies
       run: nix develop -c lein deps
     - name: run Clojure tests
       run: nix develop -c lein test
+    - run: PATH="$(pwd):$PATH" nix develop --impure -c lein figtest-headless

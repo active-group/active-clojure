@@ -17,6 +17,7 @@ A library with various basic utilities for programming with Clojure.
   return a meta data map. Use `(meta #'MyRecord)` instead.
 
 ### Breaking changes since version `0.28.0`
+
 - Clojure version 1.9.0 or higher and Clojurescript version 1.9.542 or higher
   are required.
 - The namespace of ClojureScript's `define-record-type` has changed from
@@ -32,7 +33,7 @@ A library with various basic utilities for programming with Clojure.
 
 ## Usage
 
-## Records
+### Records
 
 The `active.clojure.record` namespace implements a
 `define-record-type` form similar to Scheme's [SRFI

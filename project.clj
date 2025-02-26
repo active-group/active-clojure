@@ -21,16 +21,7 @@
                    :clean-targets ^{:protect false} ["resources/public/js/compiled"
                                                      "resources/public/cljs-out"
                                                      :target-path]}
-
-             :codox {:dependencies [[codox-theme-rdash "0.1.2"]]}
-
-             :cljs {:dependencies [[org.clojure/clojurescript "1.10.238"]
-                                   [cider/piggieback "0.4.0"]
-                                   [nrepl/nrepl "0.6.0"]]
-                    ;; run CLJS repl with
-                    ;; lein with-profile cljs repl
-                    ;; (cemerick.piggieback/cljs-repl (cljs.repl.rhino/repl-env))
-                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
+             :codox {:dependencies [[codox-theme-rdash "0.1.2"]]}}
 
   :aliases {"fig" ["trampoline" "with-profile" "+dev,+test" "run" "-m" "figwheel.main" "-b" "dev" "-r"]
             "figtest" ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]

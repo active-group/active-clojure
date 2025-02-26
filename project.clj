@@ -52,7 +52,7 @@
             "figtest-headless" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"run-chrome.sh\" :open-url]}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]}
 
   :plugins [[lein-cljsbuild "1.1.7"]
-            [lein-codox "0.10.7"]]
+            [lein-codox "0.10.8"]]
 
   :codox {:language :clojure
           :metadata {:doc/format :markdown}

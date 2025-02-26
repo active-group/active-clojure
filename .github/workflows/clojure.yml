@@ -6,19 +6,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: DeterminateSystems/nix-installer-action@main
+    - name: add pwd to PATH
+      run: echo "$(pwd)" >> "$GITHUB_PATH"
+    - name: install Leiningen
+      run: |
+        curl -LSs https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -o lein
+        chmod +x lein
     - name: install Clojure dependencies
-      run: nix develop -c lein deps
+      run: lein deps
     - name: run Clojure tests
-      run: nix develop -c lein test
-    - run: PATH="$(pwd):$PATH" nix develop --impure -c lein figtest-headless
+      run: lein test
+    - run: lein figtest-headless
 
   codox:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: DeterminateSystems/nix-installer-action@main
-    - run: nix develop -c lein codox
+    - name: add pwd to PATH
+      run: echo "$(pwd)" >> "$GITHUB_PATH"
+    - name: install Leiningen
+      run: |
+        curl -LSs https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -o lein
+        chmod +x lein
+    - run: lein codox
 
   notify-test-failures:
     runs-on: ubuntu-latest

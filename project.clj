@@ -11,25 +11,10 @@
 
   :generated-paths ["target"]
 
-  :cljsbuild {:builds
-              {:dev {:source-paths ["src"]
-                     :compiler {:output-to "target/main.js"
-                                :source-map "target/main.map"
-                                :optimizations :whitespace
-                                :pretty-print true}}
-               :test {:source-paths ["src" "test"]
-                      :compiler {:output-to "target/test.js"
-                                 ;; this fixes an error from doo
-                                 :output-dir "target"
-                                 :main active.clojure.test-runner
-                                 :optimizations :whitespace  ;; This is required for testing with nashorn.
-                                 :pretty-print true}}}}
-
   :profiles {;; to use figwheel-main
              ;; run `lein fig` and then open browser at
              ;; http://localhost:9500/figwheel-extra-main/auto-testing
-             :dev {:dependencies   [[lein-doo "0.1.10"]
-                                    [com.bhauman/figwheel-main "0.2.0"]
+             :dev {:dependencies   [[com.bhauman/figwheel-main "0.2.0"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]
                                     [compojure "1.6.1"]]
                    :source-paths ["src" "dev"]
@@ -51,8 +36,7 @@
             "figtest" ["run" "-m" "figwheel.main" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]
             "figtest-headless" ["run" "-m" "figwheel.main" "-fwo" "{:launch-js [\"run-chrome.sh\" :open-url]}" "-co" "test.cljs.edn" "-m" active.clojure.figwheel-test-runner]}
 
-  :plugins [[lein-cljsbuild "1.1.7"]
-            [lein-codox "0.10.8"]]
+  :plugins [[lein-codox "0.10.8"]]
 
   :codox {:language :clojure
           :metadata {:doc/format :markdown}

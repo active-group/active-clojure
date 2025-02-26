@@ -33,7 +33,7 @@ jobs:
   notify-test-failures:
     runs-on: ubuntu-latest
     needs: [test, codox]
-    if: failure()
+    if: failure() && github.ref == 'refs/heads/main'
     steps:
       - env:
           SECRET: ${{ secrets.MATTERMOST_WEBHOOK_URL }}

@@ -6,9 +6,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: ./.github/actions/install-leiningen
     - name: install Clojure dependencies
-      run: nix develop -c lein deps
+      run: lein deps
     - name: run Clojure tests
-      run: nix develop -c lein test
-    - run: PATH="$(pwd):$PATH" nix develop --impure -c lein figtest-headless
+      run: lein test
+    - run: lein figtest-headless
+
+  codox:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/install-leiningen
+    - run: lein codox
+
+  notify-test-failures:
+    runs-on: ubuntu-latest
+    needs: [test, codox]
+    if: failure() && github.ref == 'refs/heads/main'
+    steps:
+      - env:
+          SECRET: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          CHANNEL: "active-clojure"
+          USERNAME: "GitHub"
+        run: |
+          URL=https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}
+          curl -i --data-urlencode "payload={\"channel\":\"${CHANNEL}\", \"username\":\"${USERNAME}\",\"text\":\"Failure in tests: ${URL}\"}" ${SECRET}

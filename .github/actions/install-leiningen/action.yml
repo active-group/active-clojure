@@ -1,0 +1,12 @@
+name: "install Leiningen"
+runs:
+  using: composite
+  steps:
+    - name: add pwd to PATH
+      shell: bash
+      run: echo "$(pwd)" >> "$GITHUB_PATH"
+    - name: install Leiningen
+      shell: bash
+      run: |
+        curl -LSs https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -o lein
+        chmod +x lein

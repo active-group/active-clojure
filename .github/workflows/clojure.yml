@@ -6,12 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: add pwd to PATH
-      run: echo "$(pwd)" >> "$GITHUB_PATH"
-    - name: install Leiningen
-      run: |
-        curl -LSs https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -o lein
-        chmod +x lein
+    - uses: ./.github/actions/install-leiningen
     - name: install Clojure dependencies
       run: lein deps
     - name: run Clojure tests
@@ -22,12 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: add pwd to PATH
-      run: echo "$(pwd)" >> "$GITHUB_PATH"
-    - name: install Leiningen
-      run: |
-        curl -LSs https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein -o lein
-        chmod +x lein
+    - uses: ./.github/actions/install-leiningen
     - run: lein codox
 
   notify-test-failures:

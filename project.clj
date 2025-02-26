@@ -57,7 +57,7 @@
   :codox {:language :clojure
           :metadata {:doc/format :markdown}
           :themes [:rdash]
-          :src-dir-uri "http://github.com/active-group/active-clojure/blob/master/"
+          :src-uri "http://github.com/active-group/active-clojure/blob/main/"
           :src-linenum-anchor-prefix "L"}
 
   :global-vars {*warn-on-reflection* true})

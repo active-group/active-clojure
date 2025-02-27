@@ -355,7 +355,7 @@
 
         ;; Predicate
         (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate ?docref) meta-data)
-          (fn [x#] (instance? ~type x#)))
+          (partial instance? ~type))
 
 
         ;; Constructor

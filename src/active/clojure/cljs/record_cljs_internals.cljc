@@ -363,7 +363,7 @@
 
           ;; Predicate
           (def ~(r-help/add-meta (r-help/add-predicate-doc type predicate docref) meta-data)
-            (fn [x#] (instance? ~type x#)))
+            (partial instance? ~type))
 
           ;; Constructor
           (def ~(r-help/add-meta (r-help/add-constructor-doc constructor constructor-args type field-triples) meta-data)

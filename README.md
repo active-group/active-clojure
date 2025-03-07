@@ -1,22 +1,24 @@
 # Active Clojure
 
+## Breaking changes in recent releases
+
 A library with various basic utilities for programming with Clojure.
 
 [![Clojars Project](https://img.shields.io/clojars/v/de.active-group/active-clojure.svg)](https://clojars.org/de.active-group/active-clojure)
 [![Actions Status](https://github.com/active-group/active-clojure/workflows/ci/badge.svg)](https://github.com/active-group/active-clojure/actions)
 [![cljdoc badge](https://cljdoc.org/badge/de.active-group/active-clojure)](https://cljdoc.org/d/de.active-group/active-clojure/CURRENT)
 
-### Breaking changes in version `0.40.0`
+### `0.40.0`
 
 - `active.clojure.monad/run-monadic-swiss-army` was renamed to
   `active.clojure.monad/run-monadic`.
 
-### Breaking changes in version `0.38`
+### `0.38`
 
 - For an RTD record `MyRecord`, `(MyRecord :meta)` will no longer
   return a meta data map. Use `(meta #'MyRecord)` instead.
 
-### Breaking changes since version `0.28.0`
+### Since `0.28.0`
 
 - Clojure version 1.9.0 or higher and Clojurescript version 1.9.542 or higher
   are required.
@@ -35,9 +37,8 @@ A library with various basic utilities for programming with Clojure.
 
 ### Records
 
-The `active.clojure.record` namespace implements a
-`define-record-type` form similar to Scheme's [SRFI
-9](http://srfi.schemers.org/srfi-9/).
+The `active.clojure.record` namespace implements a `define-record-type` form
+similar to Scheme's [SRFI 9](http://srfi.schemers.org/srfi-9/).
 
 Example: A card consists of a number and a color
 
@@ -62,8 +63,6 @@ Example: A card consists of a number and a color
 (card? "3 of Hearts")
 ;; => false
 ```
-
-### Options
 
 You can provide additional options in an option-map as second argument to `define-record-type`.
 
@@ -128,42 +127,39 @@ provided for the selector functions:
 
 #### Non generative option
 
-If you provide a value (uid) to the `nongenerative` option,
-the record-creation operation is nongenerative i.e.,
-a new record type is created only if no previous call to
-`define-record-type ` was made with the uid.
-Otherwise, an error is thrown.
-If uid is `true`, a uuid is created automatically.
-If this option is not given (or value is falsy),
-the record-creation operation is generative, i.e.,
-a new record type is created even if a previous call
-to `define-record-type` was made with the same arguments.
+If you provide a value (uid) to the `nongenerative` option, the record-creation
+operation is nongenerative i.e., a new record type is created only if no
+previous call to `define-record-type ` was made with the uid. Otherwise, an
+error is thrown. If uid is `true`, a uuid is created automatically. If this
+option is not given (or value is falsy), the record-creation operation is
+generative, i.e., a new record type is created even if a previous call to
+`define-record-type` was made with the same arguments.
 
 #### Arrow constructor
 
 Default is `true`.
 
-If you provide the key:val pair `:arrow-constructor?`:`false`,
-the creation of the arrow-constructor of the `defrecord` call is omitted,
-i.e.
+If you provide the key:val pair `:arrow-constructor?`:`false`, the creation of
+the arrow constructor of the `defrecord` call is omitted, i.e.
 
 ```clojure
 (define-record-type Test {:arrow-constructor? false} (make-test a) ...)
 ```
-won't yield a function `->Test`.
+
+won't create a function `->Test`.
 
 #### Map protocol
 
 Default is `true`.
 
-If you don't want your records to implement the Map-protocols (in *Clojure*
+If you don't want your records to implement the Map protocols (in *Clojure*
 these are `java.util.Map` and `clojure.lang.IPersistentMap`, in *ClojureScript*
 `IMap` and `IAssociative`), you can provide the key:val pair
 `:map-protocol?`:`false` to the options map.
 
 #### Remove default interfaces/protocols
 
-There are a number of interfaces, that our records defaultly implement (like
+There are a number of interfaces, that our records implement by default (like
 e.g. aforementioned `java.util.Map`). Providing key:val pair
 `:remove-interfaces`:`[interface1 interface2 ...]` will prevent the
 implementations of the given interfaces.

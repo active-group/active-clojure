@@ -1,26 +1,40 @@
 (ns active.clojure.dynj
-  "Thin layer over dynamic vars for implicit dependency injection. Dynjs
-  can be used to have better control over side effects, to abstract
-  over different possible interpretations of an aspect of a program or
-  to make things easier for testing.
+  "Thin layer over dynamic vars for implicit dependency injection. *Dynjs* can be
+  used to have better control over side effects, to abstract over different
+  possible interpretations of an aspect of a program or to make things easier
+  for testing.
 
-  Main usage patterns:
+  ### Example
+
+  First we declare a *dynj* named `eff`, which expects a single argument.
 
   ```
   (declare-dynj eff [a])
+  ```
 
-  (defn foo []
+  Note that `eff` itself can already be called, but it's \"abstract\" in the
+  sense that without a bound implementation/interpreter, it cannot do anything.
+  Hence the following will throw an exception:
+
+  ```
+  (eff 2)
+  ```
+
+  Let's say `foo` is a usage site of `eff`. (Of course, calling `foo` now will
+  still throw the same exception as above.)
+
+  ```
+  (defn foo [s]
     (assert (= 4 (eff 2))))
-  
+  ```
+
+  With `binding` we can interpret `eff` as, say, a `square` function locally.
+
+  ```
   (defn square [a] (* a a))
 
-  (foo) ;; => throws exception
-  
   (binding [eff square]
-    (foo))
-
-  ((with-bindings* {#'eff square} foo))
-
+    (foo)) ;; => this works now
   ```
   "
   (:refer-clojure :rename {bound-fn* clj-bound-fn*

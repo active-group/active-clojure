@@ -370,22 +370,28 @@
   make-throwable throwable?
   [^{:doc "Throwable object"} value throwable-value])
 
+(defn ^:no-doc build-condition [base who message ?irritants]
+  (let [g (group-by (fn [thing]
+                      (or (condition? thing)
+                          #?(:cljs (instance? js/Error thing)
+                             :clj (instance? Throwable thing))))
+                    ?irritants)
+        irritants (get g false)
+        conditions (get g true)]
+    (apply combine-conditions
+           base
+           (and who (make-who-condition who))
+           (make-message-condition message)
+           (and (not-empty irritants) (make-irritants-condition irritants))
+           conditions)))
+
 #?(:clj
 (defmacro throw-condition
   "Throw a condition.
 
   For internal use."
   [?base ?who ?message ?irritants]
-  `(let [g# (group-by (fn [thing#] (or (condition? thing#) (if-cljs (instance? js/Error thing#) (instance? Throwable thing#)))) ~?irritants)
-         irritants# (get g# false)
-         conditions# (get g# true)
-         who# ~?who]
-     (throw (apply combine-conditions
-                   ~?base
-                   (and who# (make-who-condition who#))
-                   (make-message-condition ~?message)
-                   (and (not-empty irritants#) (make-irritants-condition irritants#))
-                   conditions#)))))
+  `(throw (build-condition ~?base ~?who ~?message ~?irritants))))
 
 (defn error
   "Throw an exception that signals that an error has occurred.

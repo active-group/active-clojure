@@ -160,9 +160,13 @@
   (.-rtd r))
 
 (defn record-of-type?
-  [^Record r ^RecordTypeDescriptor rtd]
+  [r ^RecordTypeDescriptor rtd]
   (and (record? r)
-       (rtd= rtd (.-rtd r))))
+       (rtd= rtd (.-rtd ^Record r))))
+
+(defn record-type-predicate [^RecordTypeDescriptor rtd]
+  (fn [x]
+    (record-of-type? x rtd)))
 
 ; assumes that ?r, ?rtd are identifiers alerady
 (defmacro record-check-rtd!

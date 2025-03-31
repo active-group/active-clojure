@@ -342,7 +342,7 @@
 
           ;; Predicate
           (def ~(add-meta (add-predicate-doc type predicate ?docref) meta-data)
-            (fn [x#] (rrun/record-of-type? x# ~rtd-symbol)))
+            (rrun/record-type-predicate ~rtd-symbol))
 
           ;; Constructor
           ;; We are defining a anonymous function for the define constructor function.

@@ -1,7 +1,10 @@
 {:linters {:monad/empty {:level :error}}
- :hooks {:analyze-call {active.clojure.monad/monadic hooks.monad/monadic
+ :hooks {:analyze-call {active.clojure.dynj/declare-dynj hooks.dynj/declare-dynj
+                        active.clojure.monad/monadic hooks.monad/monadic
                         active.clojure.cljs.record/define-record-type hooks.record/define-record-type
                         active.clojure.cljs.record/define-singleton-type hooks.record/define-singleton-type
                         active.clojure.sum-type/define-sum-type hooks.sum-type/define-sum-type
                         active.clojure.record/define-record-type hooks.record/define-record-type
-                        active.clojure.record/define-singleton-type hooks.record/define-singleton-type}}}
+                        active.clojure.record/define-singleton-type hooks.record/define-singleton-type}}
+ :lint-as {active.clojure.dynj/binding clojure.core/binding
+           active.clojure.dynj/defn-dynj clojure.core/defn}}

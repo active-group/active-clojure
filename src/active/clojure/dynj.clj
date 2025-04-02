@@ -34,7 +34,7 @@
   (defn square [a] (* a a))
 
   (binding [eff square]
-    (foo)) ;; => this works now
+    (foo 5)) ;; => this works now
   ```
   "
   (:refer-clojure :rename {bound-fn* clj-bound-fn*

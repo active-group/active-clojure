@@ -26,6 +26,15 @@
                              (foo v))))]
     (t/is (= 8 (f 4)))))
 
+(t/deftest with-bindings*-test
+  (t/is
+   (= 7
+      (sut/with-bindings*
+        ;; just "foo" doesn't work here; Var is expected
+        {#'foo (fn [x] (+ x 4))}
+        ;; expects a thunk
+        (fn [] (foo 3))))))
+
 (sut/defn-dynj bar [arg]
   (* 3 arg))
 

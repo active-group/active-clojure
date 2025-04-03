@@ -52,16 +52,15 @@
 
 (defmacro defn-dynj
   "Declares `name` as a dynamic injection point, to be bound to an
-  implementation/value later via [[binding]], and adds a default
-  implementation. Typically you would throw a helpful exception in the
-  body."
+  implementation/value later via [[binding]], and adds a default implementation.
+  Typically you would throw a helpful exception in `body`."
   [name params & body]
   (let [[docstring params body]
         (if (string? params)
           [params (first body) (rest body)]
           [nil params body])]
     
-    `(do (defn ~name [~@params] ~body)
+    `(do (defn ~name [~@params] ~@body)
          (alter-meta! (var ~name) assoc
                       :dynamic true
                       ::dynj true

@@ -25,3 +25,9 @@
             (sut/bound-fn* (fn [v]
                              (foo v))))]
     (t/is (= 8 (f 4)))))
+
+(sut/defn-dynj bar [arg]
+  (* 3 arg))
+
+(t/deftest defn-dynj-default-implementation-test
+  (t/is (= 9 (bar 3))))

@@ -44,3 +44,17 @@
 
 (t/deftest defn-dynj-default-implementation-test
   (t/is (= 9 (bar 3))))
+
+(t/deftest merge-dynjs-test
+  (let [b1 {#'foo #'inc}
+        b2 {#'bar (fn [x] (str x "foo"))}
+        bindings (dynj/merge-dynjs b1 b2)]
+    (t/is "17foo"
+          (dynj/with-bindings* bindings
+            (fn []
+              (bar (foo 16)))))
+    (dynj/merge-dynjs b1 b2))
+  (t/is
+   (thrown? AssertionError
+            (dynj/merge-dynjs {#'println (fn [s] (str s "foo"))}
+                              {#'foo #'inc}))))

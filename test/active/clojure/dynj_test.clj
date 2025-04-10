@@ -19,7 +19,7 @@
   (dynj/binding [foo (fn [x] (* x 2))]
     (t/is (= 8 @(future (foo 4))))))
 
-(t/deftest bound-fn-test
+(t/deftest bound-fn*-test
   ;; bind a function to current bindings
   (let [f (dynj/binding [foo (fn [x] (* x 2))]
             (dynj/bound-fn* (fn [v]
@@ -29,6 +29,12 @@
   (let [f (dynj/binding [foo (fn [x] (* x 2))]
             (fn [v] (foo v)))]
     (t/is (thrown? Exception (f 4)))))
+
+(t/deftest bind-fn*-test
+  (let [bindings {#'foo #'str}
+        f (fn [x] (foo (inc x)))
+        bound (dynj/bind-fn* bindings f)]
+    (t/is (= "5" (bound 4)))))
 
 (t/deftest with-bindings*-test
   (t/is

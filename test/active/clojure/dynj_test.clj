@@ -24,7 +24,11 @@
   (let [f (dynj/binding [foo (fn [x] (* x 2))]
             (dynj/bound-fn* (fn [v]
                               (foo v))))]
-    (t/is (= 8 (f 4)))))
+    (t/is (= 8 (f 4))))
+  ;; it would be "unbound" otherwise
+  (let [f (dynj/binding [foo (fn [x] (* x 2))]
+            (fn [v] (foo v)))]
+    (t/is (thrown? Exception (f 4)))))
 
 (t/deftest with-bindings*-test
   (t/is

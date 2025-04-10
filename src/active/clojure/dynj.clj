@@ -39,7 +39,8 @@
   "
   (:refer-clojure :rename {bound-fn* clj-bound-fn*
                            binding clj-binding
-                           with-bindings* clj-with-bindings*}))
+                           with-bindings* clj-with-bindings*
+                           with-bindings clj-with-bindings}))
 
 (defn- dynj-name [dynj]
   #_(symbol (name (ns-name (:ns (meta dynj))))
@@ -104,6 +105,11 @@
   [binding-map thunk]
   (assert (every? dynj-var? (keys binding-map)))
   (clj-with-bindings* binding-map thunk))
+
+(defmacro with-bindings
+  "Executes `body` using implementations defined via a map of dynj vars."
+  [binding-map & body]
+  `(with-bindings* ~binding-map (fn [] ~@body)))
 
 (defn merge-dynjs
   "Like merge, but asserts that all keys are dynj vars, and the same

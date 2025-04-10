@@ -45,6 +45,13 @@
         ;; expects a thunk
         (fn [] (foo 3))))))
 
+(t/deftest with-bindings-test
+  (t/is
+   (= 11
+      (dynj/with-bindings
+        {#'foo (fn [x] (+ x 4))}
+        (foo 7)))))
+
 (dynj/defn-dynj bar [arg]
   (* 3 arg))
 
@@ -56,9 +63,8 @@
         b2 {#'bar (fn [x] (str x "foo"))}
         bindings (dynj/merge-dynjs b1 b2)]
     (t/is "17foo"
-          (dynj/with-bindings* bindings
-            (fn []
-              (bar (foo 16)))))
+          (dynj/with-bindings bindings
+            (bar (foo 16))))
     (dynj/merge-dynjs b1 b2))
   (t/is
    (thrown? AssertionError

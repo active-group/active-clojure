@@ -231,7 +231,7 @@ You can provide a binding name to the option key `:projection-lens-constructor` 
 [[active.clojure.lens/record-lens]] constructor for the record that is bound to the supplied
 binding name.  For example:
 
-```
+```clojure
 (define-record-type Pare
   {:projection-lens-constructor pare-lens}
   kons
@@ -243,7 +243,6 @@ binding name.  For example:
       l (pare-lens (lens/>> :pare :a) (lens/>> :pare :b))]
     (= (pare "Foo" "Bar") (lens/yank data l)))
 ```
-
 
 ### Lenses
 

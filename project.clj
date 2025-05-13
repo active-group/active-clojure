@@ -11,10 +11,7 @@
 
   :generated-paths ["target"]
 
-  :profiles {;; to use figwheel-main
-             ;; run `lein fig` and then open browser at
-             ;; http://localhost:9500/figwheel-extra-main/auto-testing
-             :dev {:dependencies   [[com.bhauman/figwheel-main "0.2.0"]
+  :profiles {:dev {:dependencies   [[com.bhauman/figwheel-main "0.2.0"]
                                     [com.bhauman/rebel-readline-cljs "0.1.4"]
                                     [compojure "1.6.1"]]
                    :source-paths ["src" "dev"]

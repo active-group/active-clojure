@@ -509,19 +509,14 @@ our custom validation specifying the legal port range.
 
 ### Testing
 
-The Clojure tests can be executed via
-
-    lein test
-
-For *auto-testing* the ClojureScript code, we use [figwheel-main](https://github.com/bhauman/figwheel-main). In a terminal, do
-
-    lein fig
-
-which starts a CLJS REPL. Opening
-
-    http://localhost:9500/figwheel-extra-main/auto-testing
-
-in a browser window will then run the tests and display the results. After every code change, it will automatically reload and re-run the tests, notifying you via the browser of the result.
+The Clojure tests can be executed with `lein test`. For *auto-testing* the
+ClojureScript code, we use
+[figwheel-main](https://github.com/bhauman/figwheel-main). In a terminal, run
+`lein fig`, which then starts a CLJS REPL. Opening
+http://localhost:9500/figwheel-extra-main/auto-testing in a browser window will
+then run the tests and display the results. After every code change, it will
+automatically reload and re-run the tests, notifying you via the browser of the
+result.
 
 ## License
 

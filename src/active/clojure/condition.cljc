@@ -16,17 +16,13 @@
   One notable difference to the R6RS design is that there is no user-facing type for
   'simple conditions', nor are they regular records."
   (:refer-clojure :exclude (assert))
-  #?(:clj (:require [clojure.core :as core] ; get assert back
-                    [clojure.stacktrace :as stack]
-                    [clojure.main :as main]))
+  #?(:clj (:require [clojure.core :as core]))
   #?(:clj (:require [io.aviso.exception :as aviso-exception]
                     [io.aviso.columns :as aviso-columns]
-                    [io.aviso.ansi :as aviso-ansi]
                     [clojure.string :as string]
                     [active.clojure.macro :refer (if-cljs)]))
-  #?(:cljs (:require-macros [active.clojure.condition 
+  #?(:cljs (:require-macros [active.clojure.condition
                              :refer (define-condition-type assert condition raise guard throw-condition)]
-                            [active.clojure.macro :refer (if-cljs)]
                             [cljs.core :as core]))
   #?(:clj (:import clojure.lang.ExceptionInfo)))
 
@@ -90,11 +86,6 @@
   (.write w ": ")
   (print-method (:arguments cc) w)))
 
-(defn- condition-component?
-  "Is object a condition component?"
-  [x]
-  (instance? ConditionComponent x))
-
 (defn- condition-subtype?
   "Is `ty1` subtype of `ty2`?"
   [ty1 ty2]
@@ -135,7 +126,7 @@
   "Get a suitable argument for [[&who]] from an exception object."
   [st]
   ;; the top is the let, above that it's stack-trace-who itself
-  (if-let [^StackTraceElement e (nth st 2)]
+  (when-let [^StackTraceElement e (nth st 2)]
     (let [class (.getClassName e)
           method (.getMethodName e)]
       ;; adapted from clojure.stacktrace
@@ -292,8 +283,7 @@
                       (str " (" doc ")")
                       ""))
         reference (fn [name]
-                    (str "[[" (ns-name *ns*) "/" name "]]"))
-        ?docref (str "See " (reference ?condition-type) ".")]
+                    (str "[[" (ns-name *ns*) "/" name "]]"))]
     `(do
        (let [total-field-count# (+ ~(count ?field-pairs) (:total-field-count ~?supertype))]
          (def ~(vary-meta ?condition-type
@@ -326,7 +316,7 @@
 
 ; These standard condition types correspond directly to R6RS Scheme
 
-(define-condition-type ^{:doc "Human-reaable message."} &message &condition
+(define-condition-type ^{:doc "Human-readable message."} &message &condition
   make-message-condition message-condition?
   [^{:doc "message text"} message condition-message])
 
@@ -576,7 +566,7 @@
     (aviso-columns/write-rows writer [:formatted-name
                                       "  "
                                       :file
-                                      [#(if (:line %) ": ") :left 2]
+                                      [#(when (:line %) ": ") :left 2]
                                       #(-> % :line str)]
                               elements))))
 

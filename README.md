@@ -294,11 +294,11 @@ You can even combine lenses to update records inside records:
 ```clojure
 (r/define-record-type Address
   make-address
-  adress?
+  address?
   [street address-street
    number address-number
    city address-city
-   postalcode address-postalcode])
+   postal-code address-postal-code])
 
 (def mustermann (make-person "Max Mustermann" 35
                              (make-address "Hechinger Strasse" "12/1"

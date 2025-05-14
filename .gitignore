@@ -2,7 +2,6 @@
 *.jar
 *~
 .rebel_readline_history
-/.clj-kondo
 /.cljs_rhino_repl
 /.lein-*
 /.lsp

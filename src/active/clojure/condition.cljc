@@ -5,7 +5,7 @@
   A condition object provides information about the cause of an exception.
   Conditions thus form a protocol.
 
-  Clojure `ex-info` objects do not, by themselves, enough to form such
+  Clojure `ex-info` objects do not, by themselves, do enough to form such
   a protocol, as they do not allow classifying an exception easily.
 
   This condition system builds on the design of
@@ -16,14 +16,13 @@
   One notable difference to the R6RS design is that there is no user-facing type for
   'simple conditions', nor are they regular records."
   (:refer-clojure :exclude (assert))
-  #?(:clj (:require [clojure.core :as core]))
   #?(:clj (:require [io.aviso.exception :as aviso-exception]
                     [io.aviso.columns :as aviso-columns]
                     [clojure.string :as string]
-                    [active.clojure.macro :refer (if-cljs)]))
-  #?(:cljs (:require-macros [active.clojure.condition
-                             :refer (define-condition-type assert condition raise guard throw-condition)]
-                            [cljs.core :as core]))
+                    [clojure.core :as core]
+                    [active.clojure.macro :refer [if-cljs]])
+     :cljs (:require [active.clojure.condition :refer-macros [define-condition-type throw-condition]]
+                     [cljs.core :as core]))
   #?(:clj (:import clojure.lang.ExceptionInfo)))
 
 (defn condition?
@@ -233,7 +232,7 @@
   "    (define-condition-type <condition-type>
         <supertype>
         <constructor> <predicate>
-        [<field> <accessor> ...)
+        [<field> <accessor> ...])
 
   `<Condition-type>`, `<supertype>`, `<constructor>`, and
   `<predicate>` must all be identifiers. Each `<field>` and `<accessor>`
@@ -459,7 +458,7 @@
   `(throw (condition ~?base ~?message ~@?irritants))))
 
 #?(:cljs
-(def Throwable js/Object))
+   (def Throwable js/Object))
 
 #?(:clj
 (defmacro guard

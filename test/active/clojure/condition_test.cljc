@@ -81,20 +81,20 @@
          (c2-b v5))))
 
 (deftest condition-types
-  (map
-   #(let [e ((first %1))]
-      (is ((second %1) e))
-      (try (throw e)
-           (catch Throwable caught
-             (is (= e caught)))))
-   [[c/make-message-condition c/message-condition?]
-    [c/make-warning c/warning?]
-    [c/make-serious-condition c/serious-condition?]
-    [c/make-error c/error?]
-    [c/make-violation c/violation?]
-    [c/make-assertion-violation c/assertion-violation?]
-    [c/make-irritants-condition c/irritants-condition?]
-    [c/make-who-condition c/who-condition?]]))
+  (mapv
+   (fn [[e pred?]]
+     (is (pred? e))
+     (try (throw e)
+          (catch Throwable caught
+            (is (= e caught)))))
+   [[(c/make-message-condition "the message") c/message-condition?]
+    [(c/make-warning) c/warning?]
+    [(c/make-serious-condition) c/serious-condition?]
+    [(c/make-error) c/error?]
+    [(c/make-violation) c/violation?]
+    [(c/make-assertion-violation) c/assertion-violation?]
+    [(c/make-irritants-condition ["eins" "zwei"]) c/irritants-condition?]
+    [(c/make-who-condition "them") c/who-condition?]]))
 
 (deftest guard-test
   (is (= :error

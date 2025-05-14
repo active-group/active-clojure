@@ -3,7 +3,7 @@
 
 (defn declare-dynj
   [{:keys [node]}]
-  (let [[name second & more] (rest (:children node))
+  (let [[name _second & _more] (rest (:children node))
         new-node (api/list-node
                   (list (api/token-node 'do)
                         (api/list-node [(api/token-node 'declare) name])))]

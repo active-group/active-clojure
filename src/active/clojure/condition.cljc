@@ -353,7 +353,7 @@
   ;; any of these can be nil
   [^{:doc "namespace of the location"} namespace location-condition-namespace
    ^{:doc "file name of the location"} file location-condition-file
-   ^{:doc "line number of the loocation"} line location-condition-line])
+   ^{:doc "line number of the location"} line location-condition-line])
 
 (define-condition-type
   ^{:doc "Throwable value that's not a condition."} &throwable &serious

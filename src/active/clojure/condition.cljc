@@ -515,19 +515,19 @@
   [con]
   ;; adapted from Scheme 48
   (let [type (cond
-              (error? con) :error
-              (assertion-violation? con) :assertion-violation
-              (violation? con) :violation
-              (serious-condition? con) :serious
-              :else 'unknown)
+               (error? con) :error
+               (assertion-violation? con) :assertion-violation
+               (violation? con) :violation
+               (serious-condition? con) :serious
+               :else 'unknown)
 
-	who (and (who-condition? con)
+        who (and (who-condition? con)
                  (condition-who con))
 
-	message (and (message-condition? con)
+        message (and (message-condition? con)
                      (condition-message con))
 
-	stuff (if (irritants-condition? con)
+        stuff (if (irritants-condition? con)
                 (condition-irritants con)
                 [])
 
@@ -539,7 +539,7 @@
                     (delete-first
                      (partial condition-component-of-condition-type? &message)
                      (delete-first
-                     (partial condition-component-of-condition-type? &who)
+                      (partial condition-component-of-condition-type? &who)
                       (delete-first
                        (partial condition-component-of-condition-type? &irritants)
                        (condition-components con)))))]

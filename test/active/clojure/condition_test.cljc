@@ -1,7 +1,7 @@
 (ns active.clojure.condition-test
-  #?(:clj (:require [clojure.test :refer [deftest is]]
+  #?(:clj (:require [clojure.test :refer [deftest is testing]]
                     [active.clojure.condition :as c])
-     :cljs (:require [cljs.test :refer-macros [is deftest]]
+     :cljs (:require [cljs.test :refer-macros [is deftest testing]]
                      [active.clojure.condition :as c :include-macros true])))
 
 #?(:cljs
@@ -81,36 +81,46 @@
          (c2-b v5))))
 
 (deftest condition-types
-  (mapv
-   (fn [[e pred?]]
-     (is (pred? e))
-     (try (throw e)
-          (catch Throwable caught
-            (is (= e caught)))))
-   [[(c/make-message-condition "the message") c/message-condition?]
-    [(c/make-warning) c/warning?]
-    [(c/make-serious-condition) c/serious-condition?]
-    [(c/make-error) c/error?]
-    [(c/make-violation) c/violation?]
-    [(c/make-assertion-violation) c/assertion-violation?]
-    [(c/make-irritants-condition ["eins" "zwei"]) c/irritants-condition?]
-    [(c/make-who-condition "them") c/who-condition?]]))
+  (testing "condition types are recognized by their respective predicates"
+    (mapv
+     (fn [[e pred?]]
+       (is (pred? e))
+       (try (throw e)
+            (catch Throwable caught
+              (is (= e caught)))))
+     [[(c/make-message-condition "the message") c/message-condition?]
+      [(c/make-warning) c/warning?]
+      [(c/make-serious-condition) c/serious-condition?]
+      [(c/make-error) c/error?]
+      [(c/make-violation) c/violation?]
+      [(c/make-assertion-violation) c/assertion-violation?]
+      [(c/make-irritants-condition ["eins" "zwei"]) c/irritants-condition?]
+      [(c/make-who-condition "them") c/who-condition?]])))
 
 (deftest guard-test
-  (is (= :error
+  (testing "can guard against conditions"
+    (is (= :error
+           (c/guard [con
+                     (c/error? con) :error
+                     (c/violation? con) :violation]
+                    (throw (c/make-error))))))
+  (testing "unguarded conditions bubble up"
+    (is (thrown? Throwable
+                 (c/guard [con
+                           (c/error? con) :error]
+                          (throw (c/make-violation))))))
+  (testing ":else guards against unspecified conditions"
+    (is (= :something-else
+           (c/guard [con
+                     (c/violation? con) :violation
+                     :else :something-else]
+                    (throw (c/make-error))))))
+  (testing "can use the binding in consequent"
+    (is (c/message-condition?
          (c/guard [con
-                 (c/error? con) :error
-                 (c/violation? con) :violation]
-                (throw (c/make-error)))))
-  (is (thrown? Throwable
-               (c/guard [con
-                       (c/error? con) :error]
-                      (throw (c/make-violation)))))
-  (is (= :something-else
-         (c/guard [con
-                 (c/violation? con) :violation
-                 :else :something-else]
-                 (throw (c/make-error))))))
+                   (c/message-condition? con) con
+                   :else :something-else]
+                  (throw (c/make-message-condition "the msg")))))))
 
 #?(:clj
 (deftest java-throwables

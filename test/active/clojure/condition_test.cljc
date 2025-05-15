@@ -2,7 +2,7 @@
   #?(:clj (:require [clojure.test :refer [deftest is testing]]
                     [active.clojure.condition :as c])
      :cljs (:require [cljs.test :refer-macros [is deftest testing]]
-                     [active.clojure.condition :as c :include-macros true])))
+                     [active.clojure.condition :as c :include-macros true :refer [Throwable]])))
 
 #?(:cljs
 (enable-console-print!))

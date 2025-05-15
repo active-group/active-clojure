@@ -21,8 +21,8 @@
                     [clojure.string :as string]
                     [clojure.core :as core]
                     [active.clojure.macro :refer [if-cljs]])
-     :cljs (:require [active.clojure.condition :refer-macros [define-condition-type throw-condition]]
-                     [cljs.core :as core]))
+     :cljs (:require-macros [active.clojure.condition :refer [define-condition-type throw-condition]]
+                            [cljs.core :as core]))
   #?(:clj (:import clojure.lang.ExceptionInfo)))
 
 (defn condition?
@@ -227,7 +227,6 @@
         (nth (:arguments comp) i)
         (throw (new Error (str cond " is not a condition of type " type)))))))
 
-#?(:clj
 (defmacro define-condition-type
   "    (define-condition-type <condition-type>
         <supertype>
@@ -278,9 +277,9 @@
                                                  m
                                                  (assoc m :arglists `'(~arglist)))))))
         name-doc (fn [field]
-                    (if-let [doc (:doc (meta field))]
-                      (str " (" doc ")")
-                      ""))
+                   (if-let [doc (:doc (meta field))]
+                     (str " (" doc ")")
+                     ""))
         reference (fn [name]
                     (str "[[" (ns-name *ns*) "/" name "]]"))]
     `(do
@@ -311,7 +310,7 @@
                                                 (str "Access the `" ?field-name "`" (name-doc ?field-name)
                                                      " field from a " (reference ?condition-type) " condition."))
                      (condition-accessor ~?condition-type '~?field-name)))
-                ?field-pairs))))))
+                ?field-pairs)))))
 
 ; These standard condition types correspond directly to R6RS Scheme
 
@@ -374,13 +373,12 @@
            (and (not-empty irritants) (make-irritants-condition irritants))
            conditions)))
 
-#?(:clj
 (defmacro throw-condition
   "Throw a condition.
 
   For internal use."
   [?base ?who ?message ?irritants]
-  `(throw (build-condition ~?base ~?who ~?message ~?irritants))))
+  `(throw (build-condition ~?base ~?who ~?message ~?irritants)))
 
 (defn error
   "Throw an exception that signals that an error has occurred.
@@ -410,57 +408,53 @@
   [who message & irritants]
   (throw-condition (make-assertion-violation) who message irritants))
 
-#?(:clj
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."
   ([x]
-     (when *assert*
-       (let [?ns (str *ns*)
-             ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
-             ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
-             ?line  (:line (meta &form))]
-         `(when-not ~x
-            (assertion-violation (if-cljs
+   (when *assert*
+     (let [?ns (str *ns*)
+           ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
+           ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
+           ?line  (:line (meta &form))]
+       `(when-not ~x
+          (assertion-violation (if-cljs
                                    nil
                                    (stack-trace-who (.getStackTrace (Thread/currentThread))))
-                                 (str "Assertion failed")
-                                 (make-location-condition '~?ns ~?file ~?line)
-                                 '~x)))))
+                               (str "Assertion failed")
+                               (make-location-condition '~?ns ~?file ~?line)
+                               '~x)))))
   ([x message]
-     (when *assert*
-       (let [?ns (str *ns*)
-             ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
-             ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
-             ?line  (:line (meta &form))]
-         `(when-not ~x
-            (assertion-violation (if-cljs
-                                  nil
-                                  (stack-trace-who (.getStackTrace (Thread/currentThread))))
-                                 (str "Assert failed: " ~message)
-                                 (make-location-condition '~?ns ~?file ~?line)
-                                 '~x)))))))
+   (when *assert*
+     (let [?ns (str *ns*)
+           ?file  (let [f *file*] (when (not= f "NO_SOURCE_PATH") f))
+           ;; TODO Waiting on http://dev.clojure.org/jira/browse/CLJ-865:
+           ?line  (:line (meta &form))]
+       `(when-not ~x
+          (assertion-violation (if-cljs
+                                   nil
+                                   (stack-trace-who (.getStackTrace (Thread/currentThread))))
+                               (str "Assert failed: " ~message)
+                               (make-location-condition '~?ns ~?file ~?line)
+                               '~x))))))
 
 
-#?(:clj
 (defmacro condition
   [?base ?message & ?irritants]
   `(combine-conditions ~?base
                        (if-cljs
-                        nil
-                        (make-who-condition (stack-trace-who (.getStackTrace (Thread/currentThread)))))
+                           nil
+                           (make-who-condition (stack-trace-who (.getStackTrace (Thread/currentThread)))))
                        (make-message-condition ~?message)
-                       (make-irritants-condition [~@?irritants]))))
+                       (make-irritants-condition [~@?irritants])))
 
-#?(:clj
 (defmacro raise
   [?base ?message & ?irritants]
-  `(throw (condition ~?base ~?message ~@?irritants))))
+  `(throw (condition ~?base ~?message ~@?irritants)))
 
 #?(:cljs
    (def Throwable js/Object))
 
-#?(:clj
 (defmacro guard
   "Guard against specific conditions (with an optional default case), similar
   to `catch`.
@@ -481,13 +475,13 @@
   (let [?id (first ?handling)]
     `(try
        ~@?body
-       ; If Throwable is not a symbol it means java.lang.Throwable which does not work in ClojureScript.
+                                        ; If Throwable is not a symbol it means java.lang.Throwable which does not work in ClojureScript.
        (catch ~'Throwable ~?id
          (cond
-          ~@(rest ?handling)
-          ~@(if (= :else (last (butlast ?handling)))
-              `()
-              `(:else (throw ~?id)))))))))
+           ~@(rest ?handling)
+           ~@(if (= :else (last (butlast ?handling)))
+               `()
+               `(:else (throw ~?id))))))))
 
 (defn delete-first
   [pred? l]

@@ -1,5 +1,6 @@
 {:linters {:monad/empty {:level :error}}
  :hooks {:analyze-call {active.clojure.condition/define-condition-type hooks.condition/define-condition-type
+                        active.clojure.condition/guard hooks.condition/guard
                         active.clojure.dynj/declare-dynj hooks.dynj/declare-dynj
                         active.clojure.monad/monadic hooks.monad/monadic
                         active.clojure.cljs.record/define-record-type hooks.record/define-record-type

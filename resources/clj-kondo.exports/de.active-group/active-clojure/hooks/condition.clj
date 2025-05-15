@@ -20,9 +20,13 @@
         [condition & clauses] (:children condition+clauses)]
     {:node
      (api/list-node
-      [(api/token-node 'let)
-       (api/vector-node [condition (api/token-node 'nil)])
+      (list*
+       (api/token-node 'do)
        (api/list-node
-        (list*
-         (api/token-node 'do)
-         (concat clauses body)))])}))
+        [(api/token-node 'let)
+         (api/vector-node [condition (api/token-node 'nil)])
+         (api/list-node
+          (list*
+           (api/token-node 'do)
+           clauses))])
+       body))}))

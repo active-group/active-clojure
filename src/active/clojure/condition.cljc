@@ -462,6 +462,17 @@
 
 #?(:clj
 (defmacro guard
+  "Guard against specific conditions (with an optional default case), similar
+  to `catch`.
+
+  Example usage:
+
+      (guard [the-condition
+              (c/error? the-condition) :foo
+              (my-condition? the-condition) :my-own
+              :else :bar]
+             (do-something-that-might-throw-a-condition))
+  "
   [?handling & ?body]
   (when-not (vector? ?handling)
     (throw (IllegalArgumentException. (str "guard requires vector in " *ns* " " (meta &form)))))

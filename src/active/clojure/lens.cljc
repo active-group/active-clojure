@@ -287,7 +287,7 @@
         key
         not-found))
 
-(def ^{:doc "A trivial lens that just shows nil over anything, and does never change anything."}
+(def ^{:doc "A trivial lens (NOT well-behaved) that just shows nil over anything, and does never change anything."}
   void
   (lens (constantly nil) (fn [data _] data)))
 

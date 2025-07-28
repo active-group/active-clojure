@@ -567,12 +567,13 @@
 (defn print-stack-trace-of
   [writer exception]
   (let [elements (map preformat-stack-frame (aviso-exception/expand-stack-trace exception))]
-    (aviso-columns/write-rows writer [:formatted-name
-                                      "  "
-                                      :file
-                                      [#(when (:line %) ": ") :left 2]
-                                      #(-> % :line str)]
-                              elements))))
+    (binding [*out* writer]
+      (aviso-columns/write-rows  [:formatted-name
+                                  "  "
+                                  :file
+                                  [#(when (:line %) ": ") :left 2]
+                                  #(-> % :line str)]
+                                 elements)))))
 
 #?(:clj
 (defn print-condition
@@ -583,7 +584,7 @@
         (.write (name type))
         (.write ": "))
       (cond
-       (nil? message) (print "<no message>")
+       (nil? message) (.write w "<no message>")
        (string? message) (let [^String s message]
                            (.write w s))
        :else (print message))
@@ -592,7 +593,7 @@
                                \space))]
         (when who
           (.write w " [")
-          (print who)
+          (.write w (str who))
           (.write w "]"))
         (binding [*print-length* 12]
           (doseq [irritant stuff]

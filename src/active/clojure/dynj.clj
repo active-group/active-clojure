@@ -122,8 +122,8 @@
          (cons binding-map more)))
 
 (defn bound-fn*
-  "Returns a function that will call `f` with the same dynj
-  implementations in place as there are now. Passes all arguments though to f."
+  "Returns a function that will call `f` with the same dynj implementations in
+  place as there are now. Passes all arguments through to f."
   [f]
   (clj-bound-fn* f))
 

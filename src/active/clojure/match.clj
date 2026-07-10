@@ -705,11 +705,11 @@
         binding       (optional-path-with-default-binding-clause-binding clause)]
     `[~(symbol binding) (get-in ~message ~(mapv convert-path-element path) ~default-value)]))
 
-(defn matcher->value
+(defn- matcher->value
   "Takes a `matcher` and returns the value/s it matches on.
   `::not-nil` symbolizes the existence matcher."
   [matcher]
-  (fn [message path]
+  (fn [path]
     (cond
       (constant-matcher? matcher)
       (constant-matcher-value matcher)
@@ -724,14 +724,14 @@
       ::not-nil
 
       (predicate-matcher? matcher)
-      [`(constantly (~(predicate-matcher-predicate matcher)
-                     (get-in ~message ~path)))]
+      `(fn [message#] (~(predicate-matcher-predicate matcher)
+                       (get-in message# ~path)))
 
       :else
       (c/assertion-violation `matcher->value "not a matcher" matcher))))
 
 (defn clause->lhs
-  [message clause]
+  [clause]
   (cond
     (key-exists-without-binding-clause? clause)
     (let [key     (key-exists-without-binding-clause-key clause)]
@@ -762,16 +762,16 @@
           matcher     (key-matches-without-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
-        `({~key ~'_} :guard ~(match-value message [key]))
-        `{~key ~(match-value message [key])}))
+        `({~key ~'_} :guard ~(match-value [key]))
+        `{~key ~(match-value [key])}))
 
     (key-matches-with-binding-clause? clause)
     (let [key         (key-matches-with-binding-clause-key clause)
           matcher     (key-matches-with-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
-        `({~key ~'_} :guard ~(match-value message [key]))
-        `{~key ~(match-value message [key])}))
+        `({~key ~'_} :guard ~(match-value [key]))
+        `{~key ~(match-value [key])}))
 
     (optional-key-with-default-binding-clause? clause)
     {}
@@ -781,16 +781,16 @@
           matcher     (path-matches-without-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
-        `(~(fold-path path '_) :guard ~(match-value message path))
-        (fold-path path (match-value message path))))
+        `(~(fold-path path '_) :guard ~(match-value path))
+        (fold-path path (match-value path))))
 
     (path-matches-with-binding-clause? clause)
     (let [path        (path-matches-with-binding-clause-path clause)
           matcher     (path-matches-with-binding-clause-matcher clause)
           match-value (matcher->value matcher)]
       (if (predicate-matcher? matcher)
-        `(~(fold-path path '_) :guard ~(match-value message path))
-        (fold-path path (match-value message path))))
+        `(~(fold-path path '_) :guard ~(match-value path))
+        (fold-path path (match-value path))))
 
     (optional-path-with-default-binding-clause? clause)
     {}))
@@ -821,10 +821,10 @@
           lhss))
 
 (defn pattern->lhs
-  [message pattern]
+  [pattern]
   (->> pattern
        pattern-clauses
-       (mapv (partial clause->lhs message))
+       (mapv clause->lhs)
        reduce-lhs))
 
 (defn clause->rhs
@@ -970,7 +970,7 @@
                                     [lhs rhs]
 
                                     (pattern? lhs)
-                                    [(pattern->lhs message lhs)
+                                    [(pattern->lhs lhs)
                                      (pattern->rhs message lhs rhs)]
 
                                     :else

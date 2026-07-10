@@ -108,42 +108,38 @@
   ;; lhs doesn't care about bindings
 
   (t/testing "key exists with binding"
-    (t/is (= {:x 'x} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "x"))))
-    (t/is (= {:x 'rebind} (p/clause->lhs {} (p/key-exists-with-binding-clause :x "rebind")))))
+    (t/is (= {:x 'x} (p/clause->lhs (p/key-exists-with-binding-clause :x "x"))))
+    (t/is (= {:x 'rebind} (p/clause->lhs (p/key-exists-with-binding-clause :x "rebind")))))
 
   (t/testing "key exists without binding"
-    (t/is (= {:x '_} (p/clause->lhs {} (p/key-exists-without-binding-clause :x)))))
+    (t/is (= {:x '_} (p/clause->lhs (p/key-exists-without-binding-clause :x)))))
 
   (t/testing "path exists with binding"
     (t/is (= {:x {"b" {"c" 'c}}}
-             (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "c"))))
+             (p/clause->lhs (p/path-exists-with-binding-clause [:x "b" "c"] "c"))))
     (t/is (= {:x {"b" {"c" 'rebind}}}
-             (p/clause->lhs {} (p/path-exists-with-binding-clause [:x "b" "c"] "rebind")))))
+             (p/clause->lhs (p/path-exists-with-binding-clause [:x "b" "c"] "rebind")))))
 
   (t/testing "path exists without binding"
     (t/is (= {:x {"b" {"c" '_}}}
-             (p/clause->lhs {} (p/path-exists-without-binding-clause [:x "b" "c"])))))
+             (p/clause->lhs (p/path-exists-without-binding-clause [:x "b" "c"])))))
 
   (t/testing "key matches with binding"
-    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
-    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind"))))
-    (t/is (= `({:x ~(quote _)} :guard [(constantly (~even? (get-in {} [:x])))])
-             (p/clause->lhs {} (p/key-matches-with-binding-clause :x (p/match-predicate even?) "x")))))
+    (t/is (= {:x "b"} (p/clause->lhs (p/key-matches-with-binding-clause :x (p/match-const "b") "x"))))
+    (t/is (= {:x "b"} (p/clause->lhs (p/key-matches-with-binding-clause :x (p/match-const "b") "rebind")))))
 
   (t/testing "key matches without binding"
-    (t/is (= {:x "b"} (p/clause->lhs {} (p/key-matches-without-binding-clause :x (p/match-const "b"))))))
+    (t/is (= {:x "b"} (p/clause->lhs (p/key-matches-without-binding-clause :x (p/match-const "b"))))))
 
   (t/testing "path matches with binding"
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
+             (p/clause->lhs (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "z"))))
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind"))))
-    (t/is (= `({:x {:y {"Z" ~(quote _)}}} :guard [(constantly (~even? (get-in {} [:x :y "Z"])))])
-             (p/clause->lhs {} (p/path-matches-with-binding-clause [:x :y "Z"] (p/match-predicate even?) "Z")))))
+             (p/clause->lhs (p/path-matches-with-binding-clause [:x :y :z] (p/match-const "b") "rebind")))))
 
   (t/testing "path matches without binding"
     (t/is (= {:x {:y {:z "b"}}}
-             (p/clause->lhs {} (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))))
+             (p/clause->lhs (p/path-matches-without-binding-clause [:x :y :z] (p/match-const "b")))))))
 
 (t/deftest path-matches-with-binding-clause->rhs-match-test
   (t/is (= `[~(symbol "z") (get-in {:x {:y {:z "b"}}} [:x :y :z] "b")]

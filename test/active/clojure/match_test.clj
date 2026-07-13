@@ -276,7 +276,15 @@
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a "b"})))
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {}}})))
     (t/is (= ["D"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"e" "d"}}})))
-    (t/is (= ["d"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"c" "d"}}})))))
+    (t/is (= ["d"] ((p/map-matcher [(? [:a b c] "D" :as a)] [a]) {:a {"b" {"c" "d"}}}))))
+
+  (t/testing "optional combined with :compare-fn"
+    ;; this was buggy in the non-defpattern case. (the optional caused
+    ;; the whole clause to match everything)
+    (t/is (= :odd ((p/map-matcher [(:a (:compare-fn even?))
+                                   (? :b "b" :as b)] :even
+                                  :else :odd)
+                   {:a 11})))))
 
 (p/defpattern one-or
   [(:kind #"one")

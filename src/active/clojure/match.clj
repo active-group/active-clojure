@@ -632,6 +632,7 @@
       (reduce #(rec-merge %1 %2) v vs)
       v)))
 
+(declare reduce-lhs)
 (defn parse-emit-match-syntax
   [message [pattern rhs]]
   (let [[lhss rhss] (reduce (fn [[clauses bindings] c]
@@ -640,7 +641,7 @@
                                  (conj bindings binding)]))
                             [[] []]
                             pattern)]
-    [(apply deep-merge lhss)
+    [(reduce-lhs lhss)
      `(let ~(into [] (apply concat rhss))
         ~rhs)]))
 

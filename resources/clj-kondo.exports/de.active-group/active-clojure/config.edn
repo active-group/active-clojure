@@ -8,6 +8,9 @@
                         active.clojure.sum-type/define-sum-type hooks.sum-type/define-sum-type
                         active.clojure.record/define-record-type hooks.record/define-record-type
                         active.clojure.record/define-singleton-type hooks.record/define-singleton-type
-                        active.clojure.match/defpattern hooks.match/defpattern}}
+                        active.clojure.match/defpattern hooks.match/defpattern
+                        active.clojure.match/map-matcher hooks.match/map-matcher
+                        active.clojure.match/matcher hooks.match/matcher
+                        active.clojure.match/match hooks.matchl/match}}
  :lint-as {active.clojure.dynj/binding clojure.core/binding
            active.clojure.dynj/defn-dynj clojure.core/defn}}

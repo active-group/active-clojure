@@ -9,7 +9,7 @@
 
 (defmethod match/to-source ::match/regex
   [pat ocr]
-  `(and (not= ~ocr ::match/not-found) (re-matches ~(:regex pat) ~ocr)))
+  `(and (not= ~ocr ::match/not-found) (string? ~ocr) (re-matches ~(:regex pat) ~ocr)))
 
 (define-record-type Pattern
   (make-pattern clauses) pattern?
